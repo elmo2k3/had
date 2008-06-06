@@ -349,7 +349,11 @@ void getDailyGraph(MYSQL *mysql_connection, int modul, int sensor)
 	mysql_row = mysql_fetch_row(mysql_res); // nur eine Zeile
 
 	if(!mysql_row[0])
+	{
+		mysql_free_result(mysql_res);
+		printf("Keine Daten fuer den Graphen vorhanden!\n");
 		return;
+	}
 	sGraphPacket.max[0] = atoi(mysql_row[0]);
 	sGraphPacket.max[1] = (atof(mysql_row[0]) - atoi(mysql_row[0]))*10;
 	sGraphPacket.min[0] = atoi(mysql_row[1]);
