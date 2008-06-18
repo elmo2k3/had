@@ -9,6 +9,7 @@
 #include "serial.h"
 #include "database.h"
 #include "main.h"
+#include "libmpdclient.h"
 
 void getDailyGraph(MYSQL *mysql_connection, int modul, int sensor);
 void initArray(signed char *temperature_history, int size);
@@ -80,8 +81,52 @@ int main(int argc, char* argv[])
 	
 	struct glcdMainPacket glcdP;
 	struct rgbPacket rgbP;	
-	
 
+	struct mpdPacket mpdP;
+	
+	char currentSong[20];
+
+	char *hostname = "router2.lan";
+
+	mpd_Connection *mpdCon;
+	mpd_Status *mpdStatus;
+
+	mpdCon = mpd_newConnection(hostname,6600,20);
+	if(mpdCon->error) {
+		fprintf(stderr,"%s\n",mpdCon->errorStr);
+		mpd_closeConnection(mpdCon);
+		return -1;
+	}
+	mpd_sendCommandListOkBegin(mpdCon);
+	mpd_sendStatusCommand(mpdCon);
+	mpd_sendCurrentSongCommand(mpdCon);
+	mpd_sendCommandListEnd(mpdCon);
+	
+	if((mpdStatus = mpd_getStatus(mpdCon))==NULL) {
+		fprintf(stderr,"%s\n",mpdCon->errorStr);
+		mpd_closeConnection(mpdCon);
+		return -1;
+	}
+
+	//printf("song = %i\n", mpdStatus->song);
+
+	mpd_InfoEntity *mpdEntity;
+	mpd_nextListOkCommand(mpdCon);
+	mpd_Song *mpdSong;
+	
+	//printf("%s",currentSong);
+	while(1)
+	{
+		mpdEntity = mpd_getNextInfoEntity(mpdCon);
+		mpdSong = mpdEntity->info.song;
+		sprintf(mpdP.currentSong,"%s - %s",mpdSong->artist,mpdSong->title);
+		printf("%s\n",mpdP.currentSong);
+		mpd_freeInfoEntity(mpdEntity);
+		sleep(1);
+	}
+
+	mpd_closeConnection(mpdCon);
+	
 	fd = initSerial(argv[1]); // serielle Schnittstelle aktivieren
 
 	initArray(graphP.temperature_history,115);
@@ -196,6 +241,13 @@ int main(int argc, char* argv[])
 						usleep(100000);
 						printf("Graph gesendet\r\n");
 						break;
+					case 4:	// MPD Packet request
+						printf("MPD Packet request\r\n");
+						mpdP.address = 7;
+						mpdP.count = 21;
+						mpdP.command = 3;
+						write(fd,&mpdP,23);
+						break;
 					case 0: //decode Stream failed
 						printf("decodeStream failed!\r\n");
 						break;
@@ -252,6 +304,8 @@ void getDailyGraph(MYSQL *mysql_connection, int modul, int sensor)
 
 	temp_max = ceil((float)graphP.max[0]/10)*10;
 	temp_min = floor((float)graphP.min[0]/10)*10;
+	//temp_max = (float)graphP.max[0]/10*10;
+	//temp_min = (float)graphP.min[0]/10*10;
 
 	mysql_free_result(mysql_res);
 	

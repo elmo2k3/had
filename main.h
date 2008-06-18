@@ -6,6 +6,16 @@
 #define ADC_MODUL_3 ADC_RES*1.3
 #define ADC_MODUL_DEFAULT ADC_RES*1.25
 
+
+/* 23 Bytes */
+struct mpdPacket
+{
+	unsigned char address;
+	unsigned char count;
+	unsigned char command;
+	char currentSong[20];
+};
+
 /* 123 Bytes */
 struct graphPacket
 {
