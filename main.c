@@ -5,15 +5,14 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "serial.h"
 #include "database.h"
 #include "main.h"
 #include "libmpdclient.h"
 
-void getDailyGraph(MYSQL *mysql_connection, int modul, int sensor);
 void initArray(signed char *temperature_history, int size);
-int transformY(float temperature, int max, int min);
 
 int fileExists(const char *filename)
 {
@@ -70,7 +69,7 @@ struct graphPacket graphP;
 
 int main(int argc, char* argv[])
 {
-	int fd,c, res;
+	int fd, res;
 	char buf[255];
 
 	char query[255];
@@ -84,48 +83,47 @@ int main(int argc, char* argv[])
 
 	struct mpdPacket mpdP;
 	
-	char currentSong[20];
 
 	char *hostname = "router2.lan";
 
 	mpd_Connection *mpdCon;
 	mpd_Status *mpdStatus;
 
-	mpdCon = mpd_newConnection(hostname,6600,20);
-	if(mpdCon->error) {
-		fprintf(stderr,"%s\n",mpdCon->errorStr);
-		mpd_closeConnection(mpdCon);
-		return -1;
-	}
-	mpd_sendCommandListOkBegin(mpdCon);
-	mpd_sendStatusCommand(mpdCon);
-	mpd_sendCurrentSongCommand(mpdCon);
-	mpd_sendCommandListEnd(mpdCon);
-	
-	if((mpdStatus = mpd_getStatus(mpdCon))==NULL) {
-		fprintf(stderr,"%s\n",mpdCon->errorStr);
-		mpd_closeConnection(mpdCon);
-		return -1;
-	}
 
 	//printf("song = %i\n", mpdStatus->song);
 
 	mpd_InfoEntity *mpdEntity;
-	mpd_nextListOkCommand(mpdCon);
 	mpd_Song *mpdSong;
 	
 	//printf("%s",currentSong);
 	while(1)
 	{
+		mpdCon = mpd_newConnection(hostname,6600,1);
+		if(mpdCon->error) {
+			fprintf(stderr,"%s\n",mpdCon->errorStr);
+			mpd_closeConnection(mpdCon);
+			return -1;
+		}
+		mpd_sendCommandListOkBegin(mpdCon);
+		mpd_sendStatusCommand(mpdCon);
+		mpd_sendCurrentSongCommand(mpdCon);
+		mpd_sendCommandListEnd(mpdCon);
+		
+		if((mpdStatus = mpd_getStatus(mpdCon))==NULL) {
+			fprintf(stderr,"%s\n",mpdCon->errorStr);
+			mpd_closeConnection(mpdCon);
+			return -1;
+		}
+		mpd_nextListOkCommand(mpdCon);
 		mpdEntity = mpd_getNextInfoEntity(mpdCon);
 		mpdSong = mpdEntity->info.song;
 		sprintf(mpdP.currentSong,"%s - %s",mpdSong->artist,mpdSong->title);
 		printf("%s\n",mpdP.currentSong);
 		mpd_freeInfoEntity(mpdEntity);
 		sleep(1);
+		mpd_closeConnection(mpdCon);
 	}
 
-	mpd_closeConnection(mpdCon);
 	
 	fd = initSerial(argv[1]); // serielle Schnittstelle aktivieren
 
@@ -133,11 +131,8 @@ int main(int argc, char* argv[])
 
 	MYSQL *mysql_connection;
 	MYSQL_RES *mysql_res;
-	MYSQL_ROW mysql_row;
 
 	mysql_connection = mysql_init(NULL);
-	
-	unsigned char wecker = 0;
 	
 
 	if(argc > 2)
@@ -225,7 +220,7 @@ int main(int argc, char* argv[])
 						printf("Antwort gesendet\r\n");
 						break;
 					case 3:
-						getDailyGraph(mysql_connection,celsius,decicelsius);
+						getDailyGraph(mysql_connection,celsius,decicelsius, graphP);
 						graphP.address = 7;
 						graphP.count = 61;
 						graphP.command = 1;
@@ -267,77 +262,3 @@ void initArray(signed char *temperature_history, int size)
 		temperature_history[counter]=0;
 }
 
-void getDailyGraph(MYSQL *mysql_connection, int modul, int sensor)
-{
-	char query[255];
-	float x_div;
-	int y;
-	int temp_max,temp_min;
-
-	
-	MYSQL_RES *mysql_res;
-	MYSQL_ROW mysql_row;
-	MYSQL *mysql_helper_connection;
-
-	float sec;
-	
-	sprintf(query,"SELECT MAX(temperature),MIN(temperature) FROM temperatures WHERE modul_id='%d' AND sensor_id='%d' AND DATE(date)=CURDATE() ORDER BY date asc",modul,sensor);
-	if(mysql_query(mysql_connection,query))
-	{
-		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		exit(0);
-	}
-
-	mysql_res = mysql_use_result(mysql_connection);
-	mysql_row = mysql_fetch_row(mysql_res); // nur eine Zeile
-
-	if(!mysql_row[0])
-	{
-		mysql_free_result(mysql_res);
-		printf("Keine Daten fuer den Graphen vorhanden!\n");
-		return;
-	}
-	graphP.max[0] = atoi(mysql_row[0]);
-	graphP.max[1] = (atof(mysql_row[0]) - atoi(mysql_row[0]))*10;
-	graphP.min[0] = atoi(mysql_row[1]);
-	graphP.min[1] = (atof(mysql_row[1]) - atoi(mysql_row[1]))*10;
-
-	temp_max = ceil((float)graphP.max[0]/10)*10;
-	temp_min = floor((float)graphP.min[0]/10)*10;
-	//temp_max = (float)graphP.max[0]/10*10;
-	//temp_min = (float)graphP.min[0]/10*10;
-
-	mysql_free_result(mysql_res);
-	
-	sprintf(query,"SELECT TIME_TO_SEC(date), temperature FROM temperatures WHERE modul_id='%d' AND sensor_id='%d' AND DATE(date)=CURDATE() ORDER BY date asc",modul,sensor);
-	if(mysql_query(mysql_connection,query))
-	{
-		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		exit(0);
-	}
-
-	mysql_res = mysql_use_result(mysql_connection);
-	while(mysql_row = mysql_fetch_row(mysql_res))
-	{
-		sec = atoi(mysql_row[0]);
-		x_div = (sec/(60*60*24))*115;
-		y = transformY(atof(mysql_row[1]),temp_max,temp_min);
-		if(graphP.temperature_history[(int)x_div] !=0)
-			graphP.temperature_history[(int)x_div] = (graphP.temperature_history[(int)x_div] + y ) / 2;
-		else
-			graphP.temperature_history[(int)x_div] = y;
-		//printf("x_div = %d temp = %d\r\n",(int)x_div,temperature_history[(int)x_div]);
-		//temperature_history[i] = i;
-	}
-	graphP.numberOfPoints = x_div; // Letzter Wert
-	
-	
-	printf("Max: %d,%d Min: %d,%d\t",graphP.max[0],graphP.max[1],graphP.min[0],graphP.min[1]);
-	
-	mysql_free_result(mysql_res);
-}
-int transformY(float temperature, int max, int min)
-{
-	const float range = max - min; // hier muss noch was getan werden!
-	return ((temperature-min)/range)*40;
-}
