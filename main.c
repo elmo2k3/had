@@ -1,16 +1,16 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <sys/signal.h>
 #include <mysql/mysql.h>
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libmpd.h>
 #include <pthread.h>
 
 #include "serial.h"
 #include "database.h"
 #include "main.h"
-#include "libmpdclient.h"
+#include "mpd.h"
 
 void initArray(signed char *temperature_history, int size);
 
@@ -69,7 +69,7 @@ struct graphPacket graphP;
 
 int main(int argc, char* argv[])
 {
-	int fd, res;
+	int res;
 	char buf[255];
 
 	char query[255];
@@ -78,54 +78,33 @@ int main(int argc, char* argv[])
 	time_t rawtime;
 	struct tm *ptm;
 	
-	struct glcdMainPacket glcdP;
-	struct rgbPacket rgbP;	
+	int iport = 6600;
+	char *hostname = getenv("MPD_HOST");
+	char *port = getenv("MPD_PORT");
+	char *password = getenv("MPD_PASSWORD");
+	pthread_t threads[2];
 
-	struct mpdPacket mpdP;
+	MpdObj *mpd = NULL;
 	
+	if(!hostname)
+		hostname = "localhost";
+	if(port)
+		iport = atoi(port);
 
-	char *hostname = "router2.lan";
+	mpd = mpd_new(hostname,iport,password);
 
-	mpd_Connection *mpdCon;
-	mpd_Status *mpdStatus;
+	mpd_signal_connect_status_changed(mpd,(StatusChangedCallback)mpdStatusChanged, NULL);
+	mpd_set_connection_timeout(mpd,10);
 
+	if(mpd_connect(mpd))
+		printf("Error connecting to mpd!\n");
 
-	//printf("song = %i\n", mpdStatus->song);
+	pthread_create(&threads[0],NULL,(void*)&mpdThread,mpd);	
 
-	mpd_InfoEntity *mpdEntity;
-	mpd_Song *mpdSong;
-	
-	//printf("%s",currentSong);
-	while(1)
+	if(initSerial(argv[1]) < 0) // serielle Schnittstelle aktivieren
 	{
-		mpdCon = mpd_newConnection(hostname,6600,1);
-		if(mpdCon->error) {
-			fprintf(stderr,"%s\n",mpdCon->errorStr);
-			mpd_closeConnection(mpdCon);
-			return -1;
-		}
-		mpd_sendCommandListOkBegin(mpdCon);
-		mpd_sendStatusCommand(mpdCon);
-		mpd_sendCurrentSongCommand(mpdCon);
-		mpd_sendCommandListEnd(mpdCon);
-		
-		if((mpdStatus = mpd_getStatus(mpdCon))==NULL) {
-			fprintf(stderr,"%s\n",mpdCon->errorStr);
-			mpd_closeConnection(mpdCon);
-			return -1;
-		}
-		mpd_nextListOkCommand(mpdCon);
-		mpdEntity = mpd_getNextInfoEntity(mpdCon);
-		mpdSong = mpdEntity->info.song;
-		sprintf(mpdP.currentSong,"%s - %s",mpdSong->artist,mpdSong->title);
-		printf("%s\n",mpdP.currentSong);
-		mpd_freeInfoEntity(mpdEntity);
-		sleep(1);
-		mpd_closeConnection(mpdCon);
+		printf("Serielle Schnittstelle konnte nicht geoeffnet werden!\n");
 	}
-
-	
-	fd = initSerial(argv[1]); // serielle Schnittstelle aktivieren
 
 	initArray(graphP.temperature_history,115);
 
@@ -144,8 +123,7 @@ int main(int argc, char* argv[])
 		rgbP.blue = atoi(argv[5]);
 		rgbP.smoothness = atoi(argv[6]);
 		rgbP.count = 4;
-		write(fd,&rgbP,6);
-		usleep(100000);
+		sendPacket(&rgbP,RGB_PACKET);
 	}
 	else
 	{
@@ -157,8 +135,7 @@ int main(int argc, char* argv[])
 		mysql_connection->reconnect=1;
 
 		while (1) {
-			res = read(fd,buf,255);
-			buf[res]=0;
+			res = readSerial(buf); // blocking read
 			if(res>1)
 			{
 				printf("Res=%d\t",res);
@@ -190,9 +167,6 @@ int main(int argc, char* argv[])
 					case 2:
 						printf("Paket vom GLCD-Modul empfangen!!....");
 						ptm = localtime(&rawtime);
-						glcdP.address = 7;
-						glcdP.count = 17;
-						glcdP.command = 0;
 						glcdP.hour = ptm->tm_hour;
 						glcdP.minute = ptm->tm_min;
 						glcdP.second = ptm->tm_sec;
@@ -215,33 +189,17 @@ int main(int argc, char* argv[])
 						}
 						else
 							glcdP.wecker = 0;
-						write(fd,&glcdP,19);
-						usleep(100000);
+						sendPacket(&glcdP,GP_PACKET);
 						printf("Antwort gesendet\r\n");
 						break;
 					case 3:
 						getDailyGraph(mysql_connection,celsius,decicelsius, graphP);
-						graphP.address = 7;
-						graphP.count = 61;
-						graphP.command = 1;
-						write(fd,&graphP,63);
-						usleep(1000000);
-						
-						graphP.command = 2;
-						graphP.count = 61;
-						char *ptr = (char*)&graphP;
-						write(fd,ptr,3);
-						write(fd,ptr+62,60);
-//						write(fd,&graphP,63);
-						usleep(100000);
+						sendPacket(&graphP,GRAPH_PACKET);
 						printf("Graph gesendet\r\n");
 						break;
 					case 4:	// MPD Packet request
 						printf("MPD Packet request\r\n");
-						mpdP.address = 7;
-						mpdP.count = 21;
-						mpdP.command = 3;
-						write(fd,&mpdP,23);
+						sendPacket(&mpdP,MPD_PACKET);
 						break;
 					case 0: //decode Stream failed
 						printf("decodeStream failed!\r\n");

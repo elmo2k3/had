@@ -6,34 +6,43 @@
 #define ADC_MODUL_3 ADC_RES*1.3
 #define ADC_MODUL_DEFAULT ADC_RES*1.25
 
+#define GP_PACKET 0
+#define GRAPH_PACKET 1
+#define GRAPH_PACKET2 2
+#define MPD_PACKET 3
+#define RGB_PACKET 4
+
+#define GLCD_ADDRESS 7
+
+struct headPacket
+{
+	unsigned char address;
+	unsigned char count;
+	unsigned char command;
+};
+
 
 /* 23 Bytes */
 struct mpdPacket
 {
-	unsigned char address;
-	unsigned char count;
-	unsigned char command;
+	struct headPacket headP;
 	char currentSong[20];
-};
+}mpdP;
 
 /* 123 Bytes */
 struct graphPacket
 {
-	unsigned char address;
-	unsigned char count;
-	unsigned char command;
+	struct headPacket headP;
 	unsigned char numberOfPoints;
 	signed char max[2];
 	signed char min[2];
 	signed char temperature_history[115];
-};
+}graphP;
 
 /* 19 Byte */
 struct glcdMainPacket
 {
-	unsigned char address;
-	unsigned char count;
-	unsigned char command;
+	struct headPacket headP;
 	unsigned char hour;
 	unsigned char minute;
 	unsigned char second;
@@ -43,7 +52,7 @@ struct glcdMainPacket
 	unsigned char weekday;
 	unsigned char temperature[8];
 	unsigned char wecker;
-};
+}glcdP;
 
 /* 6 Byte */
 struct rgbPacket
@@ -54,7 +63,7 @@ struct rgbPacket
 	unsigned char green;
 	unsigned char blue;
 	unsigned char smoothness;
-};
+}rgbP;
 
 
 #endif

@@ -1,21 +1,24 @@
-#include "serial.h"
 #include <termios.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
+#include "serial.h"
+#include "main.h"
+
+int fd;
 
 int initSerial(char *device) // returns fd
 {
-	int fd;
 	struct termios newtio;
+	
 
 	/* open the device */
 	fd = open(device, O_RDWR | O_NOCTTY );
 	if (fd <0) 
 	{
-		perror(device); 
-		exit(-1);
+		return -1;
 	}
 
 	bzero(&newtio, sizeof(newtio)); /* clear struct for new port settings */
@@ -72,6 +75,53 @@ int initSerial(char *device) // returns fd
 	*/
 	tcflush(fd, TCIFLUSH);
 	tcsetattr(fd,TCSANOW,&newtio);
+	return 0;
+}
 
-	return fd;
+void sendPacket(void *packet, int type)
+{
+	struct headPacket *headP = (struct headPacket*)packet;
+	
+
+	if(type == GP_PACKET)
+	{
+		headP->address = GLCD_ADDRESS;
+		headP->command = GP_PACKET;
+		headP->count = 17;
+		write(fd,packet,sizeof(glcdP));
+	}
+	else if(type == MPD_PACKET)
+	{
+		headP->address = GLCD_ADDRESS;
+		headP->command = MPD_PACKET;
+		headP->count = 21;
+		write(fd,packet,sizeof(mpdP));
+	}
+	else if(type == GRAPH_PACKET)
+	{
+		/* Very dirty! Zweistufiges Senden wegen Pufferueberlauf */
+		headP->address = GLCD_ADDRESS;
+		headP->count = 61;
+		headP->command = GRAPH_PACKET;
+		write(fd,packet,63);
+		usleep(1000000);
+
+		headP->command = GRAPH_PACKET2;
+		char *ptr = (char*)packet;
+		write(fd,ptr,3);
+		write(fd,ptr+62,60);
+	}
+	else if(type == RGB_PACKET)
+	{
+		write(fd,packet,sizeof(rgbP));
+	}		
+	usleep(100000); // warten bis Packet wirklich abgeschickt wurde
+}
+
+int readSerial(char *buf)
+{
+	int res;
+	res = read(fd,buf,255);
+	buf[res] = 0;
+	return res;
 }
