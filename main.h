@@ -26,7 +26,7 @@ struct headPacket
 struct mpdPacket
 {
 	struct headPacket headP;
-	char currentSong[20];
+	char currentSong[31];
 }mpdP;
 
 /* 123 Bytes */

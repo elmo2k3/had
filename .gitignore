@@ -1,2 +1,5 @@
 *.o
 main
+*.swp
+tags
+libmpd-0.14.0

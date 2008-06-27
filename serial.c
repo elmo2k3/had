@@ -94,7 +94,7 @@ void sendPacket(void *packet, int type)
 	{
 		headP->address = GLCD_ADDRESS;
 		headP->command = MPD_PACKET;
-		headP->count = 21;
+		headP->count = 32;
 		write(fd,packet,sizeof(mpdP));
 	}
 	else if(type == GRAPH_PACKET)

@@ -72,7 +72,6 @@ int main(int argc, char* argv[])
 	int res;
 	char buf[255];
 
-	char query[255];
 	int modul_id,sensor_id,celsius,decicelsius,voltage;
 	signed char lastTemperature[9][9][2];
 	time_t rawtime;
@@ -94,7 +93,7 @@ int main(int argc, char* argv[])
 	mpd = mpd_new(hostname,iport,password);
 
 	mpd_signal_connect_status_changed(mpd,(StatusChangedCallback)mpdStatusChanged, NULL);
-	mpd_set_connection_timeout(mpd,10);
+	mpd_set_connection_timeout(mpd,60);
 
 	if(mpd_connect(mpd))
 		printf("Error connecting to mpd!\n");
@@ -104,14 +103,11 @@ int main(int argc, char* argv[])
 	if(initSerial(argv[1]) < 0) // serielle Schnittstelle aktivieren
 	{
 		printf("Serielle Schnittstelle konnte nicht geoeffnet werden!\n");
+		exit(-1);
 	}
 
 	initArray(graphP.temperature_history,115);
 
-	MYSQL *mysql_connection;
-	MYSQL_RES *mysql_res;
-
-	mysql_connection = mysql_init(NULL);
 	
 
 	if(argc > 2)
@@ -127,12 +123,17 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		if (!mysql_real_connect(mysql_connection, MYSQL_SERVER, MYSQL_USER, MYSQL_PASS, MYSQL_DB, 0, NULL, 0))
-		{
-			fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-			exit(0);
-		}
-		mysql_connection->reconnect=1;
+		if(initDatabase() == -1)
+			exit(-1);
+
+
+		getLastTemperature(3,1,&celsius,&decicelsius);
+		lastTemperature[3][1][0] = (char)celsius;
+		lastTemperature[3][1][1] = (char)decicelsius;
+
+		getLastTemperature(3,0,&celsius,&decicelsius);
+		lastTemperature[3][0][0] = (char)celsius;
+		lastTemperature[3][0][1] = (char)decicelsius;
 
 		while (1) {
 			res = readSerial(buf); // blocking read
@@ -158,10 +159,7 @@ int main(int argc, char* argv[])
 						//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
 						lastTemperature[modul_id][sensor_id][0] = celsius;
 						lastTemperature[modul_id][sensor_id][1] = decicelsius/625;
-						sprintf(query,"INSERT INTO temperatures (date,modul_id,sensor_id,temperature) \
-							VALUES (\"%d-%d-%d %d:%d:%d\",%d,%d,\"%d.%d\")",ptm->tm_year+1900,ptm->tm_mon+1,ptm->tm_mday,ptm->tm_hour,
-							ptm->tm_min,ptm->tm_sec,modul_id,sensor_id,celsius,decicelsius);
-						while(mysql_query(mysql_connection,query));
+						databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,ptm);
 						break;
 					
 					case 2:
@@ -193,7 +191,7 @@ int main(int argc, char* argv[])
 						printf("Antwort gesendet\r\n");
 						break;
 					case 3:
-						getDailyGraph(mysql_connection,celsius,decicelsius, graphP);
+						getDailyGraph(celsius,decicelsius, &graphP);
 						sendPacket(&graphP,GRAPH_PACKET);
 						printf("Graph gesendet\r\n");
 						break;
@@ -208,8 +206,6 @@ int main(int argc, char* argv[])
 			} // endif res>1
 					
 		}
-		mysql_free_result(mysql_res);
-		mysql_close(mysql_connection);
 	}
 	return 0;
 }
