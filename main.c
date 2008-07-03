@@ -199,6 +199,12 @@ int main(int argc, char* argv[])
 						printf("MPD Packet request\r\n");
 						sendPacket(&mpdP,MPD_PACKET);
 						break;
+					case 5: // MPD prev song
+						printf("MPD prev song\r\n");
+						mpd_player_prev(mpd);
+					case 6: // MPD next song
+						printf("MPD next song\r\n");
+						mpd_player_next(mpd);
 					case 0: //decode Stream failed
 						printf("decodeStream failed!\r\n");
 						break;
