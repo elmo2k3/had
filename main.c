@@ -6,13 +6,15 @@
 #include <string.h>
 #include <libmpd.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include "serial.h"
 #include "database.h"
 #include "main.h"
 #include "mpd.h"
+#include "network.h"
 
-void initArray(signed char *temperature_history, int size);
+pthread_t threads[2];
 
 int fileExists(const char *filename)
 {
@@ -69,6 +71,8 @@ struct graphPacket graphP;
 
 int main(int argc, char* argv[])
 {
+	signal(SIGINT, (void*)hadSIGINT);
+
 	int res;
 	char buf[255];
 
@@ -81,7 +85,6 @@ int main(int argc, char* argv[])
 	char *hostname = getenv("MPD_HOST");
 	char *port = getenv("MPD_PORT");
 	char *password = getenv("MPD_PASSWORD");
-	pthread_t threads[2];
 
 	MpdObj *mpd = NULL;
 	
@@ -99,6 +102,7 @@ int main(int argc, char* argv[])
 		printf("Error connecting to mpd!\n");
 
 	pthread_create(&threads[0],NULL,(void*)&mpdThread,mpd);	
+	pthread_create(&threads[1],NULL,(void*)&networkThread,NULL);	
 
 	if(initSerial(argv[1]) < 0) // serielle Schnittstelle aktivieren
 	{
@@ -220,5 +224,12 @@ void initArray(signed char *temperature_history, int size)
 	int counter;
 	for(counter=0;counter<size;counter++)
 		temperature_history[counter]=0;
+}
+
+void hadSIGINT(void)
+{
+	pthread_kill(threads[1],SIGQUIT);
+	printf("Shutting down\n");
+	exit(0);
 }
 

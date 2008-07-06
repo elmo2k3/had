@@ -1,6 +1,8 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
+#include <pthread.h>
+
 #define ADC_RES 1024
 #define ADC_MODUL_1 ADC_RES*1.22
 #define ADC_MODUL_3 ADC_RES*1.3
@@ -13,6 +15,11 @@
 #define RGB_PACKET 4
 
 #define GLCD_ADDRESS 7
+
+extern pthread_t threads[2];
+extern void hadSIGINT(void);
+
+extern void initArray(signed char *temperature_history, int size);
 
 struct headPacket
 {

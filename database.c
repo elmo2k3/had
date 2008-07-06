@@ -65,6 +65,9 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	float sec;	
 	float min,max;
 
+	min = 0.0;
+	max = 0.0;
+
 	
 	MYSQL_RES *mysql_res;
 	MYSQL_ROW mysql_row;

@@ -3,9 +3,8 @@
 
 #include <libmpd.h>
 
-
-void mpdStatusChanged(MpdObj *mi, ChangedStatusType what);
-void mpdThread(MpdObj *mi);
+extern void mpdStatusChanged(MpdObj *mi, ChangedStatusType what);
+extern void mpdThread(MpdObj *mi);
 
 #endif
 
