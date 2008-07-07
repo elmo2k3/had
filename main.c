@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 
-	initArray(graphP.temperature_history,115);
+	memset(graphP.temperature_history,0,115);
 
 	
 
@@ -218,12 +218,6 @@ int main(int argc, char* argv[])
 		}
 	}
 	return 0;
-}
-void initArray(signed char *temperature_history, int size)
-{
-	int counter;
-	for(counter=0;counter<size;counter++)
-		temperature_history[counter]=0;
 }
 
 void hadSIGINT(void)

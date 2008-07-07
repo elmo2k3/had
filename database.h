@@ -17,3 +17,4 @@ void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci);
 void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, struct tm *ptm);
 
 #endif
+

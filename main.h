@@ -19,8 +19,6 @@
 extern pthread_t threads[2];
 extern void hadSIGINT(void);
 
-extern void initArray(signed char *temperature_history, int size);
-
 struct headPacket
 {
 	unsigned char address;
