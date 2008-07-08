@@ -81,7 +81,6 @@ int initSerial(char *device) // returns fd
 void sendPacket(void *packet, int type)
 {
 	struct headPacket *headP = (struct headPacket*)packet;
-	
 
 	if(type == GP_PACKET)
 	{
