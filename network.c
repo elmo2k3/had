@@ -32,6 +32,8 @@ void networkThread(void)
 	unsigned char buf[BUF_SIZE];
 	int recv_size;
 
+	int i;
+
 	leave = 0;
 
 	signal(SIGQUIT, (void*)networkThreadStop);
@@ -70,7 +72,7 @@ void networkThread(void)
 			case CMD_NETWORK_RGB: 
 				recv_size = recv(client_sock,&rgbP, sizeof(rgbP),0);
 				printf("RGB Destination: %d Red: %d Green: %d Blue: %d Smoothness: %d\n",
-						rgbP.address,
+						rgbP.headP.address,
 						rgbP.red,
 						rgbP.green,
 						rgbP.blue,
@@ -81,6 +83,22 @@ void networkThread(void)
 			case CMD_NETWORK_GET_RGB:
 				send(client_sock,&rgbP, sizeof(rgbP),0);
 				break;
+
+			case CMD_NETWORK_BLINK:
+				for(i=0;i<2;i++)
+				{
+					sendRgbPacket(1,255,0,0,0);
+					sendRgbPacket(3,255,0,0,0);
+//					usleep(50000);
+
+					/* Achtung, hack: annahme beide Module gleiche Farbe */
+					rgbP.headP.address = 1;
+					sendPacket(&rgbP,RGB_PACKET);
+					rgbP.headP.address = 3;
+					sendPacket(&rgbP,RGB_PACKET);
+//					usleep(50000);
+				}
+				break;
 						     
 		}	
 		if(leave == 1)
@@ -90,5 +108,7 @@ void networkThread(void)
 	}
 
 }
+
+
 
 

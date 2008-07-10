@@ -62,8 +62,7 @@ struct glcdMainPacket
 /* 6 Byte */
 struct _rgbPacket
 {
-	unsigned char address;
-	unsigned char count;
+	struct headPacket headP;
 	unsigned char red;
 	unsigned char green;
 	unsigned char blue;
