@@ -12,6 +12,7 @@
 #include "network.h"
 #include "main.h"
 #include "serial.h"
+#include "database.h"
 
 static int sock, leave;
 
@@ -89,16 +90,27 @@ void networkThread(void)
 				{
 					sendRgbPacket(1,255,0,0,0);
 					sendRgbPacket(3,255,0,0,0);
-//					usleep(50000);
-
+					
 					/* Achtung, hack: annahme beide Module gleiche Farbe */
 					rgbP.headP.address = 1;
 					sendPacket(&rgbP,RGB_PACKET);
 					rgbP.headP.address = 3;
 					sendPacket(&rgbP,RGB_PACKET);
-//					usleep(50000);
 				}
 				break;
+
+			case CMD_NETWORK_GET_TEMPERATURE:
+				int modul,sensor;
+				int celsius, decicelsius;
+
+				recv(client_sock,&modul, sizeof(modul), 0);
+				recv(client_sock,&sensor, sizeof(modul), 0);
+
+				getLastTemperature(modul,sensor, &celsius, &decicelsius);
+
+				send(client_sock, &celsius, sizeof(celsius), 0);
+				send(client_sock, &decicelsius, sizeof(celsius), 0);
+				break;				
 						     
 		}	
 		if(leave == 1)
