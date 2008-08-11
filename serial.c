@@ -116,6 +116,13 @@ void sendPacket(void *packet, int type)
 		headP->command = 0;
 		write(fd,packet,sizeof(rgbP));
 	}		
+	else if(type == RELAIS_PACKET)
+	{
+		headP->address = 0x0A;
+		headP->count = 2;
+		headP->command = 0;
+		write(fd,packet,sizeof(relaisP));
+	}		
 	usleep(50000); // warten bis Packet wirklich abgeschickt wurde
 }
 

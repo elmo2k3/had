@@ -34,6 +34,10 @@ void networkThread(void)
 	int recv_size;
 
 	int i;
+	uint8_t modul,sensor;
+	int16_t celsius, decicelsius;
+
+	uint8_t relais;
 
 	leave = 0;
 
@@ -72,12 +76,13 @@ void networkThread(void)
 		{
 			case CMD_NETWORK_RGB: 
 				recv_size = recv(client_sock,&rgbP, sizeof(rgbP),0);
-				printf("RGB Destination: %d Red: %d Green: %d Blue: %d Smoothness: %d\n",
+				/*printf("RGB Destination: %d Red: %d Green: %d Blue: %d Smoothness: %d\n",
 						rgbP.headP.address,
 						rgbP.red,
 						rgbP.green,
 						rgbP.blue,
 						rgbP.smoothness);
+						*/
 				sendPacket(&rgbP,RGB_PACKET);
 				break;
 
@@ -91,6 +96,7 @@ void networkThread(void)
 					sendRgbPacket(1,255,0,0,0);
 					sendRgbPacket(3,255,0,0,0);
 					
+					rgbP.smoothness = 0;
 					/* Achtung, hack: annahme beide Module gleiche Farbe */
 					rgbP.headP.address = 1;
 					sendPacket(&rgbP,RGB_PACKET);
@@ -100,17 +106,24 @@ void networkThread(void)
 				break;
 
 			case CMD_NETWORK_GET_TEMPERATURE:
-				int modul,sensor;
-				int celsius, decicelsius;
-
 				recv(client_sock,&modul, sizeof(modul), 0);
-				recv(client_sock,&sensor, sizeof(modul), 0);
+				recv(client_sock,&sensor, sizeof(sensor), 0);
 
-				getLastTemperature(modul,sensor, &celsius, &decicelsius);
+				//getLastTemperature(modul,sensor, &celsius, &decicelsius);
 
 				send(client_sock, &celsius, sizeof(celsius), 0);
 				send(client_sock, &decicelsius, sizeof(celsius), 0);
-				break;				
+				break;
+			
+			case CMD_NETWORK_RELAIS:
+				recv_size = recv(client_sock,&relais, sizeof(relais),0);
+				relaisP.port = relais;
+				printf("Setting relais to ... %d\n",relaisP.port);
+				sendPacket(&relaisP,RELAIS_PACKET);
+				break;
+			case CMD_NETWORK_GET_RELAIS:
+				send(client_sock,&relaisP, sizeof(relaisP),0);
+				break;
 						     
 		}	
 		if(leave == 1)

@@ -13,6 +13,7 @@
 #define GRAPH_PACKET2 2
 #define MPD_PACKET 3
 #define RGB_PACKET 4
+#define RELAIS_PACKET 5
 
 #define GLCD_ADDRESS 7
 
@@ -68,6 +69,12 @@ struct _rgbPacket
 	unsigned char blue;
 	unsigned char smoothness;
 }rgbP;
+
+struct _relaisPacket
+{
+	struct headPacket headP;
+	unsigned char port;
+}relaisP;
 
 
 #endif

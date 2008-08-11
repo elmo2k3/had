@@ -10,6 +10,8 @@ extern void networkThread(void);
 #define CMD_NETWORK_BLINK 3
 #define CMD_NETWORK_GET_TEMPERATURE 4
 #define CMD_NETWORK_GET_VOLTAGE 5
+#define CMD_NETWORK_RELAIS 6
+#define CMD_NETWORK_GET_RELAIS 7
 
 #define BUF_SIZE 1024
 

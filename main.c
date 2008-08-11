@@ -57,7 +57,7 @@ int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *dec
 	else
 		return 0;
 					
-	if(*modul_id == 7) //GLCD Modul
+	if(*modul_id == 7 || *modul_id == 10) //GLCD Modul
 		return *sensor_id;
 		
 	trenner = (char*)strtok(NULL,";");
@@ -139,7 +139,6 @@ int main(int argc, char* argv[])
 					break;
 				
 				case 2:
-					printf("Paket vom GLCD-Modul empfangen!!....");
 					ptm = localtime(&rawtime);
 					glcdP.hour = ptm->tm_hour;
 					glcdP.minute = ptm->tm_min;
@@ -164,11 +163,11 @@ int main(int argc, char* argv[])
 					else
 						glcdP.wecker = 0;
 					sendPacket(&glcdP,GP_PACKET);
-					printf("Antwort gesendet\r\n");
+					printf("GraphLCD Info Paket gesendet\r\n");
 					break;
 				case 3:
 					getDailyGraph(celsius,decicelsius, &graphP);
-					sendPacket(&graphP,GRAPH_PACKET);
+					//sendPacket(&graphP,GRAPH_PACKET);
 					printf("Graph gesendet\r\n");
 					break;
 				case 4:	// MPD Packet request
@@ -178,9 +177,17 @@ int main(int argc, char* argv[])
 				case 5: // MPD prev song
 					printf("MPD prev song\r\n");
 					//mpd_player_prev(mpd);
+					break;
 				case 6: // MPD next song
 					printf("MPD next song\r\n");
 					//mpd_player_next(mpd);
+					break;
+				case 10: printf("Serial Modul hard-reset\r\n");
+					 break;
+				case 11: printf("Serial Modul Watchdog-reset\r\n");
+					 break;
+				case 12: printf("Serial Modul uart timeout\r\n");
+					 break;
 				case 0: //decode Stream failed
 					printf("decodeStream failed!\r\n");
 					break;
