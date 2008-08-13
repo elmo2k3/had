@@ -5,9 +5,9 @@
 #CFLAGS = -I ${INCLUDE_DIR}
 #LDFLAGS = -Xlinker -rpath-link -Xlinker ${STAGING_DIR}/usr/lib -L${STAGING_DIR}/usr/lib/ -L${STAGING_DIR}/lib -L${STAGING_DIR}/usr/lib/mysql
 LDFLAGS += -lmysqlclient -lpthread -lmpd -Llibmpd-0.14.0/src
-CFLAGS += -Os -Wall -I libmpd-0.14.0/src
+CFLAGS += -Os -Wall -I libmpd-0.14.0/src -g
 
-main: main.o serial.o database.o mpd.o network.o
+main: main.o serial.o database.o mpd.o network.o scrobbler.o
 
 clean: 
 	rm *.o main

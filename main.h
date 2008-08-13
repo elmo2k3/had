@@ -20,6 +20,8 @@
 extern pthread_t threads[2];
 extern void hadSIGINT(void);
 
+extern volatile signed char lastTemperature[9][9][2];
+
 struct headPacket
 {
 	unsigned char address;

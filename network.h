@@ -5,6 +5,7 @@
 
 extern void networkThread(void);
 
+#define CMD_NETWORK_QUIT 0
 #define CMD_NETWORK_RGB 1
 #define CMD_NETWORK_GET_RGB 2
 #define CMD_NETWORK_BLINK 3
@@ -14,14 +15,7 @@ extern void networkThread(void);
 #define CMD_NETWORK_GET_RELAIS 7
 
 #define BUF_SIZE 1024
+#define MAX_CLIENTS 10
 
-//struct _rgbNetworkPacket
-//{
-//	int destination;
-//	int red;
-//	int green;
-//	int blue;
-//};
-	
 #endif
 

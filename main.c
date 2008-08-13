@@ -17,6 +17,8 @@
 
 pthread_t threads[2];
 
+volatile signed char lastTemperature[9][9][2];
+
 int fileExists(const char *filename)
 {
 	FILE *fp = fopen(filename,"r");
@@ -78,14 +80,17 @@ int main(int argc, char* argv[])
 	char buf[255];
 
 	int modul_id,sensor_id,celsius,decicelsius,voltage;
-	signed char lastTemperature[9][9][2];
 	time_t rawtime;
 	struct tm *ptm;
+
 
 	/* Inhalt des Arrays komplett mit 0 initialisieren */
 	memset(graphP.temperature_history,0,115);
 	memset(&rgbP,0,sizeof(rgbP)); // rgpP mit 0 initialisieren
 
+	lastTemperature[3][1][0] = -1;
+	lastTemperature[3][0][0] = -1;
+	
 	pthread_create(&threads[0],NULL,(void*)&mpdThread,NULL);	
 	pthread_create(&threads[1],NULL,(void*)&networkThread,NULL);	
 

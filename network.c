@@ -16,11 +16,87 @@
 
 static int sock, leave;
 
+pthread_t *network_client_thread[MAX_CLIENTS];
+
+static void networkClientHandler(int client_sock);
+
+static int8_t numConnectedClients = 0;
+
 static void networkThreadStop(void)
 {
 	close(sock);
 	leave = 1;
 	printf("NetworkThread stopped\n");
+}
+
+static void networkClientHandler(int client_sock)
+{
+	unsigned char buf[BUF_SIZE];
+	int recv_size;
+
+	int i;
+	uint8_t modul,sensor;
+	int16_t celsius, decicelsius;
+
+	uint8_t relais;
+	do
+	{
+		buf[0] = 255;
+		/* Erstes Byte = Kommando */
+		recv_size = recv(client_sock, buf, 1, 0);
+		switch(buf[0])
+		{
+			case CMD_NETWORK_RGB: 
+				recv_size = recv(client_sock,&rgbP, sizeof(rgbP),0);
+				sendPacket(&rgbP,RGB_PACKET);
+				break;
+
+			case CMD_NETWORK_GET_RGB:
+				send(client_sock,&rgbP, sizeof(rgbP),0);
+				break;
+
+			case CMD_NETWORK_BLINK:
+				for(i=0;i<2;i++)
+				{
+					sendRgbPacket(1,255,0,0,0);
+					sendRgbPacket(3,255,0,0,0);
+					
+					rgbP.smoothness = 0;
+					/* Achtung, hack: annahme beide Module gleiche Farbe */
+					rgbP.headP.address = 1;
+					sendPacket(&rgbP,RGB_PACKET);
+					rgbP.headP.address = 3;
+					sendPacket(&rgbP,RGB_PACKET);
+				}
+				break;
+
+			case CMD_NETWORK_GET_TEMPERATURE:
+				recv(client_sock,&modul, sizeof(modul), 0);
+				recv(client_sock,&sensor, sizeof(sensor), 0);
+
+				celsius = lastTemperature[modul][sensor][0];
+				decicelsius = lastTemperature[modul][sensor][1];
+
+				send(client_sock, &celsius, sizeof(celsius), 0);
+				send(client_sock, &decicelsius, sizeof(celsius), 0);
+				break;
+			
+			case CMD_NETWORK_RELAIS:
+				recv_size = recv(client_sock,&relais, sizeof(relais),0);
+				relaisP.port = relais;
+				printf("Setting relais to ... %d\n",relaisP.port);
+				sendPacket(&relaisP,RELAIS_PACKET);
+				break;
+			case CMD_NETWORK_GET_RELAIS:
+				send(client_sock,&relaisP, sizeof(relaisP),0);
+				break;
+						     
+		}	
+		usleep(1000);
+	}while(buf[0] != CMD_NETWORK_QUIT);
+
+	close(client_sock);
+	numConnectedClients--;
 }
 
 void networkThread(void)
@@ -30,14 +106,6 @@ void networkThread(void)
 	unsigned int len;
 	int y=1;
 
-	unsigned char buf[BUF_SIZE];
-	int recv_size;
-
-	int i;
-	uint8_t modul,sensor;
-	int16_t celsius, decicelsius;
-
-	uint8_t relais;
 
 	leave = 0;
 
@@ -69,69 +137,14 @@ void networkThread(void)
 	{
 		len = sizeof(client);
 		client_sock = accept(sock, (struct sockaddr*)&client, &len);
-		
-		/* Erstes Byte = Kommando */
-		recv_size = recv(client_sock, buf, 1, 0);
-		switch(buf[0])
-		{
-			case CMD_NETWORK_RGB: 
-				recv_size = recv(client_sock,&rgbP, sizeof(rgbP),0);
-				/*printf("RGB Destination: %d Red: %d Green: %d Blue: %d Smoothness: %d\n",
-						rgbP.headP.address,
-						rgbP.red,
-						rgbP.green,
-						rgbP.blue,
-						rgbP.smoothness);
-						*/
-				sendPacket(&rgbP,RGB_PACKET);
-				break;
+		printf("Client %d connected\n",numConnectedClients+1);
 
-			case CMD_NETWORK_GET_RGB:
-				send(client_sock,&rgbP, sizeof(rgbP),0);
-				break;
-
-			case CMD_NETWORK_BLINK:
-				for(i=0;i<2;i++)
-				{
-					sendRgbPacket(1,255,0,0,0);
-					sendRgbPacket(3,255,0,0,0);
-					
-					rgbP.smoothness = 0;
-					/* Achtung, hack: annahme beide Module gleiche Farbe */
-					rgbP.headP.address = 1;
-					sendPacket(&rgbP,RGB_PACKET);
-					rgbP.headP.address = 3;
-					sendPacket(&rgbP,RGB_PACKET);
-				}
-				break;
-
-			case CMD_NETWORK_GET_TEMPERATURE:
-				recv(client_sock,&modul, sizeof(modul), 0);
-				recv(client_sock,&sensor, sizeof(sensor), 0);
-
-				//getLastTemperature(modul,sensor, &celsius, &decicelsius);
-
-				send(client_sock, &celsius, sizeof(celsius), 0);
-				send(client_sock, &decicelsius, sizeof(celsius), 0);
-				break;
-			
-			case CMD_NETWORK_RELAIS:
-				recv_size = recv(client_sock,&relais, sizeof(relais),0);
-				relaisP.port = relais;
-				printf("Setting relais to ... %d\n",relaisP.port);
-				sendPacket(&relaisP,RELAIS_PACKET);
-				break;
-			case CMD_NETWORK_GET_RELAIS:
-				send(client_sock,&relaisP, sizeof(relaisP),0);
-				break;
-						     
-		}	
-		if(leave == 1)
-			return;
-//		printf("Verbindung...\n");
-		close(client_sock);
+		if(numConnectedClients < MAX_CLIENTS)
+			pthread_create((void*)&network_client_thread[numConnectedClients++], NULL, (void*)networkClientHandler, (int*)client_sock);
+		else
+			printf("Maximale Anzahl Clients erreicht (%d)\n",numConnectedClients);
 	}
-
+		
 }
 
 

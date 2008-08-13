@@ -125,23 +125,34 @@ void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsi
 
 void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
 {
-	char query[255];
-
-	MYSQL_RES *mysql_res;
-	MYSQL_ROW mysql_row;
-
-	sprintf(query,"SELECT temperature FROM temperatures WHERE modul_id=%d AND sensor_id=%d ORDER BY id DESC LIMIT 1",modul,sensor);
-	if(mysql_query(mysql_connection,query))
+	if(lastTemperature[modul][sensor][0] == -1)
 	{
-		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		exit(0);
-	}
+		char query[255];
 
-	mysql_res = mysql_use_result(mysql_connection);
-	mysql_row = mysql_fetch_row(mysql_res);
-	*temp = atoi(mysql_row[0]);
-	*temp_deci = (atof(mysql_row[0]) - *temp)*10;
-	
-	mysql_free_result(mysql_res);
+		MYSQL_RES *mysql_res;
+		MYSQL_ROW mysql_row;
+
+		sprintf(query,"SELECT temperature FROM temperatures WHERE modul_id=%d AND sensor_id=%d ORDER BY id DESC LIMIT 1",modul,sensor);
+		if(mysql_query(mysql_connection,query))
+		{
+			fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+			exit(0);
+		}
+
+		mysql_res = mysql_use_result(mysql_connection);
+		mysql_row = mysql_fetch_row(mysql_res);
+		if(mysql_row[0])
+		{
+			*temp = atoi(mysql_row[0]);
+			*temp_deci = (atof(mysql_row[0]) - *temp)*10;
+		}
+		
+		mysql_free_result(mysql_res);
+	}
+	else
+	{
+		*temp = (int)lastTemperature[modul][sensor][0];
+		*temp_deci = (int)lastTemperature[modul][sensor][1];
+	}
 }
 
