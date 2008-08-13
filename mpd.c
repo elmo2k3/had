@@ -92,8 +92,9 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			 */
 			if(relaisP.port & 4)
 			{
+				/* check if the track ran at least 2:40 or half of its runtime */
 				if(last_time && last_time_started && 
-						((last_time_started + 240) <= current_time ||
+						((last_time_started + 160) <= current_time ||
 						 (last_time_started + (last_time/2)) <= current_time  ))
 				{
 					if(scrobblerSubmitTrack(submission_url, session_id, 
@@ -101,7 +102,11 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 							last_time, last_track, last_time_started))
 						printf("%s - %s submitted to lastfm!\n", last_artist, last_title);
 					else
+					{
 						printf("Submit fehlgeschlagen!\n");
+						if(!scrobblerHandshake(session_id, now_playing_url, submission_url))
+							printf("Scrobbler Handshake fehlgeschlagen\n");
+					}
 
 				}
 

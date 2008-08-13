@@ -49,8 +49,6 @@ int scrobblerHandshake(char *session_id, char *now_playing, char *submission)
 	system(wgetString);
 	free(authHash);
 
-	printf("%s\n",wgetString);
-	
 	tmpFile = fopen(SCROBBLER_TMP_FILE,"r");
 	if(tmpFile)
 	{
