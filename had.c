@@ -30,7 +30,7 @@
 
 #include "serial.h"
 #include "database.h"
-#include "main.h"
+#include "had.h"
 #include "mpd.h"
 #include "network.h"
 

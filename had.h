@@ -17,8 +17,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef __MAIN_H__
-#define __MAIN_H__
+#ifndef __HAD_H__
+#define __HAD_H__
 
 #include <pthread.h>
 
@@ -40,6 +40,23 @@ extern pthread_t threads[2];
 extern void hadSIGINT(void);
 
 extern signed char lastTemperature[9][9][2];
+
+struct _config
+{
+	char database_server[50];
+	char database_user[20];
+	char database_password[30];
+	char database_database[20];
+	int database_port;
+	
+	char mpd_server[50];
+	char mpd_password[30];
+	int mpd_port;
+
+	char scrobbler_user[20];
+	char scrobbler_hash[32];
+	char scrobbler_tmpfile[100];
+}config;
 
 struct headPacket
 {
