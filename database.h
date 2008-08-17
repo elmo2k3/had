@@ -20,9 +20,10 @@
 #ifndef __DATABASE_H__
 #define __DATABASE_H__
 
-#include "main.h"
-#include "mysql/mysql.h"
 #include <time.h>
+
+#include "mysql/mysql.h"
+#include "had.h"
 
 
 #define MYSQL_SERVER 	"192.168.2.1"

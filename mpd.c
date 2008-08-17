@@ -26,7 +26,7 @@
 
 #include "serial.h"
 #include "mpd.h"
-#include "main.h"
+#include "had.h"
 #include "scrobbler.h"
 	
 static MpdObj *mpd;
@@ -95,7 +95,8 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 				/* check if the track ran at least 2:40 or half of its runtime */
 				if(last_time && last_time_started && 
 						((last_time_started + 160) <= current_time ||
-						 (last_time_started + (last_time/2)) <= current_time  ))
+						 (last_time_started + (last_time/2)) <= current_time  )
+						&& song->artist && song->title)
 				{
 					if(scrobblerSubmitTrack(submission_url, session_id, 
 							last_artist, last_title, last_album,

@@ -29,7 +29,7 @@
 #include <signal.h>
 
 #include "network.h"
-#include "main.h"
+#include "had.h"
 #include "serial.h"
 #include "database.h"
 
@@ -55,7 +55,7 @@ static void networkClientHandler(int client_sock)
 
 	int i;
 	uint8_t modul,sensor;
-	int16_t celsius, decicelsius;
+	signed char celsius, decicelsius;
 
 	uint8_t relais;
 	do
@@ -96,8 +96,8 @@ static void networkClientHandler(int client_sock)
 				celsius = lastTemperature[modul][sensor][0];
 				decicelsius = lastTemperature[modul][sensor][1];
 
-				send(client_sock, &celsius, sizeof(celsius), 0);
-				send(client_sock, &decicelsius, sizeof(celsius), 0);
+				send(client_sock, &lastTemperature[modul][sensor][0], sizeof(celsius), 0);
+				send(client_sock, &lastTemperature[modul][sensor][1], sizeof(celsius), 0);
 				break;
 			
 			case CMD_NETWORK_RELAIS:

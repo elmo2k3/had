@@ -17,11 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "main.h"
 #include "database.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
+#include "had.h"
 
 
 MYSQL *mysql_connection;

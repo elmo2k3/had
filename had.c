@@ -36,7 +36,7 @@
 
 pthread_t threads[2];
 
-volatile signed char lastTemperature[9][9][2];
+signed char lastTemperature[9][9][2];
 
 int fileExists(const char *filename)
 {

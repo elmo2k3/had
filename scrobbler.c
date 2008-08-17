@@ -23,7 +23,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "main.h"
+#include "had.h"
 #include "scrobbler.h"
 
 static char *scrobblerGetAuthHash(time_t timestamp);

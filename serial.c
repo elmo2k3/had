@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "serial.h"
-#include "main.h"
+#include "had.h"
 
 int fd;
 
