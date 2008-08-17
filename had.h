@@ -22,6 +22,8 @@
 
 #include <pthread.h>
 
+#define HAD_CONFIG_FILE "had.conf"
+
 #define ADC_RES 1024
 #define ADC_MODUL_1 ADC_RES*1.22
 #define ADC_MODUL_3 ADC_RES*1.3
@@ -54,8 +56,10 @@ struct _config
 	int mpd_port;
 
 	char scrobbler_user[20];
-	char scrobbler_hash[32];
+	char scrobbler_hash[34];
 	char scrobbler_tmpfile[100];
+	
+	char logfile[100];
 }config;
 
 struct headPacket

@@ -42,17 +42,9 @@ void mpdErrorCallback(MpdObj *mi, int errorid, char *msg, void *userdata)
 
 int mpdInit(void)
 {
-	int iport = 6600;
-	char *hostname = getenv("MPD_HOST");
-	char *port = getenv("MPD_PORT");
-	char *password = getenv("MPD_PASSWORD");
-	
-	if(!hostname)
-		hostname = "localhost";
-	if(port)
-		iport = atoi(port);
-
-	mpd = mpd_new(hostname,iport,password);
+	mpd = mpd_new(config.mpd_server,
+			config.mpd_port,
+			config.mpd_password);
 
 	mpd_signal_connect_status_changed(mpd,(StatusChangedCallback)mpdStatusChanged, NULL);
 	mpd_signal_connect_error(mpd,(ErrorCallback)mpdErrorCallback, NULL);

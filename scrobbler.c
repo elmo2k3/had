@@ -45,20 +45,20 @@ int scrobblerHandshake(char *session_id, char *now_playing, char *submission)
 	copy_of_time = (long long int)rawtime;
 
 	authHash = scrobblerGetAuthHash((time_t)copy_of_time);
-	sprintf(wgetString, SCROBBLER_HANDSHAKE_EXECUTE, SCROBBLER_TMP_FILE, SCROBBLER_USER, copy_of_time, authHash);
+	sprintf(wgetString, SCROBBLER_HANDSHAKE_EXECUTE, config.scrobbler_tmpfile, config.scrobbler_user, copy_of_time, authHash);
 	system(wgetString);
 	free(authHash);
 
-	tmpFile = fopen(SCROBBLER_TMP_FILE,"r");
+	tmpFile = fopen(config.scrobbler_tmpfile,"r");
 	if(tmpFile)
 	{
 		fscanf(tmpFile,"%s\n%s\n%s\n%s",(char*)&status, session_id, now_playing, submission);
 		fclose(tmpFile);
 
-//		unlink(SCROBBLER_TMP_FILE);
+//		unlink(config.scrobbler_tmpfile);
 	}
 	else
-		printf("%s konnte nicht geoffnet werden\n",SCROBBLER_TMP_FILE);
+		printf("%s konnte nicht geoffnet werden\n",config.scrobbler_tmpfile);
 	
 	if(!strcmp(status,"OK"))
 		return 1;
@@ -72,20 +72,20 @@ int scrobblerHandshake(char *session_id, char *now_playing, char *submission)
 static char *scrobblerGetAuthHash(time_t timestamp)
 {
 	/* Nur passend fuer TMP_DIR Laenge max 4 */
-	char executeString[80];
+	char executeString[160];
 
 	char *authHash = (char*)malloc(sizeof(char)*40);
 	FILE *md5File;
 
-	sprintf(executeString, SCROBBLER_MD5_EXECUTE, SCROBBLER_PASS_HASH, (long long int)timestamp);
+	sprintf(executeString, SCROBBLER_MD5_EXECUTE, config.scrobbler_hash, (long long int)timestamp);
 	system(executeString);
 	
-	md5File = fopen(SCROBBLER_TMP_FILE,"r");
+	md5File = fopen(config.scrobbler_tmpfile,"r");
 	fscanf(md5File,"%s",authHash);
 	if(md5File)
 	{
 		fclose(md5File);
-//		unlink(SCROBBLER_TMP_FILE);
+		unlink(config.scrobbler_tmpfile);
 	}
 
 	return authHash;
@@ -98,16 +98,16 @@ int scrobblerNowPlaying(char *url, char *session_id, char *artist, char *title, 
 	FILE *tmpFile;
 
 	sprintf(executeString, SCROBBLER_NOW_PLAYING_EXECUTE,
-			SCROBBLER_TMP_FILE, url, session_id, artist, title, album, length, track);
+			config.scrobbler_tmpfile, url, session_id, artist, title, album, length, track);
 	system(executeString);
 	
-	tmpFile = fopen(SCROBBLER_TMP_FILE, "r");
+	tmpFile = fopen(config.scrobbler_tmpfile, "r");
 
 	if(tmpFile)
 	{
 		fscanf(tmpFile,"%s",(char*)&status);
 		fclose(tmpFile);
-//		unlink(SCROBBLER_TMP_FILE);
+		unlink(config.scrobbler_tmpfile);
 	}
 	else
 		return 0;
@@ -128,16 +128,16 @@ int scrobblerSubmitTrack(char *url, char *session_id, char *artist, char *title,
 	FILE *tmpFile;
 
 	sprintf(executeString, SCROBBLER_SUBMISSION_EXECUTE,
-			SCROBBLER_TMP_FILE, url, session_id, artist, title, album, length, track, (long long int)started_playing);
+			config.scrobbler_tmpfile, url, session_id, artist, title, album, length, track, (long long int)started_playing);
 	system(executeString);
 	
-	tmpFile = fopen(SCROBBLER_TMP_FILE, "r");
+	tmpFile = fopen(config.scrobbler_tmpfile, "r");
 
 	if(tmpFile)
 	{
 		fscanf(tmpFile,"%s",(char*)&status);
 		fclose(tmpFile);
-//		unlink(SCROBBLER_TMP_FILE);
+		unlink(config.scrobbler_tmpfile);
 	}
 	else
 		return 0;

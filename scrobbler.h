@@ -22,10 +22,6 @@
 
 /* For info: http://www.audioscrobbler.net/development/protocol/ */
 
-#define SCROBBLER_TMP_FILE "/tmp/scrobbler_tmp"
-#define SCROBBLER_USER "elmo2k3"
-#define SCROBBLER_PASS_HASH "c873e077d2cd57fd6e3e10f19d08456c"
-
 #define SCROBBLER_HANDSHAKE_EXECUTE "wget -O %s \"http://post.audioscrobbler.com/?hs=true&p=1.2&c=tst&v=1.0&u=%s&t=%qd&a=%s\" >> /dev/null 2>&1"
 #define SCROBBLER_MD5_EXECUTE "echo -n %s%qd | md5sum > /tmp/scrobbler_tmp"
 

@@ -33,6 +33,7 @@
 #include "had.h"
 #include "mpd.h"
 #include "network.h"
+#include "config.h"
 
 pthread_t threads[2];
 
@@ -102,6 +103,11 @@ int main(int argc, char* argv[])
 	time_t rawtime;
 	struct tm *ptm;
 
+	if(!loadConfig(HAD_CONFIG_FILE))
+	{
+		printf("Could not load config ... aborting\n\n");
+		exit(1);
+	}
 
 	/* Inhalt des Arrays komplett mit 0 initialisieren */
 	memset(graphP.temperature_history,0,115);

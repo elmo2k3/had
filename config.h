@@ -16,20 +16,18 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
 
-#ifndef __DATABASE_H__
-#define __DATABASE_H__
+#define NUM_PARAMS 12
+#define CONFIG_FILE "/etc/had.conf"
 
-#include <time.h>
+/* return 0 on failure, 1 on success */
+extern int loadConfig(char *conf);
 
-#include "mysql/mysql.h"
-#include "had.h"
-
-
-int initDatabase(void);
-void getDailyGraph(int modul, int sensor, struct graphPacket *graph);
-void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci);
-void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, struct tm *ptm);
+/* Default values */
+#define MYSQL_PORT 3306
+#define MPD_PORT 6600
 
 #endif
 

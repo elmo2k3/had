@@ -31,7 +31,11 @@ int initDatabase(void)
 {
 	mysql_connection = mysql_init(NULL);
 	
-	if (!mysql_real_connect(mysql_connection, MYSQL_SERVER, MYSQL_USER, MYSQL_PASS, MYSQL_DB, 0, NULL, 0))
+	if (!mysql_real_connect(mysql_connection, 
+				config.database_server, 
+				config.database_user,
+				config.database_password,
+				config.database_database, 0, NULL, 0))
 	{
 		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
 		return -1;
