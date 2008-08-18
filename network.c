@@ -45,7 +45,7 @@ static void networkThreadStop(void)
 {
 	close(sock);
 	leave = 1;
-	printf("NetworkThread stopped\n");
+	verbose_printf(0, "NetworkThread stopped\n");
 }
 
 static void networkClientHandler(int client_sock)
@@ -103,7 +103,7 @@ static void networkClientHandler(int client_sock)
 			case CMD_NETWORK_RELAIS:
 				recv_size = recv(client_sock,&relais, sizeof(relais),0);
 				relaisP.port = relais;
-				printf("Setting relais to ... %d\n",relaisP.port);
+				verbose_printf(9, "Setting relais to ... %d\n",relaisP.port);
 				sendPacket(&relaisP,RELAIS_PACKET);
 				break;
 			case CMD_NETWORK_GET_RELAIS:
@@ -132,7 +132,7 @@ void networkThread(void)
 	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if( sock < 0 )
 	{
-		printf("Listener Socket konnte nicht erstellt werden!\n");
+		verbose_printf(0, "Listener Socket konnte nicht erstellt werden!\n");
 	}
 	
 	memset(&server, 0, sizeof(server));
@@ -144,24 +144,24 @@ void networkThread(void)
 
 	if(bind(sock,(struct sockaddr*)&server, sizeof( server)) < 0)
 	{
-		printf("Konnte TCP Server nicht starten\n");
+		verbose_printf(0, "Konnte TCP Server nicht starten\n");
 	}
 
 	if(listen(sock, 5) == -1)
 	{
-		printf("Error bei listen\n");
+		verbose_printf(0, "Error bei listen\n");
 	}
 
 	while(1)
 	{
 		len = sizeof(client);
 		client_sock = accept(sock, (struct sockaddr*)&client, &len);
-		printf("Client %d connected\n",numConnectedClients+1);
+		verbose_printf(9, "Client %d connected\n",numConnectedClients+1);
 
 		if(numConnectedClients < MAX_CLIENTS)
 			pthread_create((void*)&network_client_thread[numConnectedClients++], NULL, (void*)networkClientHandler, (int*)client_sock);
 		else
-			printf("Maximale Anzahl Clients erreicht (%d)\n",numConnectedClients);
+			verbose_printf(0, "Maximale Anzahl Clients erreicht (%d)\n",numConnectedClients);
 	}
 		
 }

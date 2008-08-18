@@ -22,7 +22,7 @@
 
 #include <pthread.h>
 
-#define HAD_CONFIG_FILE "had.conf"
+#define HAD_CONFIG_FILE "/etc/had.conf"
 
 #define ADC_RES 1024
 #define ADC_MODUL_1 ADC_RES*1.22
@@ -38,8 +38,17 @@
 
 #define GLCD_ADDRESS 7
 
+#define verbose_printf(X,args...) \
+	if(X <= config.verbosity) \
+        {\
+                printf("%s    ",theTime()); \
+                printf(args); \
+	}
+
 extern pthread_t threads[2];
 extern void hadSIGINT(void);
+
+extern char *theTime(void);
 
 extern signed char lastTemperature[9][9][2];
 
@@ -60,6 +69,9 @@ struct _config
 	char scrobbler_tmpfile[100];
 	
 	char logfile[100];
+	char tty[255];
+	int verbosity;
+	int daemonize;
 }config;
 
 struct headPacket

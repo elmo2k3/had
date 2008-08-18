@@ -24,9 +24,11 @@
 #include "config.h"
 #include "had.h"
 
+#define NUM_PARAMS 15
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
 	"db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
-	"scrobbler_hash", "scrobbler_tmpfile", "logfile"};
+	"scrobbler_hash", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
+	"tty"};
 
 
 int loadConfig(char *conf)
@@ -40,7 +42,6 @@ int loadConfig(char *conf)
 	config_file = fopen(conf,"r");
 	if(!config_file)
 	{
-		printf("Could not load config file, aborting ...\n\n");
 		return 0;
 	}
 
@@ -117,6 +118,15 @@ int loadConfig(char *conf)
 					 break;
 				/* logfile */
 				case 11: strcpy(config.logfile, value);
+					 break;
+				/* verbosity */
+				case 12: config.verbosity = atoi(value);
+					 break;
+				/* daemonize? */
+				case 13: config.daemonize = atoi(value);
+					 break;
+				/* serial port */
+				case 14: strcpy(config.tty, value);
 					 break;
 			}
 		}

@@ -27,6 +27,8 @@
 #include <libmpd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/stat.h>
+#include <sysexits.h>
 
 #include "serial.h"
 #include "database.h"
@@ -35,11 +37,12 @@
 #include "network.h"
 #include "config.h"
 
+
 pthread_t threads[2];
 
 signed char lastTemperature[9][9][2];
 
-int fileExists(const char *filename)
+static int fileExists(const char *filename)
 {
 	FILE *fp = fopen(filename,"r");
 	if(fp)
@@ -49,6 +52,21 @@ int fileExists(const char *filename)
 	}
 	else
 		return 0;
+}
+
+char *theTime(void)
+{
+	static char returnValue[9];
+	time_t currentTime;
+	struct tm *ptm;
+
+	time(&currentTime);
+
+	ptm = localtime(&currentTime);
+
+	sprintf(returnValue,"%02d.%2d %02d:%02d:%02d",ptm->tm_mday, ptm->tm_mon,  
+			ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+	return returnValue;
 }
 
 int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *decicelsius, int *voltage)
@@ -102,13 +120,37 @@ int main(int argc, char* argv[])
 	int modul_id,sensor_id,celsius,decicelsius,voltage;
 	time_t rawtime;
 	struct tm *ptm;
+	pid_t pid;
 
 	if(!loadConfig(HAD_CONFIG_FILE))
 	{
-		printf("Could not load config ... aborting\n\n");
-		exit(1);
+		verbose_printf(0,"Could not load config ... aborting\n\n");
+		exit(EX_NOINPUT);
 	}
 
+	if(config.daemonize)
+	{
+		if(( pid = fork() ) != 0 )
+			exit(EX_OSERR);
+
+		if(setsid() < 0)
+			exit(EX_OSERR);
+
+		signal(SIGHUP, SIG_IGN);
+		
+		if(( pid = fork() ) != 0 )
+			exit(EX_OSERR);
+
+		umask(0);
+		
+		freopen(config.logfile, "w", stdout);
+		freopen(config.logfile, "w", stderr);
+
+		/* write into file without buffer */
+		setvbuf(stdout, NULL, _IONBF, 0);
+		setvbuf(stderr, NULL, _IONBF, 0);
+
+	}
 	/* Inhalt des Arrays komplett mit 0 initialisieren */
 	memset(graphP.temperature_history,0,115);
 	memset(&rgbP,0,sizeof(rgbP)); // rgpP mit 0 initialisieren
@@ -119,10 +161,10 @@ int main(int argc, char* argv[])
 	pthread_create(&threads[0],NULL,(void*)&mpdThread,NULL);	
 	pthread_create(&threads[1],NULL,(void*)&networkThread,NULL);	
 
-	if(initSerial(argv[1]) < 0) // serielle Schnittstelle aktivieren
+	if(initSerial(config.tty) < 0) // serielle Schnittstelle aktivieren
 	{
-		printf("Serielle Schnittstelle konnte nicht geoeffnet werden!\n");
-		exit(-1);
+		verbose_printf(0,"Serielle Schnittstelle konnte nicht geoeffnet werden!\n");
+		exit(EX_NOINPUT);
 	}
 
 	/* Falls keine Verbindung zum Mysql-Server aufgebaut werden kann, einfach
@@ -141,25 +183,26 @@ int main(int argc, char* argv[])
 	lastTemperature[3][0][0] = (char)celsius;
 	lastTemperature[3][0][1] = (char)decicelsius;
 
+	/* main loop */
 	while (1) {
 		res = readSerial(buf); // blocking read
 		if(res>1)
 		{
-			printf("Res=%d\t",res);
+			verbose_printf(9,"Res=%d\t",res);
 			time(&rawtime);
 			ptm = gmtime(&rawtime);
 			switch(decodeStream(buf,&modul_id,&sensor_id,&celsius,&decicelsius,&voltage))
 			{
 				case 1:
-					printf("%02d:%02d:%02d\t",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
-					printf("Modul ID: %d\t",modul_id);
-					printf("Sensor ID: %d\t",sensor_id);
-					printf("Temperatur: %d,%d\t",celsius,decicelsius);
+					verbose_printf(9,"%02d:%02d:%02d\t",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
+					verbose_printf(9,"Modul ID: %d\t",modul_id);
+					verbose_printf(9,"Sensor ID: %d\t",sensor_id);
+					verbose_printf(9,"Temperatur: %d,%d\t",celsius,decicelsius);
 					switch(modul_id)
 					{
-						case 1: printf("Spannung: %2.2f\r\n",ADC_MODUL_1/voltage); break;
-						case 3: printf("Spannung: %2.2f\r\n",ADC_MODUL_3/voltage); break;
-						default: printf("Spannung: %2.2f\r\n",ADC_MODUL_DEFAULT/voltage);
+						case 1: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_1/voltage); break;
+						case 3: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_3/voltage); break;
+						default: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_DEFAULT/voltage);
 					}		
 				
 					//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
@@ -187,39 +230,39 @@ int main(int argc, char* argv[])
 					glcdP.temperature[7] = lastTemperature[1][2][1];
 					if(fileExists("/had/wakeme"))
 					{
-						printf("... Wecker aktiviert ...");
+						verbose_printf(9,"... Wecker aktiviert ...");
 						glcdP.wecker = 1;
 					}
 					else
 						glcdP.wecker = 0;
 					sendPacket(&glcdP,GP_PACKET);
-					printf("GraphLCD Info Paket gesendet\r\n");
+					verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
 					break;
 				case 3:
 					getDailyGraph(celsius,decicelsius, &graphP);
 					//sendPacket(&graphP,GRAPH_PACKET);
-					printf("Graph gesendet\r\n");
+					verbose_printf(9,"Graph gesendet\r\n");
 					break;
 				case 4:	// MPD Packet request
-					printf("MPD Packet request\r\n");
+					verbose_printf(9,"MPD Packet request\r\n");
 					sendPacket(&mpdP,MPD_PACKET);
 					break;
 				case 5: // MPD prev song
-					printf("MPD prev song\r\n");
+					verbose_printf(9,"MPD prev song\r\n");
 					//mpd_player_prev(mpd);
 					break;
 				case 6: // MPD next song
-					printf("MPD next song\r\n");
+					verbose_printf(9,"MPD next song\r\n");
 					//mpd_player_next(mpd);
 					break;
-				case 10: printf("Serial Modul hard-reset\r\n");
+				case 10: verbose_printf(0,"Serial Modul hard-reset\r\n");
 					 break;
-				case 11: printf("Serial Modul Watchdog-reset\r\n");
+				case 11: verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
 					 break;
-				case 12: printf("Serial Modul uart timeout\r\n");
+				case 12: verbose_printf(0,"Serial Modul uart timeout\r\n");
 					 break;
 				case 0: //decode Stream failed
-					printf("decodeStream failed!\r\n");
+					verbose_printf(0,"decodeStream failed!\r\n");
 					break;
 			}
 		} // endif res>1
@@ -231,7 +274,7 @@ int main(int argc, char* argv[])
 void hadSIGINT(void)
 {
 	pthread_kill(threads[1],SIGQUIT);
-	printf("Shutting down\n");
-	exit(0);
+	verbose_printf(0,"Shutting down\n");
+	exit(EXIT_SUCCESS);
 }
 

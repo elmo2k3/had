@@ -17,12 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include "database.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include "had.h"
+#include "database.h"
 
 
 MYSQL *mysql_connection;
@@ -70,7 +70,7 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 	if(!mysql_row[0])
 	{
 		mysql_free_result(mysql_res);
-		printf("Keine Daten fuer den Graphen vorhanden!\n");
+		verbose_printf(1,"Keine Daten fuer den Graphen vorhanden!\n");
 		return;
 	}
 	*max = atof(mysql_row[0]);
@@ -132,7 +132,7 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	graph->numberOfPoints = x_div; // Letzter Wert
 	
 	
-	printf("Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
+	verbose_printf(9,"Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
 	
 	mysql_free_result(mysql_res);
 }

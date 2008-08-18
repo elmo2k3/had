@@ -58,13 +58,13 @@ int scrobblerHandshake(char *session_id, char *now_playing, char *submission)
 //		unlink(config.scrobbler_tmpfile);
 	}
 	else
-		printf("%s konnte nicht geoffnet werden\n",config.scrobbler_tmpfile);
+		verbose_printf(0, "%s konnte nicht geoffnet werden\n",config.scrobbler_tmpfile);
 	
 	if(!strcmp(status,"OK"))
 		return 1;
 	else
 	{
-		printf("Fehler: %s\n",status);
+		verbose_printf(0,"Fehler: %s\n",status);
 		return 0;
 	}
 }
@@ -116,7 +116,7 @@ int scrobblerNowPlaying(char *url, char *session_id, char *artist, char *title, 
 		return 1;
 	else
 	{
-		printf("Fehler: %s\n",status);
+		verbose_printf(0, "Fehler: %s\n",status);
 		return 0;
 	}
 }
@@ -146,7 +146,7 @@ int scrobblerSubmitTrack(char *url, char *session_id, char *artist, char *title,
 		return 1;
 	else
 	{
-		printf("Fehler: %s\n",status);
+		verbose_printf(0, "Fehler: %s\n",status);
 		return 0;
 	}
 }

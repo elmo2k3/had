@@ -37,7 +37,7 @@ static char session_id[50],
 
 void mpdErrorCallback(MpdObj *mi, int errorid, char *msg, void *userdata)
 {
-	printf("Error: %i : %s ", errorid, msg);
+	verbose_printf(0,"Error: %i : %s ", errorid, msg);
 }
 
 int mpdInit(void)
@@ -53,7 +53,7 @@ int mpdInit(void)
 
 	if(mpd_connect(mpd))
 	{
-		printf("Error connecting to mpd!\n");
+		verbose_printf(0,"Error connecting to mpd!\n");
 		return -1;
 	}
 	else
@@ -93,12 +93,16 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 					if(scrobblerSubmitTrack(submission_url, session_id, 
 							last_artist, last_title, last_album,
 							last_time, last_track, last_time_started))
-						printf("%s - %s submitted to lastfm!\n", last_artist, last_title);
+					{
+						verbose_printf(1,"%s - %s submitted to lastfm!\n", last_artist, last_title);
+					}
 					else
 					{
-						printf("Submit fehlgeschlagen!\n");
+						verbose_printf(0,"Submit fehlgeschlagen!\n");
 						if(!scrobblerHandshake(session_id, now_playing_url, submission_url))
-							printf("Scrobbler Handshake fehlgeschlagen\n");
+						{
+							verbose_printf(0,"Scrobbler Handshake fehlgeschlagen\n");
+						}
 					}
 
 				}
@@ -106,12 +110,18 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 				if(scrobblerNowPlaying(now_playing_url, session_id,
 						song->artist, song->title, song->album,
 						song->time, song->track))
-					printf("%s - %s now-playing submitted\n", song->artist, song->title);
+				{
+					verbose_printf(9, "%s - %s now-playing submitted\n", song->artist, song->title);
+				}
 				else
-					printf("Now-Playing fehlgeschlagen\n");
+				{
+					verbose_printf(9, "Now-Playing fehlgeschlagen\n");
+				}
 			}
 			else
-				printf("Stereoanlage ist aus, kein Submit zu last.fm\n");
+			{
+				verbose_printf(9, "Stereoanlage ist aus, kein Submit zu last.fm\n");
+			}
 
 			sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
 			sendPacket(&mpdP,MPD_PACKET);			
@@ -131,7 +141,7 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 				last_time_started = current_time - song->pos;
 			else
 				last_time_started = current_time;
-			printf("Song changed ...\n");
+			verbose_printf(9, "Song changed ...\n");
 		}
 	}
 }
@@ -141,7 +151,9 @@ void mpdThread(void)
 	int second_counter=0;
 
 	if(!scrobblerHandshake(session_id, now_playing_url, submission_url))
-		printf("Scrobbler Handshake fehlgeschlagen\n");
+	{
+		verbose_printf(0, "Scrobbler Handshake fehlgeschlagen\n");
+	}
 	
 	while(mpdInit() < 0)
 	{

@@ -19,9 +19,6 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#define NUM_PARAMS 12
-#define CONFIG_FILE "/etc/had.conf"
-
 /* return 0 on failure, 1 on success */
 extern int loadConfig(char *conf);
 
