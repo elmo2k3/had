@@ -37,7 +37,7 @@ static char session_id[50],
 
 void mpdErrorCallback(MpdObj *mi, int errorid, char *msg, void *userdata)
 {
-	verbose_printf(0,"Error: %i : %s ", errorid, msg);
+	verbose_printf(0,"Error: %i : %s \n", errorid, msg);
 }
 
 int mpdInit(void)

@@ -61,7 +61,6 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 	if(mysql_query(mysql_connection,query))
 	{
 		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		exit(0);
 	}
 
 	mysql_res = mysql_use_result(mysql_connection);
@@ -113,7 +112,6 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	if(mysql_query(mysql_connection,query))
 	{
 		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		exit(0);
 	}
 
 	mysql_res = mysql_use_result(mysql_connection);
@@ -160,7 +158,6 @@ void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
 		if(mysql_query(mysql_connection,query))
 		{
 			fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-			exit(0);
 		}
 
 		mysql_res = mysql_use_result(mysql_connection);

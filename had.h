@@ -37,6 +37,13 @@
 #define RELAIS_PACKET 5
 
 #define GLCD_ADDRESS 7
+#define TEMP1_ADDRESS 3
+#define BASE_ADDRESS 10
+
+#define SERIAL_CMD_TEMP_INSERT 1
+#define SERIAL_CMD_ 1
+
+#define PID_FILE "/var/run/had.pid"
 
 #define verbose_printf(X,args...) \
 	if(X <= config.verbosity) \
@@ -46,7 +53,7 @@
 	}
 
 extern pthread_t threads[2];
-extern void hadSIGINT(void);
+extern void hadSignalHandler(void);
 
 extern char *theTime(void);
 

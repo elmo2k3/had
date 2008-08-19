@@ -42,6 +42,13 @@ pthread_t threads[2];
 
 signed char lastTemperature[9][9][2];
 
+static char *monthToName[12] = {"Jan","Feb","Mar","Apr","May",
+	"Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+
+static int killDaemon(void);
+static int fileExists(const char *filename);
+static void printUsage(void);
+
 static int fileExists(const char *filename)
 {
 	FILE *fp = fopen(filename,"r");
@@ -64,7 +71,7 @@ char *theTime(void)
 
 	ptm = localtime(&currentTime);
 
-	sprintf(returnValue,"%02d.%2d %02d:%02d:%02d",ptm->tm_mday, ptm->tm_mon,  
+	sprintf(returnValue,"%s %2d %02d:%02d:%02d",monthToName[ptm->tm_mon], ptm->tm_mday, 
 			ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
 	return returnValue;
 }
@@ -108,11 +115,37 @@ int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *dec
 	return 1;
 }
 
-struct graphPacket graphP;
+static void printUsage(void)
+{
+	printf("Usage :\n\n");
+	printf("had --help  this text\n");
+	printf("had -s      start (default)\n");
+	printf("had -k      kill the daemon\n");
+}
+
+static int killDaemon(void)
+{
+	FILE *pid_file = fopen(PID_FILE,"r");
+
+	int pid;
+
+	if(!pid_file)
+	{
+		printf("Could not open %s. Maybe had is not running?\n",PID_FILE);
+		return(EXIT_FAILURE);
+	}
+	fscanf(pid_file,"%d",&pid);
+	fclose(pid_file);
+
+	kill(pid,SIGTERM);
+	return EXIT_SUCCESS;
+}
+
 
 int main(int argc, char* argv[])
 {
-	signal(SIGINT, (void*)hadSIGINT);
+	signal(SIGINT, (void*)hadSignalHandler);
+	signal(SIGTERM, (void*)hadSignalHandler);
 
 	int res;
 	char buf[255];
@@ -121,6 +154,27 @@ int main(int argc, char* argv[])
 	time_t rawtime;
 	struct tm *ptm;
 	pid_t pid;
+	FILE *pid_file;
+
+	if(argc > 2)
+	{
+		printUsage();
+		exit(EXIT_FAILURE);
+	}
+	
+	if(argc >1)
+	{
+		if(!strcmp(argv[1],"--help"))
+		{
+			printUsage();
+			exit(EXIT_SUCCESS);
+		}
+
+		if(!strcmp(argv[1],"-k"))
+		{
+			exit(killDaemon());
+		}
+	}
 
 	if(!loadConfig(HAD_CONFIG_FILE))
 	{
@@ -130,18 +184,38 @@ int main(int argc, char* argv[])
 
 	if(config.daemonize)
 	{
+		if(fileExists(PID_FILE))
+		{
+			printf("%s exists. Maybe had is still running?\n",PID_FILE);
+			exit(EXIT_FAILURE);
+		}
+
 		if(( pid = fork() ) != 0 )
 			exit(EX_OSERR);
 
 		if(setsid() < 0)
 			exit(EX_OSERR);
-
+		
 		signal(SIGHUP, SIG_IGN);
 		
 		if(( pid = fork() ) != 0 )
 			exit(EX_OSERR);
 
 		umask(0);
+		
+		pid_file = fopen(PID_FILE,"w");
+		if(!pid_file)
+		{
+			printf("Could not write %s\n",PID_FILE);
+			exit(EXIT_FAILURE);
+		}
+		fprintf(pid_file,"%d\n",(int)getpid());
+		fclose(pid_file);
+
+		if(config.verbosity >= 9)
+			printf("My PID is %d\n",(int)getpid());
+
+
 		
 		freopen(config.logfile, "w", stdout);
 		freopen(config.logfile, "w", stderr);
@@ -151,6 +225,8 @@ int main(int argc, char* argv[])
 		setvbuf(stderr, NULL, _IONBF, 0);
 
 	}
+
+	verbose_printf(0, "had gestartet\n");
 	/* Inhalt des Arrays komplett mit 0 initialisieren */
 	memset(graphP.temperature_history,0,115);
 	memset(&rgbP,0,sizeof(rgbP)); // rgpP mit 0 initialisieren
@@ -230,7 +306,7 @@ int main(int argc, char* argv[])
 					glcdP.temperature[7] = lastTemperature[1][2][1];
 					if(fileExists("/had/wakeme"))
 					{
-						verbose_printf(9,"... Wecker aktiviert ...");
+						verbose_printf(9,"... Wecker aktiviert ...\n");
 						glcdP.wecker = 1;
 					}
 					else
@@ -262,7 +338,7 @@ int main(int argc, char* argv[])
 				case 12: verbose_printf(0,"Serial Modul uart timeout\r\n");
 					 break;
 				case 0: //decode Stream failed
-					verbose_printf(0,"decodeStream failed!\r\n");
+					verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
 					break;
 			}
 		} // endif res>1
@@ -271,8 +347,10 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void hadSIGINT(void)
+void hadSignalHandler(void)
 {
+	if(config.daemonize)
+		unlink(PID_FILE);
 	pthread_kill(threads[1],SIGQUIT);
 	verbose_printf(0,"Shutting down\n");
 	exit(EXIT_SUCCESS);
