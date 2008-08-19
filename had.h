@@ -53,7 +53,6 @@
 	}
 
 extern pthread_t threads[2];
-extern void hadSignalHandler(void);
 
 extern char *theTime(void);
 

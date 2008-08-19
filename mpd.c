@@ -126,14 +126,24 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
 			sendPacket(&mpdP,MPD_PACKET);			
 
-			if(song->artist)
+			if(song->artist && song->title)
+			{
 				strcpy(last_artist, song->artist);
-			if(song->title)
 				strcpy(last_title, song->title);
+			}
+			else
+			{
+				memset(last_artist,0,sizeof(last_artist));
+				memset(last_title,0,sizeof(last_title));
+			}
 			if(song->album)
 				strcpy(last_album, song->album);
+			else
+				memset(last_album,0,sizeof(last_album));
 			if(song->track)
 				strcpy(last_track, song->track);
+			else
+				memset(last_track,0,sizeof(last_track));
 
 			last_time = song->time;
 			/* First run! */

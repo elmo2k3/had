@@ -45,9 +45,10 @@ signed char lastTemperature[9][9][2];
 static char *monthToName[12] = {"Jan","Feb","Mar","Apr","May",
 	"Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
 
-static int killDaemon(void);
+static int killDaemon(int signal);
 static int fileExists(const char *filename);
 static void printUsage(void);
+static void hadSignalHandler(int signal);
 
 static int fileExists(const char *filename)
 {
@@ -121,9 +122,10 @@ static void printUsage(void)
 	printf("had --help  this text\n");
 	printf("had -s      start (default)\n");
 	printf("had -k      kill the daemon\n");
+	printf("had -r      reload config (does currently not reconnect db and mpd\n\n");
 }
 
-static int killDaemon(void)
+static int killDaemon(int signal)
 {
 	FILE *pid_file = fopen(PID_FILE,"r");
 
@@ -137,7 +139,7 @@ static int killDaemon(void)
 	fscanf(pid_file,"%d",&pid);
 	fclose(pid_file);
 
-	kill(pid,SIGTERM);
+	kill(pid,signal);
 	return EXIT_SUCCESS;
 }
 
@@ -172,8 +174,12 @@ int main(int argc, char* argv[])
 
 		if(!strcmp(argv[1],"-k"))
 		{
-			exit(killDaemon());
+			exit(killDaemon(SIGTERM));
 		}
+
+		/* reload config */
+		if(!strcmp(argv[1],"-r"))
+			exit(killDaemon(SIGHUP));
 	}
 
 	if(!loadConfig(HAD_CONFIG_FILE))
@@ -203,6 +209,8 @@ int main(int argc, char* argv[])
 
 		umask(0);
 		
+		signal(SIGHUP, (void*)hadSignalHandler);
+
 		pid_file = fopen(PID_FILE,"w");
 		if(!pid_file)
 		{
@@ -264,7 +272,7 @@ int main(int argc, char* argv[])
 		res = readSerial(buf); // blocking read
 		if(res>1)
 		{
-			verbose_printf(9,"Res=%d\t",res);
+			verbose_printf(9,"Res=%d\n",res);
 			time(&rawtime);
 			ptm = gmtime(&rawtime);
 			switch(decodeStream(buf,&modul_id,&sensor_id,&celsius,&decicelsius,&voltage))
@@ -347,12 +355,20 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void hadSignalHandler(void)
+static void hadSignalHandler(int signal)
 {
-	if(config.daemonize)
-		unlink(PID_FILE);
-	pthread_kill(threads[1],SIGQUIT);
-	verbose_printf(0,"Shutting down\n");
-	exit(EXIT_SUCCESS);
+	if(signal == SIGTERM || signal == SIGINT)
+	{
+		if(config.daemonize)
+			unlink(PID_FILE);
+		pthread_kill(threads[1],SIGQUIT);
+		verbose_printf(0,"Shutting down\n");
+		exit(EXIT_SUCCESS);
+	}
+	else if(signal == SIGHUP)
+	{
+		verbose_printf(0,"Config reloaded\n");
+		loadConfig(HAD_CONFIG_FILE);
+	}
 }
 
