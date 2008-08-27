@@ -25,6 +25,8 @@
 #define HAD_CONFIG_FILE "/etc/had.conf"
 
 #define ADC_RES 1024
+
+/* Experimental discovered values */
 #define ADC_MODUL_1 ADC_RES*1.22
 #define ADC_MODUL_3 ADC_RES*1.3
 #define ADC_MODUL_DEFAULT ADC_RES*1.25
@@ -56,7 +58,14 @@ extern pthread_t threads[2];
 
 extern char *theTime(void);
 
-extern signed char lastTemperature[9][9][2];
+extern int16_t lastTemperature[9][9][2];
+extern int16_t lastVoltage[9];
+
+struct _currentTemperature
+{
+	int wohnzimmer[2];
+	int draussen[2];
+}currentTemperature;
 
 struct _config
 {

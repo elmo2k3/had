@@ -40,7 +40,8 @@
 
 pthread_t threads[2];
 
-signed char lastTemperature[9][9][2];
+int16_t lastTemperature[9][9][2];
+int16_t lastVoltage[9];
 
 static char *monthToName[12] = {"Jan","Feb","Mar","Apr","May",
 	"Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
@@ -260,12 +261,12 @@ int main(int argc, char* argv[])
 	}
 
 	getLastTemperature(3,1,&celsius,&decicelsius);
-	lastTemperature[3][1][0] = (char)celsius;
-	lastTemperature[3][1][1] = (char)decicelsius;
+	lastTemperature[3][1][0] = (int16_t)celsius;
+	lastTemperature[3][1][1] = (int16_t)decicelsius;
 
 	getLastTemperature(3,0,&celsius,&decicelsius);
-	lastTemperature[3][0][0] = (char)celsius;
-	lastTemperature[3][0][1] = (char)decicelsius;
+	lastTemperature[3][0][0] = (int16_t)celsius;
+	lastTemperature[3][0][1] = (int16_t)decicelsius;
 
 	/* main loop */
 	while (1) {
@@ -290,8 +291,9 @@ int main(int argc, char* argv[])
 					}		
 				
 					//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
-					lastTemperature[modul_id][sensor_id][0] = celsius;
-					lastTemperature[modul_id][sensor_id][1] = decicelsius/625;
+					lastTemperature[modul_id][sensor_id][0] = (int16_t)celsius;
+					lastTemperature[modul_id][sensor_id][1] = (int16_t)decicelsius;
+					lastVoltage[modul_id] = voltage;
 					databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,ptm);
 					break;
 				

@@ -55,7 +55,6 @@ static void networkClientHandler(int client_sock)
 
 	int i;
 	uint8_t modul,sensor;
-	signed char celsius, decicelsius;
 
 	uint8_t relais;
 	do
@@ -93,13 +92,15 @@ static void networkClientHandler(int client_sock)
 				recv(client_sock,&modul, sizeof(modul), 0);
 				recv(client_sock,&sensor, sizeof(sensor), 0);
 
-				celsius = lastTemperature[modul][sensor][0];
-				decicelsius = lastTemperature[modul][sensor][1];
-
-				send(client_sock, &lastTemperature[modul][sensor][0], sizeof(celsius), 0);
-				send(client_sock, &lastTemperature[modul][sensor][1], sizeof(celsius), 0);
+				send(client_sock, &lastTemperature[modul][sensor][0], sizeof(int16_t), 0);
+				send(client_sock, &lastTemperature[modul][sensor][1], sizeof(int16_t), 0);
 				break;
-			
+		
+			case CMD_NETWORK_GET_VOLTAGE:
+				recv(client_sock,&modul,sizeof(modul), 0);
+				send(client_sock, &lastVoltage[modul], sizeof(int16_t), 0);
+				break;
+
 			case CMD_NETWORK_RELAIS:
 				recv_size = recv(client_sock,&relais, sizeof(relais),0);
 				relaisP.port = relais;
