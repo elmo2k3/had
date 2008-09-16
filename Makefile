@@ -1,16 +1,26 @@
 # Bjoern Biesenbach <bjoern@bjoern-b.de>
 # 17.8.2008
 
-#STAGING_DIR = /home/bjoern/OpenWrt-SDK-Linux-i686-1/staging_dir_mipsel
-#CC = ${STAGING_DIR}/bin/mipsel-linux-gcc
-#LD = ${STAGING_DIR}/mipsel-linux-uclibc/bin/ld
-#INCLUDE_DIR = ${STAGING_DIR}/usr/include
-#CFLAGS = -I ${INCLUDE_DIR}
-#LDFLAGS = -Xlinker -rpath-link -Xlinker ${STAGING_DIR}/usr/lib -L${STAGING_DIR}/usr/lib/ -L${STAGING_DIR}/lib -L${STAGING_DIR}/usr/lib/mysql
 LDFLAGS += -lmysqlclient -lpthread -lmpd -Llibmpd
-CFLAGS += -Os -Wall -I libmpd -g
+CFLAGS += -Os -Wall -I libmpd
 
-had: had.o serial.o database.o mpd.o network.o scrobbler.o config.o
+OBJECTS = had.o serial.o database.o mpd.o network.o scrobbler.o config.o led_routines.o
+
+had: $(OBJECTS)
+
+had.o: had.c had.h serial.h database.h mpd.h network.h scrobbler.h config.h led_routines.h
+
+serial.o: serial.c serial.h had.h
+
+database.o: database.c database.h had.h
+
+mpd.o: mpd.c mpd.h had.h
+
+scrobbler.o: scrobbler.c scrobbler.h had.h
+
+config.o: config.c config.h had.h
+
+led_routines.o: led_routines.c led_routines.h had.h
 
 clean: 
 	rm *.o had
