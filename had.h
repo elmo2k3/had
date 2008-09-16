@@ -45,8 +45,6 @@
 #define SERIAL_CMD_TEMP_INSERT 1
 #define SERIAL_CMD_ 1
 
-#define PID_FILE "/var/run/had.pid"
-
 #define verbose_printf(X,args...) \
 	if(X <= config.verbosity) \
         {\
@@ -54,7 +52,7 @@
                 printf(args); \
 	}
 
-extern pthread_t threads[2];
+extern pthread_t threads[3];
 
 extern char *theTime(void);
 
@@ -83,10 +81,16 @@ struct _config
 	char scrobbler_hash[34];
 	char scrobbler_tmpfile[100];
 	
+	char pid_file[100];
 	char logfile[100];
 	char tty[255];
 	int verbosity;
 	int daemonize;
+
+	char led_matrix_ip[50];
+	int led_matrix_port;
+	int led_matrix_activated;
+	int scrobbler_activated;
 }config;
 
 struct headPacket
@@ -115,7 +119,7 @@ struct graphPacket
 }graphP;
 
 /* 19 Byte */
-struct glcdMainPacket
+struct __attribute__((packed)) glcdMainPacket
 {
 	struct headPacket headP;
 	unsigned char hour;
@@ -125,7 +129,7 @@ struct glcdMainPacket
 	unsigned char month;
 	unsigned char year;
 	unsigned char weekday;
-	unsigned char temperature[8];
+	int16_t temperature[4];
 	unsigned char wecker;
 }glcdP;
 

@@ -25,6 +25,8 @@ extern int loadConfig(char *conf);
 /* Default values */
 #define MYSQL_PORT 3306
 #define MPD_PORT 6600
+#define PID_FILE "/var/run/had/had.pid"
+#define LOG_FILE "/tmp/had.log"
 
 #endif
 

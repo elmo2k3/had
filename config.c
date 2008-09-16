@@ -24,11 +24,12 @@
 #include "config.h"
 #include "had.h"
 
-#define NUM_PARAMS 15
+#define NUM_PARAMS 20
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
 	"db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
 	"scrobbler_hash", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
-	"tty"};
+	"tty","led_matrix_ip","led_matrix_port","led_matrix_activated","scrobbler_activated",
+	"pid_file"};
 
 
 int loadConfig(char *conf)
@@ -51,6 +52,8 @@ int loadConfig(char *conf)
 	/* default values */
 	config.database_port = MYSQL_PORT;
 	config.mpd_port = MPD_PORT;
+	strcpy(config.pid_file, PID_FILE);
+	strcpy(config.logfile,LOG_FILE);
 
 	/* step through every line */
 	while(fgets(line, sizeof(line), config_file) != NULL)
@@ -127,6 +130,21 @@ int loadConfig(char *conf)
 					 break;
 				/* serial port */
 				case 14: strcpy(config.tty, value);
+					 break;
+				/* led matrix ip */
+				case 15: strcpy(config.led_matrix_ip, value);
+					 break;
+				/* led matrix port */
+				case 16: config.led_matrix_port = atoi(value);
+					 break;
+				/* led matrix activated */
+				case 17: config.led_matrix_activated = atoi(value);
+					 break;
+				/* scrobbler activated */
+				case 18: config.scrobbler_activated = atoi(value);
+					 break;
+				/* pid file */
+				case 19: strcpy(config.pid_file, value);
 					 break;
 			}
 		}
