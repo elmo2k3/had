@@ -132,7 +132,6 @@ void sendPacket(void *packet, int type)
 	else if(type == RGB_PACKET)
 	{
 		headP->count = 5;
-		headP->command = 0;
 		write(fd,packet,sizeof(rgbP));
 	}		
 	else if(type == RELAIS_PACKET)
@@ -142,7 +141,8 @@ void sendPacket(void *packet, int type)
 		headP->command = 0;
 		write(fd,packet,sizeof(relaisP));
 	}		
-	usleep(50000); // warten bis Packet wirklich abgeschickt wurde
+//	usleep(50000); // warten bis Packet wirklich abgeschickt wurde
+	usleep(30000); // warten bis Packet wirklich abgeschickt wurde
 }
 
 void sendRgbPacket(unsigned char address, unsigned char red, unsigned char green, unsigned char blue, unsigned char smoothness)

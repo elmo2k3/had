@@ -32,6 +32,7 @@
 #include "had.h"
 #include "serial.h"
 #include "database.h"
+#include "led_routines.h"
 
 static int sock, leave;
 
@@ -67,6 +68,12 @@ static void networkClientHandler(int client_sock)
 			case CMD_NETWORK_RGB: 
 				recv_size = recv(client_sock,&rgbP, sizeof(rgbP),0);
 				sendPacket(&rgbP,RGB_PACKET);
+				
+				rgbP.headP.address = GLCD_ADDRESS;
+				rgbP.headP.command = RGB_PACKET;
+				sendPacket(&rgbP,RGB_PACKET);
+				rgbP.headP.command = 0;
+
 				break;
 
 			case CMD_NETWORK_GET_RGB:
@@ -78,12 +85,15 @@ static void networkClientHandler(int client_sock)
 				{
 					sendRgbPacket(1,255,0,0,0);
 					sendRgbPacket(3,255,0,0,0);
+					sendRgbPacket(4,255,0,0,0);
 					
 					rgbP.smoothness = 0;
 					/* Achtung, hack: annahme beide Module gleiche Farbe */
 					rgbP.headP.address = 1;
 					sendPacket(&rgbP,RGB_PACKET);
 					rgbP.headP.address = 3;
+					sendPacket(&rgbP,RGB_PACKET);
+					rgbP.headP.address = 4;
 					sendPacket(&rgbP,RGB_PACKET);
 				}
 				break;
@@ -106,6 +116,12 @@ static void networkClientHandler(int client_sock)
 				relaisP.port = relais;
 				verbose_printf(9, "Setting relais to ... %d\n",relaisP.port);
 				sendPacket(&relaisP,RELAIS_PACKET);
+
+				if(relaisP.port & 4 && config.led_matrix_activated && !ledIsRunning())
+					pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+				else
+					stopLedMatrixThread();
+					
 				break;
 			case CMD_NETWORK_GET_RELAIS:
 				send(client_sock,&relaisP, sizeof(relaisP),0);

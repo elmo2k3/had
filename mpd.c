@@ -28,6 +28,7 @@
 #include "mpd.h"
 #include "had.h"
 #include "scrobbler.h"
+#include "led_routines.h"
 	
 static MpdObj *mpd;
 
@@ -82,7 +83,7 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			/* Auf PIN4 liegt die Stereoanlage
 			 * Nur wenn diese an ist zu last.fm submitten!
 			 */
-			if(relaisP.port & 4)
+			if((relaisP.port & 4) && config.scrobbler_activated)
 			{
 				/* check if the track ran at least 2:40 or half of its runtime */
 				if(last_time && last_time_started && 
@@ -117,14 +118,25 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 				{
 					verbose_printf(9, "Now-Playing fehlgeschlagen\n");
 				}
+				
+				if(config.led_matrix_activated)
+				{
+					int last_led_buffer = getCurrentLedBuffer();
+					switchToBuffer(LED_BUFFER_MPD);
+
+					clearScreen();
+					putString(song->artist,COLOR_RED);
+					putString(" - ",COLOR_AMBER);
+					putString(song->title,COLOR_GREEN);
+	//				updateDisplay();
+					switchToBuffer(last_led_buffer);
+
+				}
 			}
 			else
 			{
 				verbose_printf(9, "Stereoanlage ist aus, kein Submit zu last.fm\n");
 			}
-
-			sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
-			sendPacket(&mpdP,MPD_PACKET);			
 
 			if(song->artist && song->title)
 			{
@@ -152,6 +164,10 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			else
 				last_time_started = current_time;
 			verbose_printf(9, "Song changed ...\n");
+			
+			sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
+			sendPacket(&mpdP,MPD_PACKET);			
+		
 		}
 	}
 }
@@ -159,12 +175,15 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 void mpdThread(void)
 {
 	int second_counter=0;
-
-	if(!scrobblerHandshake(session_id, now_playing_url, submission_url))
-	{
-		verbose_printf(0, "Scrobbler Handshake fehlgeschlagen\n");
-	}
 	
+	if(config.scrobbler_activated)
+	{
+		if(!scrobblerHandshake(session_id, now_playing_url, submission_url))
+		{
+			verbose_printf(0, "Scrobbler Handshake fehlgeschlagen\n");
+		}
+	}
+
 	while(mpdInit() < 0)
 	{
 		sleep(10);
@@ -179,6 +198,6 @@ void mpdThread(void)
 			second_counter = 0;
 		}
 		mpd_status_update(mpd);
-		sleep(1);
+		usleep(100000);
 	}
 }

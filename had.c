@@ -36,9 +36,10 @@
 #include "mpd.h"
 #include "network.h"
 #include "config.h"
+#include "led_routines.h"
 
 
-pthread_t threads[2];
+pthread_t threads[3];
 
 int16_t lastTemperature[9][9][2];
 int16_t lastVoltage[9];
@@ -106,7 +107,7 @@ int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *dec
 	else
 		return 0;
 					
-	if(*modul_id == 7 || *modul_id == 10) //GLCD Modul
+	if(*modul_id == 10) // Base station
 		return *sensor_id;
 		
 	trenner = (char*)strtok(NULL,";");
@@ -114,6 +115,10 @@ int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *dec
 		*voltage = atoi(trenner);
 	else
 		return 0;
+
+	if(*modul_id == 7) // GLCD
+		return *sensor_id;
+
 	return 1;
 }
 
@@ -128,13 +133,13 @@ static void printUsage(void)
 
 static int killDaemon(int signal)
 {
-	FILE *pid_file = fopen(PID_FILE,"r");
+	FILE *pid_file = fopen(config.pid_file,"r");
 
 	int pid;
 
 	if(!pid_file)
 	{
-		printf("Could not open %s. Maybe had is not running?\n",PID_FILE);
+		printf("Could not open %s. Maybe had is not running?\n",config.pid_file);
 		return(EXIT_FAILURE);
 	}
 	fscanf(pid_file,"%d",&pid);
@@ -149,7 +154,6 @@ int main(int argc, char* argv[])
 {
 	signal(SIGINT, (void*)hadSignalHandler);
 	signal(SIGTERM, (void*)hadSignalHandler);
-
 	int res;
 	char buf[255];
 
@@ -191,9 +195,9 @@ int main(int argc, char* argv[])
 
 	if(config.daemonize)
 	{
-		if(fileExists(PID_FILE))
+		if(fileExists(config.pid_file))
 		{
-			printf("%s exists. Maybe had is still running?\n",PID_FILE);
+			printf("%s exists. Maybe had is still running?\n",config.pid_file);
 			exit(EXIT_FAILURE);
 		}
 
@@ -212,10 +216,10 @@ int main(int argc, char* argv[])
 		
 		signal(SIGHUP, (void*)hadSignalHandler);
 
-		pid_file = fopen(PID_FILE,"w");
+		pid_file = fopen(config.pid_file,"w");
 		if(!pid_file)
 		{
-			printf("Could not write %s\n",PID_FILE);
+			printf("Could not write %s\n",config.pid_file);
 			exit(EXIT_FAILURE);
 		}
 		fprintf(pid_file,"%d\n",(int)getpid());
@@ -244,7 +248,10 @@ int main(int argc, char* argv[])
 	lastTemperature[3][0][0] = -1;
 	
 	pthread_create(&threads[0],NULL,(void*)&mpdThread,NULL);	
-	pthread_create(&threads[1],NULL,(void*)&networkThread,NULL);	
+	pthread_create(&threads[1],NULL,(void*)&networkThread,NULL);
+
+//	if(config.led_matrix_activated)
+//		pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
 
 	if(initSerial(config.tty) < 0) // serielle Schnittstelle aktivieren
 	{
@@ -270,6 +277,7 @@ int main(int argc, char* argv[])
 
 	/* main loop */
 	while (1) {
+		memset(buf,0,sizeof(buf));
 		res = readSerial(buf); // blocking read
 		if(res>1)
 		{
@@ -310,10 +318,10 @@ int main(int argc, char* argv[])
 					glcdP.temperature[1] = lastTemperature[3][1][1]; 
 					glcdP.temperature[2] = lastTemperature[3][0][0]; // schlaf
 					glcdP.temperature[3] = lastTemperature[3][0][1];
-					glcdP.temperature[4] = lastTemperature[1][1][0]; // kuehl
-					glcdP.temperature[5] = lastTemperature[1][1][1];
-					glcdP.temperature[6] = lastTemperature[1][2][0];// gefrier
-					glcdP.temperature[7] = lastTemperature[1][2][1];
+//					glcdP.temperature[4] = lastTemperature[1][1][0]; // kuehl
+//					glcdP.temperature[5] = lastTemperature[1][1][1];
+//					glcdP.temperature[6] = lastTemperature[1][2][0];// gefrier
+//					glcdP.temperature[7] = lastTemperature[1][2][1];
 					if(fileExists("/had/wakeme"))
 					{
 						verbose_printf(9,"... Wecker aktiviert ...\n");
@@ -341,6 +349,21 @@ int main(int argc, char* argv[])
 					verbose_printf(9,"MPD next song\r\n");
 					//mpd_player_next(mpd);
 					break;
+				case 7: // RGB Packet request
+					rgbP.headP.address = GLCD_ADDRESS;
+					rgbP.headP.command = RGB_PACKET;
+					sendPacket(&rgbP,RGB_PACKET);
+					rgbP.headP.command = 0;
+					break;
+				case 8: // RGB Packet set
+					rgbP.red = celsius;
+					rgbP.green = decicelsius;
+					rgbP.blue = voltage;
+					rgbP.headP.address = 0x01;
+					sendPacket(&rgbP, RGB_PACKET);
+					rgbP.headP.address = 0x03;
+					sendPacket(&rgbP, RGB_PACKET);
+					break;
 				case 10: verbose_printf(0,"Serial Modul hard-reset\r\n");
 					 break;
 				case 11: verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
@@ -362,7 +385,7 @@ static void hadSignalHandler(int signal)
 	if(signal == SIGTERM || signal == SIGINT)
 	{
 		if(config.daemonize)
-			unlink(PID_FILE);
+			unlink(config.pid_file);
 		pthread_kill(threads[1],SIGQUIT);
 		verbose_printf(0,"Shutting down\n");
 		exit(EXIT_SUCCESS);
