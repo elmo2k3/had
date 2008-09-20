@@ -162,6 +162,13 @@ int main(int argc, char* argv[])
 	struct tm *ptm;
 	pid_t pid;
 	FILE *pid_file;
+	
+	if(!loadConfig(HAD_CONFIG_FILE))
+	{
+		verbose_printf(0,"Could not load config ... aborting\n\n");
+		exit(EX_NOINPUT);
+	}
+
 
 	if(argc > 2)
 	{
@@ -185,12 +192,6 @@ int main(int argc, char* argv[])
 		/* reload config */
 		if(!strcmp(argv[1],"-r"))
 			exit(killDaemon(SIGHUP));
-	}
-
-	if(!loadConfig(HAD_CONFIG_FILE))
-	{
-		verbose_printf(0,"Could not load config ... aborting\n\n");
-		exit(EX_NOINPUT);
 	}
 
 	if(config.daemonize)
