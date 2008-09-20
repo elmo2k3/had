@@ -117,10 +117,16 @@ static void networkClientHandler(int client_sock)
 				verbose_printf(9, "Setting relais to ... %d\n",relaisP.port);
 				sendPacket(&relaisP,RELAIS_PACKET);
 
-				if(relaisP.port & 4 && config.led_matrix_activated && !ledIsRunning())
-					pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+				if(relaisP.port & 4)
+				{
+					if(config.led_matrix_activated && !ledIsRunning())
+						pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+				}
 				else
-					stopLedMatrixThread();
+				{
+					if(ledIsRunning())
+						stopLedMatrixThread();
+				}
 					
 				break;
 			case CMD_NETWORK_GET_RELAIS:

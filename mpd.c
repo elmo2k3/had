@@ -36,6 +36,20 @@ static char session_id[50],
 	     now_playing_url[70],
 	     submission_url[70];
 
+struct _ledLine ledLineMpd;
+
+static int isPlaying;
+
+MpdObj *getMpdObject(void)
+{
+	return mpd;
+}
+
+int mpdGetState(void)
+{
+	return isPlaying;
+}
+
 void mpdErrorCallback(MpdObj *mi, int errorid, char *msg, void *userdata)
 {
 	verbose_printf(0,"Error: %i : %s \n", errorid, msg);
@@ -74,12 +88,19 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 
 	time_t current_time;
 
+	isPlaying = mpd_player_get_state(mpd);
+
 	if(what & MPD_CST_SONGID)
 	{
 		time(&current_time);
 		mpd_Song *song = mpd_playlist_get_current_song(mi);
 		if(song)
 		{
+			clearScreen(&ledLineMpd);
+			putString(song->artist,COLOR_RED,&ledLineMpd);
+			putString(" - ",COLOR_AMBER,&ledLineMpd);
+			putString(song->title,COLOR_GREEN,&ledLineMpd);
+
 			/* Auf PIN4 liegt die Stereoanlage
 			 * Nur wenn diese an ist zu last.fm submitten!
 			 */
@@ -119,19 +140,7 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 					verbose_printf(9, "Now-Playing fehlgeschlagen\n");
 				}
 				
-				if(config.led_matrix_activated)
-				{
-					int last_led_buffer = getCurrentLedBuffer();
-					switchToBuffer(LED_BUFFER_MPD);
 
-					clearScreen();
-					putString(song->artist,COLOR_RED);
-					putString(" - ",COLOR_AMBER);
-					putString(song->title,COLOR_GREEN);
-	//				updateDisplay();
-					switchToBuffer(last_led_buffer);
-
-				}
 			}
 			else
 			{
@@ -175,6 +184,11 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 void mpdThread(void)
 {
 	int second_counter=0;
+
+	/* Speicher reservieren */
+
+	ledLineMpd.column_red = malloc(sizeof(uint16_t)*LINE_LENGTH);
+	ledLineMpd.column_green = malloc(sizeof(uint16_t)*LINE_LENGTH);
 	
 	if(config.scrobbler_activated)
 	{
@@ -188,10 +202,13 @@ void mpdThread(void)
 	{
 		sleep(10);
 	}
+	
+	isPlaying = mpd_player_get_state(mpd);
+
 	while(1)
 	{
 		/* Alle 10s checken ob die Verbindung zum MPD noch steht */
-		if(second_counter++ == 9)
+		if(second_counter++ == 90)
 		{
 			if(!mpd_check_connected(mpd))
 				mpd_connect(mpd);
@@ -200,4 +217,7 @@ void mpdThread(void)
 		mpd_status_update(mpd);
 		usleep(100000);
 	}
+	/* wird derzeit nie erreicht ... fuer spaeter */
+	free(ledLineMpd.column_red);
+	free(ledLineMpd.column_green);
 }

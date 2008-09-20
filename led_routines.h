@@ -26,28 +26,36 @@
 #define COLOR_GREEN 1
 #define COLOR_AMBER 2
 
-#define LED_BUFFER_MPD 0
-#define LED_BUFFER_GENERAL 1
+#define LINE_LENGTH 512
 
-extern int getCurrentLedBuffer(void);
+
+struct _ledLine
+{
+	uint16_t *column_red;
+	uint16_t *column_green;
+	int x;
+	int y;
+};
+
+
 extern int ledIsRunning(void);
-
 extern void ledMatrixThread(void);
 extern void stopLedMatrixThread(void);
-
 
 /* send data over tcp/ip */
 extern void updateDisplay();
 
-extern void putChar(char c, uint8_t color);
+extern void putChar(char c, uint8_t color, struct _ledLine *ledLine);
 
-extern void putString(char *string, uint8_t color);
+extern void putString(char *string, uint8_t color, struct _ledLine *ledLine);
+
+extern void copyBufferToOutput(struct _ledLine ledLine);
 
 /* clears the screen. doesn't send to display, call updateDisplay() afterwards */
-extern void clearScreen(void);
+extern void clearScreen(struct _ledLine *ledLine);
 
-/* shifts all columns on to the left */
-extern int shiftLeft(void);
+/* shifts all columns to the left */
+extern int shiftOutputLeft(struct _ledLine ledLine);
 
 extern void switchToBuffer(int numBuffer);
 

@@ -31,11 +31,11 @@
 #include "led_routines.h"
 #include "arial_bold_14.h"
 #include "had.h"
+#include "mpd.h"
 
 #define LMS_IP "192.168.0.93"
 #define LMS_PORT 9328
 
-static void hilfsarray_to_normal(void);
 static uint16_t charGetStart(char c);
 static int initNetwork(void);
 
@@ -43,33 +43,24 @@ static int initNetwork(void);
 static uint16_t RED[4][16];
 static uint16_t GREEN[4][16];
 
-/* Dies sind die eigentlich genutzten Arrays. Grund: 
- * einfachere Handhabung! Jedes Element entspricht genau einer Spalte
- */
-static uint16_t *column_red;
-static uint16_t *column_green;
+static struct _ledLine ledLineOutput;
 
-static uint16_t *column_red_current;
-static uint16_t *column_green_current;
+static struct _ledLine ledLineGeneral;
 
-static uint16_t *column_mpd_red;
-static uint16_t *column_mpd_green;
-
-static uint16_t *column_general_red;
-static uint16_t *column_general_green;
 
 static int client_sock;
 static int running;
 
 static int position = 0;
 
-static uint16_t *x,*y;
 
-static int current_led_buffer;
-
-int getCurrentLedBuffer(void)
+void copyBufferToOutput(struct _ledLine ledLine)
 {
-	return current_led_buffer;
+	memcpy(ledLineOutput.column_red,ledLine.column_red,sizeof(uint16_t)*LINE_LENGTH);
+	memcpy(ledLineOutput.column_green,ledLine.column_green,sizeof(uint16_t)*LINE_LENGTH);
+
+	ledLineOutput.x = ledLine.x;
+	ledLineOutput.y = ledLine.y;
 }
 
 int ledIsRunning(void)
@@ -77,31 +68,25 @@ int ledIsRunning(void)
 	return running;
 }
 
-void switchToBuffer(int numBuffer)
-{
-	static uint16_t x_mpd=0, x_general=0, y_mpd=0, y_general=0;
-	switch(numBuffer)
-	{
-		case LED_BUFFER_MPD:
-			x = &x_mpd;
-			y = &y_mpd;
-			column_red_current = column_mpd_red;
-			column_green_current = column_mpd_green;
-			current_led_buffer = numBuffer;
-			break;
-		case LED_BUFFER_GENERAL:
-			x = &x_general;
-			y = &y_general;
-			column_red_current = column_general_red;
-			column_green_current = column_general_green;
-			current_led_buffer = numBuffer;
-			break;
-	}
-}
-
 void updateDisplay()
 {
 	int bytes_send;
+	int i,p,m;
+
+	memset(&RED,0,sizeof(RED));
+	memset(&GREEN,0,sizeof(GREEN));
+
+	for(m=0;m<4;m++)
+	{
+		for(i=0;i<16;i++)
+		{
+			for(p=0;p<16;p++)
+			{
+				RED[m][i+ledLineOutput.y] |= ((ledLineOutput.column_red[p+m*16] & (1<<i))>>(i)<<p);
+				GREEN[m][i+ledLineOutput.y] |= ((ledLineOutput.column_green[p+m*16] & (1<<i))>>(i)<<p);
+			}
+		}
+	}
 	bytes_send = send(client_sock, &RED, sizeof(RED),0);
 	bytes_send = send(client_sock, &GREEN, sizeof(GREEN),0);
 
@@ -130,31 +115,12 @@ static uint16_t charGetStart(char c)
 }
 
 
-static void hilfsarray_to_normal(void)
-{
-	int i,p,m;
-	memset(&RED,0,sizeof(RED));
-	memset(&GREEN,0,sizeof(GREEN));
-
-	for(m=0;m<4;m++)
-	{
-		for(i=0;i<16;i++)
-		{
-			for(p=0;p<16;p++)
-			{
-				RED[m][i+*y] |= ((column_red[p+m*16] & (1<<i))>>(i)<<p);
-				GREEN[m][i+*y] |= ((column_green[p+m*16] & (1<<i))>>(i)<<p);
-			}
-		}
-	}
-}
-
-void putChar(char c, uint8_t color)
+void putChar(char c, uint8_t color, struct _ledLine *ledLine)
 {
 	/* Leerzeichen abfangen */
 	if(c == 32)
 	{
-		*x += 4;
+		ledLine->x += 4;
 		return;
 	}
 
@@ -170,88 +136,85 @@ void putChar(char c, uint8_t color)
 	{
 		if(color == COLOR_RED)
 		{
-			column_red_current[i+*x] = Arial_Bold_14[6+char_count+start+i];
+			ledLine->column_red[i+ledLine->x] = Arial_Bold_14[6+char_count+start+i];
 		}
 		else if(color == COLOR_GREEN)
 		{
-			column_green_current[i+*x] = Arial_Bold_14[6+char_count+start+i];
+			ledLine->column_green[i+ledLine->x] = Arial_Bold_14[6+char_count+start+i];
 		}
 		else if(color == COLOR_AMBER)
 		{
-			column_red_current[i+*x] = Arial_Bold_14[6+char_count+start+i];
-			column_green_current[i+*x] = Arial_Bold_14[6+char_count+start+i];
+			ledLine->column_red[i+ledLine->x] = Arial_Bold_14[6+char_count+start+i];
+			ledLine->column_green[i+ledLine->x] = Arial_Bold_14[6+char_count+start+i];
 		}
 	}
+	/* unteren Teil der Zeichen schreiben (noch nicht dynamisch fuer verschiedene Schriftgroessen) */
 	for(i=0;i<char_width;i++)
 	{
 		if(color == COLOR_RED)
 		{
 			/* Man erklaere mir was ich hier geschrieben. Aber funktionieren tuts! :-) */
-			column_red_current[i+*x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
+			ledLine->column_red[i+ledLine->x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
 		}
 		else if(color == COLOR_GREEN)
 		{
-			column_green_current[i+*x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
+			ledLine->column_green[i+ledLine->x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
 		}
 		else if(color == COLOR_AMBER)
 		{
-			column_red_current[i+*x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
-			column_green_current[i+*x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
+			ledLine->column_red[i+ledLine->x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
+			ledLine->column_green[i+ledLine->x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
 		}
 	}
 
-	hilfsarray_to_normal();
-
 	/* Bei Bedarf wieder an den Anfang gehen */
-	if(*x + char_width +1 < 511)
-		*x += char_width + 1;
+	if(ledLine->x + char_width +1 < LINE_LENGTH-1)
+		ledLine->x += char_width + 1;
 	else
-		*x = 0;
+		ledLine->x = 0;
 }
 
-void putString(char *string, uint8_t color)
+void putString(char *string, uint8_t color, struct _ledLine *ledLine)
 {
 	if(!string)
 		string = "null";
 	while(*string)
 	{
-		putChar(*string++,color);
+		putChar(*string++,color,ledLine);
 	}
 }
 
-void clearScreen(void)
+void clearScreen(struct _ledLine *ledLine)
 {
-	memset(column_red_current,0,sizeof(uint16_t)*512);
-	memset(column_green_current,0,sizeof(uint16_t)*512);
-	*x = 0;
-	*y = 1;
+	memset(ledLine->column_red,0,sizeof(uint16_t)*LINE_LENGTH);
+	memset(ledLine->column_green,0,sizeof(uint16_t)*LINE_LENGTH);
+	ledLine->x = 0;
+	ledLine->y = 1;
 }
 
 
-int shiftLeft(void)
+int shiftOutputLeft(struct _ledLine ledLine)
 {
 	int counter;
 	
 	position++;
 
-	for(counter=0;counter< *x + 10;counter++)
+	for(counter=0;counter< ledLine.x + 10;counter++)
 	{
-		if(position + counter > (*x + 10))
+		if(position + counter > (ledLine.x + 10))
 		{
-			column_red[counter] = column_red_current[counter + position - (*x +11)];
-			column_green[counter] = column_green_current[counter + position - (*x +11)];
+			ledLineOutput.column_red[counter] = ledLine.column_red[counter + position - (ledLine.x +11)];
+			ledLineOutput.column_green[counter] = ledLine.column_green[counter + position - (ledLine.x +11)];
 		}
 		else
 		{
-			column_red[counter] = column_red_current[position+counter];
-			column_green[counter] = column_green_current[position+counter];
+			ledLineOutput.column_red[counter] = ledLine.column_red[position+counter];
+			ledLineOutput.column_green[counter] = ledLine.column_green[position+counter];
 		}
 	}
 
 	
-	hilfsarray_to_normal();
-	
-	if(position > *x + 10)
+	if(position > ledLine.x + 11)
 	{
 		position = 0;
 		return 0;
@@ -266,7 +229,7 @@ static int initNetwork(void)
 
 	client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(client_sock < 0)
-		printf("Client_sock konnte nicht erstellt werden\n");
+		verbose_printf(0,"Keine Verbindung zum LED-Modul\n");
 	server.sin_family = AF_INET;
 	server.sin_port = htons(config.led_matrix_port);
 	inet_aton(config.led_matrix_ip, &server.sin_addr);
@@ -274,7 +237,7 @@ static int initNetwork(void)
 
 	if(connect(client_sock, (struct sockaddr*)&server, sizeof(server)) != 0)
 	{
-		printf("Konnte nicht verbinden\n");
+		verbose_printf(0,"Konnte nicht zum LED-Modul verbinden\n");
 		return -1;
 	}	
 
@@ -300,79 +263,50 @@ void ledMatrixThread(void)
 
 	running = 1;
 
-	column_red = malloc(512 * sizeof(uint16_t));
-	column_green = malloc(512 * sizeof(uint16_t));
+	ledLineOutput.column_red = malloc(sizeof(uint16_t)*LINE_LENGTH);
+	ledLineOutput.column_green = malloc(sizeof(uint16_t)*LINE_LENGTH);
 	
-	column_mpd_red = malloc(512 * sizeof(uint16_t));
-	column_mpd_green = malloc(512 * sizeof(uint16_t));
+	ledLineGeneral.column_red = malloc(sizeof(uint16_t)*LINE_LENGTH);
+	ledLineGeneral.column_green = malloc(sizeof(uint16_t)*LINE_LENGTH);
 	
-	column_general_red = malloc(512 * sizeof(uint16_t));
-	column_general_green = malloc(512 * sizeof(uint16_t));
-
-	if(!column_red || !column_green || !column_mpd_red
-			|| !column_mpd_green || !column_general_red
-			|| !column_general_green)
-	{
-		printf("Could not allocate memory!\n");
-		exit(EXIT_FAILURE);
-	}
-
-	switchToBuffer(LED_BUFFER_GENERAL);
-
-	putString("00:00:00",COLOR_GREEN);
-
-	switchToBuffer(LED_BUFFER_MPD);
-
-	if(column_red == 0)
-	{
-		printf("Kein Speicher?\n");
-		exit(EXIT_FAILURE);
-	}
 	initNetwork();
-	clearScreen();
+	clearScreen(&ledLineOutput);
 
 	while(running)
 	{
-//		memcpy(column_red,column_red_current,512 * sizeof(uint16_t));
-//		memcpy(column_green,column_green_current,512 * sizeof(uint16_t));
-		
-		switchToBuffer(LED_BUFFER_MPD);
-
-		while(shiftLeft())
+		if(mpdGetState() & MPD_PLAYER_PLAY)
 		{
+			shiftOutputLeft(ledLineMpd);
 			updateDisplay();
 			usleep(20000);
 		}
-
-		sleep(2);
-
-		switchToBuffer(LED_BUFFER_GENERAL);
-		
-		for(counter=0;counter<10;counter++)
+		else
 		{
 			time(&rawtime);
 			ptm = localtime(&rawtime);
 			sprintf(time_string,"  %02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
-			clearScreen();
-			putString(time_string,COLOR_RED);
-
-			memcpy(column_red,column_red_current,512 * sizeof(uint16_t));
-			memcpy(column_green,column_green_current,512 * sizeof(uint16_t));
+			clearScreen(&ledLineGeneral);
+			putString(time_string,COLOR_RED,&ledLineGeneral);
+			copyBufferToOutput(ledLineGeneral);
 
 			updateDisplay();
-			sleep(1);
+			usleep(1000);
 		}
+
+
+
+
+		/*for(counter=0;counter<10;counter++)
+		{
+		}*/
 
 	}
 	
-	free(column_red);
-	free(column_green);
+	free(ledLineOutput.column_red);
+	free(ledLineOutput.column_green);
 	
-	free(column_mpd_red);
-	free(column_mpd_green);
-	
-	free(column_general_red);
-	free(column_general_green);
+	free(ledLineGeneral.column_red);
+	free(ledLineGeneral.column_green);
 
 	close(client_sock);
 }

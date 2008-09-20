@@ -22,9 +22,15 @@
 
 #include <libmpd.h>
 
+extern struct _ledLine ledLineMpd;
+
 extern int mpdInit(void);
 extern void mpdStatusChanged(MpdObj *mi, ChangedStatusType what);
 extern void mpdThread(void);
+
+extern int mpdGetState(void);
+
+extern int mpdState(void);
 
 #endif
 
