@@ -371,6 +371,22 @@ int main(int argc, char* argv[])
 					 break;
 				case 12: verbose_printf(0,"Serial Modul uart timeout\r\n");
 					 break;
+				case 13: mpdTogglePlayStop();
+					 break;
+				case 14: relaisP.port ^= 4;
+					 sendPacket(&relaisP, RELAIS_PACKET);
+					 if(relaisP.port & 4)
+					 {
+						 if(config.led_matrix_activated && !ledIsRunning())
+							 pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+					 }
+					 else
+					 {
+						 if(ledIsRunning())
+							 stopLedMatrixThread();
+					 }
+					 break;
+
 				case 0: //decode Stream failed
 					verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
 					break;

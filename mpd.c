@@ -216,20 +216,20 @@ void mpdThread(void)
 		}
 	}
 
-	while(mpdInit() < 0)
-	{
-		sleep(10);
-	}
+	mpdInit();
 	
 	isPlaying = mpd_player_get_state(mpd);
 
 	while(1)
 	{
 		/* Alle 10s checken ob die Verbindung zum MPD noch steht */
-		if(second_counter++ == 90)
+		if(second_counter++ == 270)
 		{
 			if(!mpd_check_connected(mpd))
-				mpd_connect(mpd);
+			{
+				if(!mpd_connect(mpd))
+					verbose_printf(0,"Connection to mpd successfully initiated!\n");
+			}
 			second_counter = 0;
 		}
 		mpd_status_update(mpd);
