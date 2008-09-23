@@ -254,7 +254,6 @@ void ledMatrixThread(void)
 {
 	
 	verbose_printf(9,"LedMatrixThread gestartet\n");
-	int counter;
 
 	time_t rawtime;
 	struct tm *ptm;
@@ -274,7 +273,7 @@ void ledMatrixThread(void)
 
 	while(running)
 	{
-		if(mpdGetState() & MPD_PLAYER_PLAY)
+		if(mpdGetState() == MPD_PLAYER_PLAY)
 		{
 			shiftOutputLeft(ledLineMpd);
 			updateDisplay();

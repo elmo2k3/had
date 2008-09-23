@@ -342,13 +342,14 @@ int main(int argc, char* argv[])
 					verbose_printf(9,"MPD Packet request\r\n");
 					sendPacket(&mpdP,MPD_PACKET);
 					break;
-				case 5: // MPD prev song
-					verbose_printf(9,"MPD prev song\r\n");
+				case 5: // MPD toggle play
+//					verbose_printf(9,"MPD play/pause\r\n");
+//					mpdTogglePlayPause();
 					//mpd_player_prev(mpd);
 					break;
 				case 6: // MPD next song
 					verbose_printf(9,"MPD next song\r\n");
-					//mpd_player_next(mpd);
+					mpdNext();
 					break;
 				case 7: // RGB Packet request
 					rgbP.headP.address = GLCD_ADDRESS;
@@ -371,7 +372,7 @@ int main(int argc, char* argv[])
 					 break;
 				case 12: verbose_printf(0,"Serial Modul uart timeout\r\n");
 					 break;
-				case 13: mpdTogglePlayStop();
+				case 13: mpdTogglePlayPause();
 					 break;
 				case 14: relaisP.port ^= 4;
 					 sendPacket(&relaisP, RELAIS_PACKET);

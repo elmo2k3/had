@@ -181,10 +181,10 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 	}
 }
 
-void mpdTogglePlayStop(void)
+void mpdTogglePlayPause(void)
 {
-	if(mpdGetState() & MPD_PLAYER_PLAY)
-		mpd_player_stop(mpd);
+	if(mpdGetState() == MPD_PLAYER_PLAY)
+		mpd_player_pause(mpd);
 	else
 		mpd_player_play(mpd);
 }
