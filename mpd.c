@@ -181,6 +181,24 @@ void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 	}
 }
 
+void mpdTogglePlayStop(void)
+{
+	if(mpdGetState() & MPD_PLAYER_PLAY)
+		mpd_player_stop(mpd);
+	else
+		mpd_player_play(mpd);
+}
+
+void mpdNext(void)
+{
+	mpd_player_next(mpd);
+}
+
+void mpdPrev(void)
+{
+	mpd_player_prev(mpd);
+}
+
 void mpdThread(void)
 {
 	int second_counter=0;

@@ -31,6 +31,9 @@ extern void mpdThread(void);
 extern int mpdGetState(void);
 
 extern int mpdState(void);
+extern void mpdTogglePlayStop(void);
+void mpdNext(void);
+void mpdPrev(void);
 
 #endif
 
