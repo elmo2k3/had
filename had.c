@@ -342,10 +342,9 @@ int main(int argc, char* argv[])
 					verbose_printf(9,"MPD Packet request\r\n");
 					sendPacket(&mpdP,MPD_PACKET);
 					break;
-				case 5: // MPD toggle play
-//					verbose_printf(9,"MPD play/pause\r\n");
-//					mpdTogglePlayPause();
-					//mpd_player_prev(mpd);
+				case 5: // MPD prev
+					verbose_printf(9,"MPD prev\r\n");
+					mpdPrev();
 					break;
 				case 6: // MPD next song
 					verbose_printf(9,"MPD next song\r\n");

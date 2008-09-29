@@ -291,14 +291,6 @@ void ledMatrixThread(void)
 			updateDisplay();
 			usleep(1000);
 		}
-
-
-
-
-		/*for(counter=0;counter<10;counter++)
-		{
-		}*/
-
 	}
 	
 	free(ledLineOutput.column_red);
@@ -308,5 +300,7 @@ void ledMatrixThread(void)
 	free(ledLineGeneral.column_green);
 
 	close(client_sock);
+
+	pthread_exit(0);
 }
 

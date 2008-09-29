@@ -141,7 +141,7 @@ struct _rgbPacket
 	unsigned char green;
 	unsigned char blue;
 	unsigned char smoothness;
-}rgbP;
+}rgbP,rgbP1,rgbP2;
 
 struct _relaisPacket
 {

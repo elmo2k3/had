@@ -58,6 +58,8 @@ static void networkClientHandler(int client_sock)
 	uint8_t modul,sensor;
 
 	uint8_t relais;
+
+	struct _rgbPacket rgbTemp;
 	do
 	{
 		buf[0] = 255;
@@ -66,14 +68,20 @@ static void networkClientHandler(int client_sock)
 		switch(buf[0])
 		{
 			case CMD_NETWORK_RGB: 
-				recv_size = recv(client_sock,&rgbP, sizeof(rgbP),0);
-				sendPacket(&rgbP,RGB_PACKET);
+				recv_size = recv(client_sock,&rgbTemp, sizeof(rgbTemp),0);
+				sendPacket(&rgbTemp,RGB_PACKET);
+				if(rgbTemp.headP.address == 1)
+					memcpy(&rgbP,&rgbTemp,sizeof(rgbTemp));
+				else if(rgbTemp.headP.address == 3)
+					memcpy(&rgbP1,&rgbTemp,sizeof(rgbTemp));
+				else if(rgbTemp.headP.address == 4)
+					memcpy(&rgbP2,&rgbTemp,sizeof(rgbTemp));
 				
-				rgbP.headP.address = GLCD_ADDRESS;
+/*				rgbP.headP.address = GLCD_ADDRESS;
 				rgbP.headP.command = RGB_PACKET;
 				sendPacket(&rgbP,RGB_PACKET);
 				rgbP.headP.command = 0;
-
+*/
 				break;
 
 			case CMD_NETWORK_GET_RGB:
@@ -83,18 +91,19 @@ static void networkClientHandler(int client_sock)
 			case CMD_NETWORK_BLINK:
 				for(i=0;i<2;i++)
 				{
+					/* alle Module rot */
 					sendRgbPacket(1,255,0,0,0);
 					sendRgbPacket(3,255,0,0,0);
 					sendRgbPacket(4,255,0,0,0);
 					
 					rgbP.smoothness = 0;
-					/* Achtung, hack: annahme beide Module gleiche Farbe */
-					rgbP.headP.address = 1;
+					rgbP1.smoothness = 0;
+					rgbP2.smoothness = 0;
+					
+					/* vorherige Farben zurueckschreiben */
 					sendPacket(&rgbP,RGB_PACKET);
-					rgbP.headP.address = 3;
-					sendPacket(&rgbP,RGB_PACKET);
-					rgbP.headP.address = 4;
-					sendPacket(&rgbP,RGB_PACKET);
+					sendPacket(&rgbP1,RGB_PACKET);
+					sendPacket(&rgbP2,RGB_PACKET);
 				}
 				break;
 
