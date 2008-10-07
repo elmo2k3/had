@@ -28,7 +28,7 @@
 
 #define LINE_LENGTH 512
 
-
+/* holding the content for each different line to be shown */
 struct _ledLine
 {
 	uint16_t *column_red;

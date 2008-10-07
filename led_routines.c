@@ -45,7 +45,7 @@ static uint16_t GREEN[4][16];
 
 static struct _ledLine ledLineOutput;
 
-static struct _ledLine ledLineGeneral;
+static struct _ledLine ledLineTime;
 
 
 static int client_sock;
@@ -265,8 +265,8 @@ void ledMatrixThread(void)
 	ledLineOutput.column_red = malloc(sizeof(uint16_t)*LINE_LENGTH);
 	ledLineOutput.column_green = malloc(sizeof(uint16_t)*LINE_LENGTH);
 	
-	ledLineGeneral.column_red = malloc(sizeof(uint16_t)*LINE_LENGTH);
-	ledLineGeneral.column_green = malloc(sizeof(uint16_t)*LINE_LENGTH);
+	ledLineTime.column_red = malloc(sizeof(uint16_t)*LINE_LENGTH);
+	ledLineTime.column_green = malloc(sizeof(uint16_t)*LINE_LENGTH);
 	
 	initNetwork();
 	clearScreen(&ledLineOutput);
@@ -284,9 +284,9 @@ void ledMatrixThread(void)
 			time(&rawtime);
 			ptm = localtime(&rawtime);
 			sprintf(time_string,"  %02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
-			clearScreen(&ledLineGeneral);
-			putString(time_string,COLOR_RED,&ledLineGeneral);
-			copyBufferToOutput(ledLineGeneral);
+			clearScreen(&ledLineTime);
+			putString(time_string,COLOR_RED,&ledLineTime);
+			copyBufferToOutput(ledLineTime);
 
 			updateDisplay();
 			usleep(1000);
@@ -296,8 +296,8 @@ void ledMatrixThread(void)
 	free(ledLineOutput.column_red);
 	free(ledLineOutput.column_green);
 	
-	free(ledLineGeneral.column_red);
-	free(ledLineGeneral.column_green);
+	free(ledLineTime.column_red);
+	free(ledLineTime.column_green);
 
 	close(client_sock);
 

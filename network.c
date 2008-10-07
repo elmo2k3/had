@@ -18,6 +18,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -60,6 +61,11 @@ static void networkClientHandler(int client_sock)
 	uint8_t relais;
 
 	struct _rgbPacket rgbTemp;
+	
+	/* led-display stuff */
+	uint16_t line_size;
+	char *led_line;
+
 	do
 	{
 		buf[0] = 255;
@@ -140,6 +146,12 @@ static void networkClientHandler(int client_sock)
 				break;
 			case CMD_NETWORK_GET_RELAIS:
 				send(client_sock,&relaisP, sizeof(relaisP),0);
+				break;
+			
+			case CMD_NETWORK_LED_DISPLAY_TEXT:
+				recv(client_sock,&line_size, 2, 0);
+				led_line = malloc(sizeof(char)*line_size);
+				recv(client_sock,&led_line,line_size,0);
 				break;
 						     
 		}	
