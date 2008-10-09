@@ -231,8 +231,8 @@ int main(int argc, char* argv[])
 
 
 		
-		freopen(config.logfile, "w", stdout);
-		freopen(config.logfile, "w", stderr);
+		freopen(config.logfile, "a", stdout);
+		freopen(config.logfile, "a", stderr);
 
 		/* write into file without buffer */
 		setvbuf(stdout, NULL, _IONBF, 0);
