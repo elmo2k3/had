@@ -27,6 +27,7 @@
 #define COLOR_AMBER 2
 
 #define LINE_LENGTH 512
+#define LED_MAX_STACK 10
 
 /* holding the content for each different line to be shown */
 struct _ledLine
@@ -39,7 +40,6 @@ struct _ledLine
 	int y;
 	int shift_position;
 };
-
 
 extern int ledIsRunning(void);
 extern void ledMatrixThread(void);
@@ -60,6 +60,8 @@ extern void clearScreen(struct _ledLine *ledLine);
 
 /* shifts all columns to the left */
 extern int shiftLeft(struct _ledLine *ledLine);
+
+extern void ledPushToStack(char *string, int color, int shift, int lifetime);
 
 #endif
 

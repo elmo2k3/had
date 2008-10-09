@@ -152,6 +152,8 @@ static void networkClientHandler(int client_sock)
 				recv(client_sock,&line_size, 2, 0);
 				led_line = malloc(sizeof(char)*line_size);
 				recv(client_sock,&led_line,line_size,0);
+
+				ledPushToStack(led_line, COLOR_RED, 2, 100);
 				break;
 						     
 		}	

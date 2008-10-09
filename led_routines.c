@@ -44,9 +44,16 @@ static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
 static uint16_t RED[4][16];
 static uint16_t GREEN[4][16];
 
+static struct _ledLine ledLineStack[LED_MAX_STACK];
+
+int led_line_stack_time[LED_MAX_STACK];
+int led_line_stack_shift[LED_MAX_STACK];
 
 static int client_sock;
 static int running;
+
+int led_stack_size;
+
 
 
 int ledIsRunning(void)
@@ -272,6 +279,21 @@ void freeLedLine(struct _ledLine ledLine)
 	free(ledLine.column_green_output);
 }
 
+void ledPushToStack(char *string, int color, int shift, int lifetime)
+{
+	allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH);
+	putString(string, color, &ledLineStack[led_stack_size]);
+	led_line_stack_time[led_stack_size] = lifetime;
+	led_line_stack_shift[led_stack_size] = shift;
+	led_stack_size++;
+}
+
+static void ledPopFromStack(void)
+{
+	freeLedLine(ledLineStack[led_stack_size-1]);
+	led_stack_size--;
+}
+
 void ledMatrixThread(void)
 {
 	verbose_printf(9,"LedMatrixThread gestartet\n");
@@ -281,6 +303,7 @@ void ledMatrixThread(void)
 	int shift_speed = 0;
 	time_t rawtime;
 	struct tm *ptm;
+
 
 	char time_string[20];
 
@@ -293,20 +316,34 @@ void ledMatrixThread(void)
 	ledLineToDraw = &ledLineTime;
 	while(running)
 	{
-		if(mpdGetState() == MPD_PLAYER_PLAY)
+		if(led_stack_size)
 		{
-			ledLineToDraw = &ledLineMpd;
-			shift_speed = 2;
+			ledLineToDraw = &ledLineStack[led_stack_size-1];
+			led_line_stack_time[led_stack_size-1]--;
+			shift_speed = led_line_stack_shift[led_stack_size-1];
+			if(!led_line_stack_time[led_stack_size-1])
+			{
+				ledPopFromStack();
+				led_stack_size--;
+			}
 		}
 		else
 		{
-			time(&rawtime);
-			ptm = localtime(&rawtime);
-			sprintf(time_string,"  %02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
-			clearScreen(&ledLineTime);
-			putString(time_string,COLOR_RED,&ledLineTime);
-			ledLineToDraw = &ledLineTime;
-			shift_speed = 0;
+			if(mpdGetState() == MPD_PLAYER_PLAY)
+			{
+				ledLineToDraw = &ledLineMpd;
+				shift_speed = 2;
+			}
+			else
+			{
+				time(&rawtime);
+				ptm = localtime(&rawtime);
+				sprintf(time_string,"  %02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
+				clearScreen(&ledLineTime);
+				putString(time_string,COLOR_RED,&ledLineTime);
+				ledLineToDraw = &ledLineTime;
+				shift_speed = 0;
+			}
 		}
 		
 		ledDisplayMain(ledLineToDraw, shift_speed);
