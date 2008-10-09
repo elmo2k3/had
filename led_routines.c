@@ -38,37 +38,23 @@
 
 static uint16_t charGetStart(char c);
 static int initNetwork(void);
+static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
 
 /* Diese Arrays werden nur zur Uebertragung ans Modul genutzt */
 static uint16_t RED[4][16];
 static uint16_t GREEN[4][16];
 
-static struct _ledLine ledLineOutput;
-
-static struct _ledLine ledLineTime;
-
 
 static int client_sock;
 static int running;
 
-static int position = 0;
-
-
-void copyBufferToOutput(struct _ledLine ledLine)
-{
-	memcpy(ledLineOutput.column_red,ledLine.column_red,sizeof(uint16_t)*LINE_LENGTH);
-	memcpy(ledLineOutput.column_green,ledLine.column_green,sizeof(uint16_t)*LINE_LENGTH);
-
-	ledLineOutput.x = ledLine.x;
-	ledLineOutput.y = ledLine.y;
-}
 
 int ledIsRunning(void)
 {
 	return running;
 }
 
-void updateDisplay()
+void updateDisplay(struct _ledLine ledLine)
 {
 	int bytes_send;
 	int i,p,m;
@@ -82,8 +68,18 @@ void updateDisplay()
 		{
 			for(p=0;p<16;p++)
 			{
-				RED[m][i+ledLineOutput.y] |= ((ledLineOutput.column_red[p+m*16] & (1<<i))>>(i)<<p);
-				GREEN[m][i+ledLineOutput.y] |= ((ledLineOutput.column_green[p+m*16] & (1<<i))>>(i)<<p);
+				/* was there a shift yet? if no, print the unshifted arrays */
+				if(ledLine.shift_position)
+				{
+					RED[m][i+ledLine.y] |= ((ledLine.column_red_output[p+m*16] & (1<<i))>>(i)<<p);
+					GREEN[m][i+ledLine.y] |= ((ledLine.column_green_output[p+m*16] & (1<<i))>>(i)<<p);
+				}
+				else
+				{
+					RED[m][i+ledLine.y] |= ((ledLine.column_red[p+m*16] & (1<<i))>>(i)<<p);
+					GREEN[m][i+ledLine.y] |= ((ledLine.column_green[p+m*16] & (1<<i))>>(i)<<p);
+				}
+
 			}
 		}
 	}
@@ -188,35 +184,39 @@ void clearScreen(struct _ledLine *ledLine)
 {
 	memset(ledLine->column_red,0,sizeof(uint16_t)*LINE_LENGTH);
 	memset(ledLine->column_green,0,sizeof(uint16_t)*LINE_LENGTH);
+	
+	memset(ledLine->column_red_output,0,sizeof(uint16_t)*LINE_LENGTH);
+	memset(ledLine->column_green_output,0,sizeof(uint16_t)*LINE_LENGTH);
+
 	ledLine->x = 0;
 	ledLine->y = 1;
 }
 
 
-int shiftOutputLeft(struct _ledLine ledLine)
+int shiftLeft(struct _ledLine *ledLine)
 {
 	int counter;
 	
-	position++;
+	ledLine->shift_position++;
 
-	for(counter=0;counter< ledLine.x + 10;counter++)
+	for(counter=0;counter< ledLine->x + 10;counter++)
 	{
-		if(position + counter > (ledLine.x + 10))
+		if(ledLine->shift_position + counter > (ledLine->x + 10))
 		{
-			ledLineOutput.column_red[counter] = ledLine.column_red[counter + position - (ledLine.x +11)];
-			ledLineOutput.column_green[counter] = ledLine.column_green[counter + position - (ledLine.x +11)];
+			ledLine->column_red_output[counter] = ledLine->column_red[counter + ledLine->shift_position - (ledLine->x +11)];
+			ledLine->column_green_output[counter] = ledLine->column_green[counter + ledLine->shift_position - (ledLine->x +11)];
 		}
 		else
 		{
-			ledLineOutput.column_red[counter] = ledLine.column_red[position+counter];
-			ledLineOutput.column_green[counter] = ledLine.column_green[position+counter];
+			ledLine->column_red_output[counter] = ledLine->column_red[ledLine->shift_position+counter];
+			ledLine->column_green_output[counter] = ledLine->column_green[ledLine->shift_position+counter];
 		}
 	}
 
 	
-	if(position > ledLine.x + 11)
+	if(ledLine->shift_position > ledLine->x + 11)
 	{
-		position = 0;
+		ledLine->shift_position = 0;
 		return 0;
 	}
 	else
@@ -250,34 +250,53 @@ void stopLedMatrixThread()
 	running = 0;
 }
 
+void allocateLedLine(struct _ledLine *ledLine, int line_length)
+{
+	ledLine->column_red = malloc(sizeof(uint16_t)*line_length);
+	ledLine->column_green = malloc(sizeof(uint16_t)*line_length);
+	
+	ledLine->column_red_output = malloc(sizeof(uint16_t)*line_length);
+	ledLine->column_green_output = malloc(sizeof(uint16_t)*line_length);
+
+	ledLine->x = 0;
+	ledLine->y = 0;
+	ledLine->shift_position = 0;
+}
+
+void freeLedLine(struct _ledLine ledLine)
+{
+	free(ledLine.column_red);
+	free(ledLine.column_green);
+	
+	free(ledLine.column_red_output);
+	free(ledLine.column_green_output);
+}
+
 void ledMatrixThread(void)
 {
-	
 	verbose_printf(9,"LedMatrixThread gestartet\n");
 
+	struct _ledLine ledLineTime;
+	struct _ledLine *ledLineToDraw;
+	int shift_speed = 0;
 	time_t rawtime;
 	struct tm *ptm;
 
 	char time_string[20];
 
 	running = 1;
+	
+	allocateLedLine(&ledLineTime, LINE_LENGTH);
 
-	ledLineOutput.column_red = malloc(sizeof(uint16_t)*LINE_LENGTH);
-	ledLineOutput.column_green = malloc(sizeof(uint16_t)*LINE_LENGTH);
-	
-	ledLineTime.column_red = malloc(sizeof(uint16_t)*LINE_LENGTH);
-	ledLineTime.column_green = malloc(sizeof(uint16_t)*LINE_LENGTH);
-	
 	initNetwork();
-	clearScreen(&ledLineOutput);
 
+	ledLineToDraw = &ledLineTime;
 	while(running)
 	{
 		if(mpdGetState() == MPD_PLAYER_PLAY)
 		{
-			shiftOutputLeft(ledLineMpd);
-			updateDisplay();
-			usleep(20000);
+			ledLineToDraw = &ledLineMpd;
+			shift_speed = 2;
 		}
 		else
 		{
@@ -286,21 +305,33 @@ void ledMatrixThread(void)
 			sprintf(time_string,"  %02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
 			clearScreen(&ledLineTime);
 			putString(time_string,COLOR_RED,&ledLineTime);
-			copyBufferToOutput(ledLineTime);
-
-			updateDisplay();
-			usleep(1000);
+			ledLineToDraw = &ledLineTime;
+			shift_speed = 0;
 		}
+		
+		ledDisplayMain(ledLineToDraw, shift_speed);
 	}
-	
-	free(ledLineOutput.column_red);
-	free(ledLineOutput.column_green);
-	
-	free(ledLineTime.column_red);
-	free(ledLineTime.column_green);
 
+	freeLedLine(ledLineTime);
+	
 	close(client_sock);
 
 	pthread_exit(0);
+}
+
+static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
+{
+	static int counter = 0;
+	if(shift_speed)
+	{
+		shiftLeft(ledLineToDraw);
+		updateDisplay(*ledLineToDraw);
+		usleep(20000);
+	}
+	else
+	{
+		updateDisplay(*ledLineToDraw);
+		usleep(1000);
+	}
 }
 

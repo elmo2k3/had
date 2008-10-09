@@ -33,8 +33,11 @@ struct _ledLine
 {
 	uint16_t *column_red;
 	uint16_t *column_green;
+	uint16_t *column_red_output;
+	uint16_t *column_green_output;
 	int x;
 	int y;
+	int shift_position;
 };
 
 
@@ -45,19 +48,18 @@ extern void stopLedMatrixThread(void);
 /* send data over tcp/ip */
 extern void updateDisplay();
 
+extern void allocateLedLine(struct _ledLine *ledLine, int line_length);
+extern void freeLedLine(struct _ledLine ledLine);
+
 extern void putChar(char c, uint8_t color, struct _ledLine *ledLine);
 
 extern void putString(char *string, uint8_t color, struct _ledLine *ledLine);
-
-extern void copyBufferToOutput(struct _ledLine ledLine);
 
 /* clears the screen. doesn't send to display, call updateDisplay() afterwards */
 extern void clearScreen(struct _ledLine *ledLine);
 
 /* shifts all columns to the left */
-extern int shiftOutputLeft(struct _ledLine ledLine);
-
-extern void switchToBuffer(int numBuffer);
+extern int shiftLeft(struct _ledLine *ledLine);
 
 #endif
 

@@ -205,8 +205,7 @@ void mpdThread(void)
 
 	/* Speicher reservieren */
 
-	ledLineMpd.column_red = malloc(sizeof(uint16_t)*LINE_LENGTH);
-	ledLineMpd.column_green = malloc(sizeof(uint16_t)*LINE_LENGTH);
+	allocateLedLine(&ledLineMpd, LINE_LENGTH);
 	
 	if(config.scrobbler_activated)
 	{
@@ -236,6 +235,5 @@ void mpdThread(void)
 		usleep(100000);
 	}
 	/* wird derzeit nie erreicht ... fuer spaeter */
-	free(ledLineMpd.column_red);
-	free(ledLineMpd.column_green);
+	freeLedLine(ledLineMpd);
 }
