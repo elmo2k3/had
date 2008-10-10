@@ -281,6 +281,7 @@ void freeLedLine(struct _ledLine ledLine)
 
 void ledPushToStack(char *string, int color, int shift, int lifetime)
 {
+	verbose_printf(9,"String pushed to stack: %s\n",string);
 	allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH);
 	putString(string, color, &ledLineStack[led_stack_size]);
 	led_line_stack_time[led_stack_size] = lifetime;
@@ -290,6 +291,7 @@ void ledPushToStack(char *string, int color, int shift, int lifetime)
 
 static void ledPopFromStack(void)
 {
+	verbose_printf(9,"String popped from stack\n");
 	freeLedLine(ledLineStack[led_stack_size-1]);
 	led_stack_size--;
 }
