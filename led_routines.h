@@ -22,6 +22,10 @@
 
 #include <inttypes.h>
 
+/** \defgroup 1Basic Basic
+ */
+/*@{*/
+
 #define COLOR_RED 0
 #define COLOR_GREEN 1
 #define COLOR_AMBER 2
@@ -41,6 +45,11 @@ struct _ledLine
 	int shift_position;
 };
 
+/** 
+ * Checks if the thread for the led-matrix is running
+ *
+ * @returns returns 0 on stopped, 1 on running
+ */
 extern int ledIsRunning(void);
 extern void ledMatrixThread(void);
 extern void stopLedMatrixThread(void);
@@ -51,7 +60,15 @@ extern void updateDisplay();
 extern void allocateLedLine(struct _ledLine *ledLine, int line_length);
 extern void freeLedLine(struct _ledLine ledLine);
 
-extern void putChar(char c, uint8_t color, struct _ledLine *ledLine);
+/** Draw a character
+ *
+ * @param c character to draw
+ * @param color can be COLOR_RED, COLOR_GREEN or COLOR_AMBER
+ * @param *ledLine pointer to the struct where the character should be drawn
+ * 
+ * @return 0 on failure (LINE_LENGTH reached), 1 on success
+ */
+extern int putChar(char c, uint8_t color, struct _ledLine *ledLine);
 
 extern void putString(char *string, uint8_t color, struct _ledLine *ledLine);
 
@@ -62,6 +79,8 @@ extern void clearScreen(struct _ledLine *ledLine);
 extern int shiftLeft(struct _ledLine *ledLine);
 
 extern void ledPushToStack(char *string, int color, int shift, int lifetime);
+
+/*@}*/
 
 #endif
 

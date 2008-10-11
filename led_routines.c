@@ -52,8 +52,7 @@ int led_line_stack_shift[LED_MAX_STACK];
 static int client_sock;
 static int running;
 
-int led_stack_size;
-
+int led_stack_size = 0;
 
 
 int ledIsRunning(void)
@@ -118,22 +117,38 @@ static uint16_t charGetStart(char c)
 }
 
 
-void putChar(char c, uint8_t color, struct _ledLine *ledLine)
+int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 {
-	/* Leerzeichen abfangen */
-	if(c == 32)
-	{
-		ledLine->x += 4;
-		return;
-	}
 
 	uint8_t first_char = Arial_Bold_14[4];
 	uint8_t char_count = Arial_Bold_14[5];
-	uint8_t char_width = Arial_Bold_14[6+c-first_char];
+	uint8_t char_width;
 
-	uint16_t start = charGetStart(c);
+	uint16_t start;
 
 	uint8_t i;
+
+	/* if char is not in our font just leave */
+	if(c < first_char || c > (first_char + char_count))
+		return 1;
+	
+	/* Leerzeichen abfangen */
+	if(c == 32)
+		char_width = 4;
+	else
+	{
+		char_width = Arial_Bold_14[6+c-first_char];
+		start = charGetStart(c);
+	}
+	
+	if((ledLine->x + char_width) >= LINE_LENGTH-50)
+		return 0;
+
+	if(c == 32)
+	{
+		ledLine->x += 4;
+		return 1;
+	}
 
 	for(i=0;i<char_width;i++)
 	{
@@ -170,11 +185,9 @@ void putChar(char c, uint8_t color, struct _ledLine *ledLine)
 		}
 	}
 
-	/* Bei Bedarf wieder an den Anfang gehen */
-	if(ledLine->x + char_width +1 < LINE_LENGTH-1)
-		ledLine->x += char_width + 1;
-	else
-		ledLine->x = 0;
+	ledLine->x += char_width + 1;
+
+	return 1;
 }
 
 void putString(char *string, uint8_t color, struct _ledLine *ledLine)
@@ -183,7 +196,8 @@ void putString(char *string, uint8_t color, struct _ledLine *ledLine)
 		string = "null";
 	while(*string)
 	{
-		putChar(*string++,color,ledLine);
+		if(!putChar(*string++,color,ledLine))
+			return;
 	}
 }
 
@@ -204,8 +218,6 @@ int shiftLeft(struct _ledLine *ledLine)
 {
 	int counter;
 	
-	ledLine->shift_position++;
-
 	for(counter=0;counter< ledLine->x + 10;counter++)
 	{
 		if(ledLine->shift_position + counter > (ledLine->x + 10))
@@ -220,10 +232,11 @@ int shiftLeft(struct _ledLine *ledLine)
 		}
 	}
 
+	ledLine->shift_position++;
 	
 	if(ledLine->shift_position > ledLine->x + 11)
 	{
-		ledLine->shift_position = 0;
+		ledLine->shift_position = 1;
 		return 0;
 	}
 	else
@@ -264,6 +277,8 @@ void allocateLedLine(struct _ledLine *ledLine, int line_length)
 	
 	ledLine->column_red_output = malloc(sizeof(uint16_t)*line_length);
 	ledLine->column_green_output = malloc(sizeof(uint16_t)*line_length);
+	
+	clearScreen(ledLine);
 
 	ledLine->x = 0;
 	ledLine->y = 0;
@@ -281,12 +296,22 @@ void freeLedLine(struct _ledLine ledLine)
 
 void ledPushToStack(char *string, int color, int shift, int lifetime)
 {
+	int x;
 	verbose_printf(9,"String pushed to stack: %s\n",string);
 	allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH);
 	putString(string, color, &ledLineStack[led_stack_size]);
+	
+	x = ledLineStack[led_stack_size].x;
+
+	lifetime *= (x+11);
+	if(x > 64)
+		lifetime -= 64;
+	else
+		shift = 0;
 	led_line_stack_time[led_stack_size] = lifetime;
 	led_line_stack_shift[led_stack_size] = shift;
 	led_stack_size++;
+	running = 1;
 }
 
 static void ledPopFromStack(void)
@@ -294,6 +319,7 @@ static void ledPopFromStack(void)
 	verbose_printf(9,"String popped from stack\n");
 	freeLedLine(ledLineStack[led_stack_size-1]);
 	led_stack_size--;
+
 }
 
 void ledMatrixThread(void)
@@ -326,10 +352,10 @@ void ledMatrixThread(void)
 			if(!led_line_stack_time[led_stack_size-1])
 			{
 				ledPopFromStack();
-				led_stack_size--;
 			}
 		}
-		else
+		/* Important! else doesn't work here */
+		if(!led_stack_size)
 		{
 			if(mpdGetState() == MPD_PLAYER_PLAY)
 			{

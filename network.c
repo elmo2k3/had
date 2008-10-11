@@ -64,6 +64,7 @@ static void networkClientHandler(int client_sock)
 	
 	/* led-display stuff */
 	uint16_t line_size;
+	uint16_t led_count;
 	char *led_line;
 
 	do
@@ -152,10 +153,11 @@ static void networkClientHandler(int client_sock)
 				recv(client_sock,&line_size, 2, 0);
 				verbose_printf(9,"LED line_size: %d\n",line_size);
 				led_line = malloc(sizeof(char)*line_size);
+				recv(client_sock,&led_count, 2, 0);
 				recv(client_sock,led_line,line_size,0);
 				led_line[line_size] = '\0';
 
-				ledPushToStack(led_line, COLOR_RED, 2, 100);
+				ledPushToStack(led_line, COLOR_RED, 2, led_count);
 				break;
 						     
 		}	
