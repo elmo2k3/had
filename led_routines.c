@@ -324,6 +324,8 @@ static void ledPopFromStack(void)
 
 void ledMatrixThread(void)
 {
+	if(running) // something went terribly wrong
+		return;
 	verbose_printf(9,"LedMatrixThread gestartet\n");
 
 	struct _ledLine ledLineTime;
