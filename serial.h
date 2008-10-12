@@ -22,9 +22,32 @@
 
 #define BAUDRATE B19200
 
+/** @file serial.h
+ */
+
+/** Init serial device
+ * @return 0 on failure, 1 on success
+ */
 int initSerial(char *device);
+
+/** Read a line
+ *
+ * @param *buf char buffer should be 255
+ * @return number of read bytes
+ */
 int readSerial(char *buf);
+
+/** Send a packet
+ *
+ * @param *packet pointer to struct holding the data
+ * @param type packet type, see had.h
+ */
 void sendPacket(void *packet, int type);
+
+/** Send a RGB packet
+ *
+ * @param address address of the rgb modul. Currently can be 1,3 or 4
+ */
 void sendRgbPacket(unsigned char address, unsigned char red, unsigned char green, unsigned char blue, unsigned char smoothness);
 
 #endif

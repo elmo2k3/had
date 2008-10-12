@@ -254,7 +254,7 @@ int main(int argc, char* argv[])
 //	if(config.led_matrix_activated)
 //		pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
 
-	if(initSerial(config.tty) < 0) // serielle Schnittstelle aktivieren
+	if(!initSerial(config.tty)) // serielle Schnittstelle aktivieren
 	{
 		verbose_printf(0,"Serielle Schnittstelle konnte nicht geoeffnet werden!\n");
 		exit(EX_NOINPUT);

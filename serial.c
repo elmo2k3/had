@@ -28,7 +28,7 @@
 
 int fd;
 
-int initSerial(char *device) // returns fd
+int initSerial(char *device) 
 {
 	struct termios newtio;
 	
@@ -37,7 +37,7 @@ int initSerial(char *device) // returns fd
 	fd = open(device, O_RDWR | O_NOCTTY );
 	if (fd <0) 
 	{
-		return -1;
+		return 0;
 	}
 
 	bzero(&newtio, sizeof(newtio)); /* clear struct for new port settings */
@@ -94,7 +94,7 @@ int initSerial(char *device) // returns fd
 	*/
 	tcflush(fd, TCIFLUSH);
 	tcsetattr(fd,TCSANOW,&newtio);
-	return 0;
+	return 1;
 }
 
 void sendPacket(void *packet, int type)

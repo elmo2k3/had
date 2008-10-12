@@ -40,6 +40,9 @@ struct _ledLine ledLineMpd;
 
 static int isPlaying;
 
+static int mpdInit(void);
+static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what);
+
 MpdObj *getMpdObject(void)
 {
 	return mpd;
@@ -55,7 +58,7 @@ void mpdErrorCallback(MpdObj *mi, int errorid, char *msg, void *userdata)
 	verbose_printf(0,"Error: %i : %s \n", errorid, msg);
 }
 
-int mpdInit(void)
+static int mpdInit(void)
 {
 	mpd = mpd_new(config.mpd_server,
 			config.mpd_port,
@@ -75,7 +78,7 @@ int mpdInit(void)
 		return 1;
 }
 
-void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
+static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 {
 	static char last_artist[30],
 		    last_title[30],

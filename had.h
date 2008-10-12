@@ -22,6 +22,9 @@
 
 #include <pthread.h>
 
+/** @file had.h
+ */
+
 #define HAD_CONFIG_FILE "/etc/had.conf"
 
 #define ADC_RES 1024
@@ -59,38 +62,35 @@ extern char *theTime(void);
 extern int16_t lastTemperature[9][9][2];
 extern int16_t lastVoltage[9];
 
-struct _currentTemperature
-{
-	int wohnzimmer[2];
-	int draussen[2];
-}currentTemperature;
-
+/** Struct holding all config vars
+ * 
+ */
 struct _config
 {
-	char database_server[50];
-	char database_user[20];
-	char database_password[30];
-	char database_database[20];
-	int database_port;
+	char database_server[50]; /**< mysql server, can be hostname or ip */
+	char database_user[20]; /**< mysql user */
+	char database_password[30]; /**< mysql password */
+	char database_database[20]; /**< database name */
+	int database_port; /**< database port. default 3306 */
 	
-	char mpd_server[50];
-	char mpd_password[30];
-	int mpd_port;
+	char mpd_server[50]; /**< mpd server, hostname or ip */
+	char mpd_password[30]; /**< mpd password */
+	int mpd_port; /**< mpd port, default 6600 */
 
-	char scrobbler_user[20];
-	char scrobbler_hash[34];
-	char scrobbler_tmpfile[100];
+	char scrobbler_user[20]; /**< audioscrobbler user */
+	char scrobbler_hash[34]; /**< audioscrobbler password hash, see audioscrobbler docu */
+	char scrobbler_tmpfile[100]; /**< tempfile. ugly. wont be needed in future versions */
 	
-	char pid_file[100];
-	char logfile[100];
-	char tty[255];
-	int verbosity;
-	int daemonize;
+	char pid_file[100]; /**< had pid file */
+	char logfile[100]; /**< had logfile */
+	char tty[255]; /**< serial device */
+	int verbosity; /**< verbosity. currently 0 and 9 supported */
+	int daemonize; /**< detach from tty, 0 or 1 */
 
-	char led_matrix_ip[50];
-	int led_matrix_port;
-	int led_matrix_activated;
-	int scrobbler_activated;
+	char led_matrix_ip[50]; /**< ip address of led-matrix-display */
+	int led_matrix_port; /**< port of led-matrix-display */
+	int led_matrix_activated; /**< led-matrix-display activated, 0 or 1 */
+	int scrobbler_activated; /**< audioscrobbler activated, 0 or 1 */
 }config;
 
 struct headPacket

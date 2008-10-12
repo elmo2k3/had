@@ -19,7 +19,14 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-/* return 0 on failure, 1 on success */
+/** @file config.h
+ * Config file routines
+ */
+
+/**
+ * @param *conf config file to load
+ * @return 0 on failure, 1 on success
+ */
 extern int loadConfig(char *conf);
 
 /* Default values */

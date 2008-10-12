@@ -20,20 +20,35 @@
 #ifndef __MPD_H__
 #define __MPD_H__
 
+/** @file mpd.h
+ * MusicPlayerDaemon routines
+ */
+
 #include <libmpd.h>
+
 
 extern struct _ledLine ledLineMpd;
 
-extern int mpdInit(void);
-extern void mpdStatusChanged(MpdObj *mi, ChangedStatusType what);
+/** MPD main thread
+ */
 extern void mpdThread(void);
 
+/** 
+ * @return current mpd state. See libmpd for details
+ */
 extern int mpdGetState(void);
 
-extern int mpdState(void);
+/** Toggle play/pause
+ */
 extern void mpdTogglePlayPause(void);
-void mpdNext(void);
-void mpdPrev(void);
+
+/** Next song
+ */
+extern void mpdNext(void);
+
+/** Previous song
+ */
+extern void mpdPrev(void);
 
 #endif
 
