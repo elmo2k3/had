@@ -41,7 +41,7 @@
 #define RGB_PACKET 4
 #define RELAIS_PACKET 5
 
-#define GLCD_ADDRESS 7
+#define GLCD_ADDRESS 0x30
 #define TEMP1_ADDRESS 3
 #define BASE_ADDRESS 10
 

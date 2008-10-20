@@ -270,19 +270,29 @@ void stopLedMatrixThread()
 	running = 0;
 }
 
-void allocateLedLine(struct _ledLine *ledLine, int line_length)
+int allocateLedLine(struct _ledLine *ledLine, int line_length)
 {
 	ledLine->column_red = malloc(sizeof(uint16_t)*line_length);
+	if(!ledLine->column_red)
+		return 0;
 	ledLine->column_green = malloc(sizeof(uint16_t)*line_length);
+	if(!ledLine->column_green)
+		return 0;
 	
 	ledLine->column_red_output = malloc(sizeof(uint16_t)*line_length);
+	if(!ledLine->column_red_output)
+		return 0;
 	ledLine->column_green_output = malloc(sizeof(uint16_t)*line_length);
+	if(!ledLine->column_green_output)
+		return 0;
 	
+
 	clearScreen(ledLine);
 
 	ledLine->x = 0;
 	ledLine->y = 0;
 	ledLine->shift_position = 0;
+	return 1;
 }
 
 void freeLedLine(struct _ledLine ledLine)
@@ -297,9 +307,15 @@ void freeLedLine(struct _ledLine ledLine)
 void ledPushToStack(char *string, int color, int shift, int lifetime)
 {
 	int x;
+	if(!allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH))
+	{
+		verbose_printf(0,"Could not allocate memory!!\n");
+		return;
+	}
+	
 	verbose_printf(9,"String pushed to stack: %s\n",string);
-	allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH);
 	putString(string, color, &ledLineStack[led_stack_size]);
+	free(string);
 	
 	x = ledLineStack[led_stack_size].x;
 
@@ -311,7 +327,6 @@ void ledPushToStack(char *string, int color, int shift, int lifetime)
 	led_line_stack_time[led_stack_size] = lifetime;
 	led_line_stack_shift[led_stack_size] = shift;
 	led_stack_size++;
-	running = 1;
 }
 
 static void ledPopFromStack(void)

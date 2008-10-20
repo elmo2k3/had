@@ -32,7 +32,7 @@
 #define COLOR_AMBER 2
 
 #define LINE_LENGTH 512
-#define LED_MAX_STACK 10
+#define LED_MAX_STACK 30
 
 /** Struct holding a line drawable at the display
  *
@@ -81,7 +81,7 @@ extern void updateDisplay(struct _ledLine ledLine);
  * @param *ledLine reference to the line
  * @param line_length IMPORTANT: by now, only use LINE_LENGTH
  */
-extern void allocateLedLine(struct _ledLine *ledLine, int line_length);
+extern int allocateLedLine(struct _ledLine *ledLine, int line_length);
 
 /** Free memory for a line
  *

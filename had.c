@@ -360,10 +360,15 @@ int main(int argc, char* argv[])
 					rgbP.red = celsius;
 					rgbP.green = decicelsius;
 					rgbP.blue = voltage;
-					rgbP.headP.address = 0x01;
+					rgbP.headP.address = 0x10;
 					sendPacket(&rgbP, RGB_PACKET);
-					rgbP.headP.address = 0x03;
+					rgbP.headP.address = 0x11;
 					sendPacket(&rgbP, RGB_PACKET);
+					memcpy(&rgbP1,&rgbP,sizeof(rgbP));
+					rgbP.headP.address = 0x12;
+					sendPacket(&rgbP, RGB_PACKET);
+					memcpy(&rgbP2,&rgbP,sizeof(rgbP));
+					rgbP.headP.address = 0x10;
 					break;
 				case 10: verbose_printf(0,"Serial Modul hard-reset\r\n");
 					 break;
@@ -385,6 +390,9 @@ int main(int argc, char* argv[])
 						 if(ledIsRunning())
 							 stopLedMatrixThread();
 					 }
+					 break;
+				case 15: relaisP.port ^= 32;
+					 sendPacket(&relaisP, RELAIS_PACKET);	
 					 break;
 
 				case 0: //decode Stream failed

@@ -37,6 +37,8 @@
 
 static int sock, leave;
 
+static int net_blocked = 0;
+
 pthread_t *network_client_thread[MAX_CLIENTS];
 
 static void networkClientHandler(int client_sock);
@@ -77,11 +79,11 @@ static void networkClientHandler(int client_sock)
 			case CMD_NETWORK_RGB: 
 				recv_size = recv(client_sock,&rgbTemp, sizeof(rgbTemp),0);
 				sendPacket(&rgbTemp,RGB_PACKET);
-				if(rgbTemp.headP.address == 1)
+				if(rgbTemp.headP.address == 0x10)
 					memcpy(&rgbP,&rgbTemp,sizeof(rgbTemp));
-				else if(rgbTemp.headP.address == 3)
+				else if(rgbTemp.headP.address == 0x11)
 					memcpy(&rgbP1,&rgbTemp,sizeof(rgbTemp));
-				else if(rgbTemp.headP.address == 4)
+				else if(rgbTemp.headP.address == 0x12)
 					memcpy(&rgbP2,&rgbTemp,sizeof(rgbTemp));
 				
 /*				rgbP.headP.address = GLCD_ADDRESS;
@@ -96,21 +98,28 @@ static void networkClientHandler(int client_sock)
 				break;
 
 			case CMD_NETWORK_BLINK:
-				for(i=0;i<2;i++)
+				if(!net_blocked)
 				{
-					/* alle Module rot */
-					sendRgbPacket(1,255,0,0,0);
-					sendRgbPacket(3,255,0,0,0);
-					sendRgbPacket(4,255,0,0,0);
-					
-					rgbP.smoothness = 0;
-					rgbP1.smoothness = 0;
-					rgbP2.smoothness = 0;
-					
-					/* vorherige Farben zurueckschreiben */
-					sendPacket(&rgbP,RGB_PACKET);
-					sendPacket(&rgbP1,RGB_PACKET);
-					sendPacket(&rgbP2,RGB_PACKET);
+					net_blocked = 1;
+					for(i=0;i<2;i++)
+					{
+						/* alle Module rot */
+						sendRgbPacket(0x10,255,0,0,0);
+						sendRgbPacket(0x11,255,0,0,0);
+						sendRgbPacket(0x12,255,0,0,0);
+						
+						rgbP.smoothness = 0;
+						rgbP1.smoothness = 0;
+						rgbP2.smoothness = 0;
+						usleep(100000);
+						
+						/* vorherige Farben zurueckschreiben */
+						sendPacket(&rgbP,RGB_PACKET);
+						sendPacket(&rgbP1,RGB_PACKET);
+						sendPacket(&rgbP2,RGB_PACKET);
+						usleep(100000);
+					}
+					net_blocked = 0;
 				}
 				break;
 

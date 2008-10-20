@@ -136,13 +136,13 @@ void sendPacket(void *packet, int type)
 	}		
 	else if(type == RELAIS_PACKET)
 	{
-		headP->address = 0x0A;
+		headP->address = 0x02;
 		headP->count = 2;
 		headP->command = 0;
 		write(fd,packet,sizeof(relaisP));
 	}		
 //	usleep(50000); // warten bis Packet wirklich abgeschickt wurde
-	usleep(30000); // warten bis Packet wirklich abgeschickt wurde
+//	usleep(30000); // warten bis Packet wirklich abgeschickt wurde
 }
 
 void sendRgbPacket(unsigned char address, unsigned char red, unsigned char green, unsigned char blue, unsigned char smoothness)
