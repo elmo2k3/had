@@ -91,6 +91,7 @@ struct _config
 	int led_matrix_port; /**< port of led-matrix-display */
 	int led_matrix_activated; /**< led-matrix-display activated, 0 or 1 */
 	int scrobbler_activated; /**< audioscrobbler activated, 0 or 1 */
+	int led_shift_speed; /**< Shift speed for texts on the led matrix */
 }config;
 
 struct headPacket

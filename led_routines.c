@@ -272,17 +272,17 @@ void stopLedMatrixThread()
 
 int allocateLedLine(struct _ledLine *ledLine, int line_length)
 {
-	ledLine->column_red = malloc(sizeof(uint16_t)*line_length);
+	ledLine->column_red = calloc(sizeof(uint16_t), line_length);
 	if(!ledLine->column_red)
 		return 0;
-	ledLine->column_green = malloc(sizeof(uint16_t)*line_length);
+	ledLine->column_green = calloc(sizeof(uint16_t), line_length);
 	if(!ledLine->column_green)
 		return 0;
 	
-	ledLine->column_red_output = malloc(sizeof(uint16_t)*line_length);
+	ledLine->column_red_output = calloc(sizeof(uint16_t), line_length);
 	if(!ledLine->column_red_output)
 		return 0;
-	ledLine->column_green_output = malloc(sizeof(uint16_t)*line_length);
+	ledLine->column_green_output = calloc(sizeof(uint16_t), line_length);
 	if(!ledLine->column_green_output)
 		return 0;
 	
@@ -306,27 +306,36 @@ void freeLedLine(struct _ledLine ledLine)
 
 void ledPushToStack(char *string, int color, int shift, int lifetime)
 {
-	int x;
-	if(!allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH))
-	{
-		verbose_printf(0,"Could not allocate memory!!\n");
+	if(!running)
 		return;
-	}
-	
-	verbose_printf(9,"String pushed to stack: %s\n",string);
-	putString(string, color, &ledLineStack[led_stack_size]);
-	free(string);
-	
-	x = ledLineStack[led_stack_size].x;
+	if(led_stack_size + 1 < LED_MAX_STACK)
+	{
+		int x;
+		if(!allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH))
+		{
+			verbose_printf(0,"Could not allocate memory!!\n");
+			return;
+		}
+		
+		verbose_printf(9,"String pushed to stack: %s\n",string);
+		putString(string, color, &ledLineStack[led_stack_size]);
+	//	free(string);
+		
+		x = ledLineStack[led_stack_size].x;
 
-	lifetime *= (x+11);
-	if(x > 64)
-		lifetime -= 64;
+		lifetime *= (x+11);
+		if(x > 64)
+			lifetime -= 64;
+		else
+			shift = 0;
+		led_line_stack_time[led_stack_size] = lifetime;
+		led_line_stack_shift[led_stack_size] = shift;
+		led_stack_size++;
+	}
 	else
-		shift = 0;
-	led_line_stack_time[led_stack_size] = lifetime;
-	led_line_stack_shift[led_stack_size] = shift;
-	led_stack_size++;
+	{
+		verbose_printf(0,"LED-Stack is full!!\n");
+	}
 }
 
 static void ledPopFromStack(void)
@@ -408,7 +417,7 @@ static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
 	{
 		shiftLeft(ledLineToDraw);
 		updateDisplay(*ledLineToDraw);
-		usleep(20000);
+		usleep(config.led_shift_speed);
 	}
 	else
 	{
