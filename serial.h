@@ -50,5 +50,19 @@ void sendPacket(void *packet, int type);
  */
 void sendRgbPacket(unsigned char address, unsigned char red, unsigned char green, unsigned char blue, unsigned char smoothness);
 
+/** Activate the background light of the basestation
+ */
+void setBaseLcdOn();
+
+/** Deactivate the background light of the basestation
+ */
+void setBaseLcdOff();
+
+/** Send text to the basestation lcd display
+ *
+ * @param *text text to show, max 32 chars
+ */
+void sendBaseLcdText(char *text);
+
 #endif
 

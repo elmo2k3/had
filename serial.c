@@ -165,3 +165,40 @@ int readSerial(char *buf)
 	buf[res] = 0;
 	return res;
 }
+
+void setBaseLcdOn()
+{
+	struct headPacket headP;
+	headP.address = 0x02;
+	headP.count = 1;
+	headP.command = 1;
+	write(fd,&headP,sizeof(headP));
+}
+
+void setBaseLcdOff()
+{
+	struct headPacket headP;
+	headP.address = 0x02;
+	headP.count = 1;
+	headP.command = 2;
+	write(fd,&headP,sizeof(headP));
+}
+
+void sendBaseLcdText(char *text)
+{
+	struct headPacket headP;
+	struct _lcd_text
+	{
+		struct headPacket headP;
+		char text[33];
+	}lcd_text;
+
+	lcd_text.headP.address = 0x02;
+	lcd_text.headP.count = 34;
+	lcd_text.headP.command = 5;
+	strncpy(lcd_text.text,text,32);
+	lcd_text.text[32] = '\0';
+	write(fd,&lcd_text,sizeof(lcd_text));
+}
+
+

@@ -67,7 +67,8 @@ static void networkClientHandler(int client_sock)
 	/* led-display stuff */
 	uint16_t line_size;
 	uint16_t led_count;
-	char *led_line;
+
+	char led_line[1024];
 
 	do
 	{
@@ -161,14 +162,29 @@ static void networkClientHandler(int client_sock)
 			case CMD_NETWORK_LED_DISPLAY_TEXT:
 				recv(client_sock,&line_size, 2, 0);
 				verbose_printf(9,"LED line_size: %d\n",line_size);
-				led_line = malloc(sizeof(char)*line_size);
+//				led_line = malloc(sizeof(char)*line_size);
 				recv(client_sock,&led_count, 2, 0);
 				recv(client_sock,led_line,line_size,0);
 				led_line[line_size] = '\0';
 
 				ledPushToStack(led_line, COLOR_RED, 2, led_count);
 				break;
-						     
+			
+			case CMD_NETWORK_BASE_LCD_ON:
+				setBaseLcdOn();
+				break;
+
+			case CMD_NETWORK_BASE_LCD_OFF:
+				setBaseLcdOff();
+				break;
+
+			case CMD_NETWORK_BASE_LCD_TEXT:
+				recv(client_sock, &line_size, 2, 0);
+				verbose_printf(9,"LCD line_size: %d\n",line_size);
+				recv(client_sock, led_line, line_size, 0);
+				sendBaseLcdText(led_line);
+				break;
+				     
 		}	
 		usleep(1000);
 	}while(buf[0] != CMD_NETWORK_QUIT);

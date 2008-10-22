@@ -34,6 +34,9 @@ extern void networkThread(void);
 #define CMD_NETWORK_RELAIS 6
 #define CMD_NETWORK_GET_RELAIS 7
 #define CMD_NETWORK_LED_DISPLAY_TEXT 8
+#define CMD_NETWORK_BASE_LCD_ON 9
+#define CMD_NETWORK_BASE_LCD_OFF 10
+#define CMD_NETWORK_BASE_LCD_TEXT 11
 
 #define BUF_SIZE 1024
 #define MAX_CLIENTS 10

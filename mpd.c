@@ -178,8 +178,8 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			verbose_printf(9, "Song changed ...\n");
 			
 			sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
-		//	sendPacket(&mpdP,MPD_PACKET);			
-		
+			sendPacket(&mpdP,MPD_PACKET);
+			sendBaseLcdText(mpdP.currentSong);
 		}
 	}
 }
