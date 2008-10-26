@@ -190,14 +190,23 @@ int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 	return 1;
 }
 
-void putString(char *string, uint8_t color, struct _ledLine *ledLine)
+void putString(char *string, struct _ledLine *ledLine)
 {
+	static int color = COLOR_RED;
+
 	if(!string)
 		string = "null";
 	while(*string)
 	{
-		if(!putChar(*string++,color,ledLine))
+		if(*string == '\n')
+			color = COLOR_GREEN;
+		else if(*string == '\r')
+			color = COLOR_RED;
+		else if(*string == '\a')
+			color = COLOR_AMBER;
+		else if(!putChar(*string,color,ledLine))
 			return;
+		string++;
 	}
 }
 
@@ -318,7 +327,7 @@ void ledPushToStack(char *string, int color, int shift, int lifetime)
 		}
 		
 		verbose_printf(9,"String pushed to stack: %s\n",string);
-		putString(string, color, &ledLineStack[led_stack_size]);
+		putString(string,&ledLineStack[led_stack_size]);
 	//	free(string);
 		
 		x = ledLineStack[led_stack_size].x;
@@ -392,9 +401,9 @@ void ledMatrixThread(void)
 			{
 				time(&rawtime);
 				ptm = localtime(&rawtime);
-				sprintf(time_string,"  %02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
+				sprintf(time_string,"  \r%02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
 				clearScreen(&ledLineTime);
-				putString(time_string,COLOR_RED,&ledLineTime);
+				putString(time_string,&ledLineTime);
 				ledLineToDraw = &ledLineTime;
 				shift_speed = 0;
 			}

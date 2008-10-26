@@ -350,12 +350,12 @@ int main(int argc, char* argv[])
 					verbose_printf(9,"MPD next song\r\n");
 					mpdNext();
 					break;
-				case 7: // RGB Packet request
+/*				case 7: // RGB Packet request
 					rgbP.headP.address = GLCD_ADDRESS;
 					rgbP.headP.command = RGB_PACKET;
 					sendPacket(&rgbP,RGB_PACKET);
 					rgbP.headP.command = 0;
-					break;
+					break;*/
 				case 8: // RGB Packet set
 					rgbP.red = celsius;
 					rgbP.green = decicelsius;

@@ -100,9 +100,11 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 		if(song)
 		{
 			clearScreen(&ledLineMpd);
-			putString(song->artist,COLOR_RED,&ledLineMpd);
-			putString(" - ",COLOR_AMBER,&ledLineMpd);
-			putString(song->title,COLOR_GREEN,&ledLineMpd);
+			char stringToPrint[100];
+			putString("\r",&ledLineMpd);
+			putString(song->artist,&ledLineMpd);
+			putString("\a - \n",&ledLineMpd);
+			putString(song->title,&ledLineMpd);
 
 			/* Auf PIN4 liegt die Stereoanlage
 			 * Nur wenn diese an ist zu last.fm submitten!

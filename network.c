@@ -152,7 +152,7 @@ static void networkClientHandler(int client_sock)
 				{
 					if(ledIsRunning())
 						stopLedMatrixThread();
-				}
+					}
 					
 				break;
 			case CMD_NETWORK_GET_RELAIS:

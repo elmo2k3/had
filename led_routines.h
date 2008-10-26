@@ -104,10 +104,9 @@ extern int putChar(char c, uint8_t color, struct _ledLine *ledLine);
 /** Append a string to line
  *
  * @param *string null-terminated string
- * @param color can be COLOR_RED, COLOR_GREEN or COLOR_AMBER
  * @param *ledLine reference to the line
  */
-extern void putString(char *string, uint8_t color, struct _ledLine *ledLine);
+extern void putString(char *string, struct _ledLine *ledLine);
 
 /** Clear a line
  *
