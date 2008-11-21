@@ -52,7 +52,7 @@ int led_line_stack_shift[LED_MAX_STACK];
 static int client_sock;
 static int running;
 
-int led_stack_size = 0;
+volatile int led_stack_size = 0;
 
 
 int ledIsRunning(void)
@@ -226,13 +226,20 @@ void clearScreen(struct _ledLine *ledLine)
 int shiftLeft(struct _ledLine *ledLine)
 {
 	int counter;
+
+	int scroll_length;
 	
-	for(counter=0;counter< ledLine->x + 10;counter++)
+	if(ledLine->x + 11 > LINE_LENGTH)
+		scroll_length = LINE_LENGTH;
+	else
+		scroll_length = ledLine->x + 11;
+
+	for(counter=0;counter< scroll_length - 1  ;counter++)
 	{
-		if(ledLine->shift_position + counter > (ledLine->x + 10))
+		if(ledLine->shift_position + counter > scroll_length - 1)
 		{
-			ledLine->column_red_output[counter] = ledLine->column_red[counter + ledLine->shift_position - (ledLine->x +11)];
-			ledLine->column_green_output[counter] = ledLine->column_green[counter + ledLine->shift_position - (ledLine->x +11)];
+			ledLine->column_red_output[counter] = ledLine->column_red[counter + ledLine->shift_position - (scroll_length)];
+			ledLine->column_green_output[counter] = ledLine->column_green[counter + ledLine->shift_position - (scroll_length)];
 		}
 		else
 		{
@@ -304,13 +311,22 @@ int allocateLedLine(struct _ledLine *ledLine, int line_length)
 	return 1;
 }
 
-void freeLedLine(struct _ledLine ledLine)
+void freeLedLine(struct _ledLine *ledLine)
 {
-	free(ledLine.column_red);
-	free(ledLine.column_green);
+	if(!ledLine->column_red)
+		verbose_printf(0,"ledLine.column_red was not allocated\n");
+	if(!ledLine->column_green)
+		verbose_printf(0,"ledLine.column_green was not allocated\n");
+	if(!ledLine->column_red_output)
+		verbose_printf(0,"ledLine.column_red_output was not allocated\n");
+	if(!ledLine->column_green_output)
+		verbose_printf(0,"ledLine.column_green_output was not allocated\n");
+	free(ledLine->column_red);
+	free(ledLine->column_green);
 	
-	free(ledLine.column_red_output);
-	free(ledLine.column_green_output);
+	free(ledLine->column_red_output);
+	free(ledLine->column_green_output);
+	verbose_printf(0,"Free'd\n");
 }
 
 void ledPushToStack(char *string, int color, int shift, int lifetime)
@@ -328,7 +344,6 @@ void ledPushToStack(char *string, int color, int shift, int lifetime)
 		
 		verbose_printf(9,"String pushed to stack: %s\n",string);
 		putString(string,&ledLineStack[led_stack_size]);
-	//	free(string);
 		
 		x = ledLineStack[led_stack_size].x;
 
@@ -350,7 +365,7 @@ void ledPushToStack(char *string, int color, int shift, int lifetime)
 static void ledPopFromStack(void)
 {
 	verbose_printf(9,"String popped from stack\n");
-	freeLedLine(ledLineStack[led_stack_size-1]);
+	freeLedLine(&ledLineStack[led_stack_size-1]);
 	led_stack_size--;
 
 }
@@ -388,6 +403,9 @@ void ledMatrixThread(void)
 			{
 				ledPopFromStack();
 			}
+			else
+				ledDisplayMain(ledLineToDraw, shift_speed);
+
 		}
 		/* Important! else doesn't work here */
 		if(!led_stack_size)
@@ -407,12 +425,12 @@ void ledMatrixThread(void)
 				ledLineToDraw = &ledLineTime;
 				shift_speed = 0;
 			}
+			ledDisplayMain(ledLineToDraw, shift_speed);
 		}
 		
-		ledDisplayMain(ledLineToDraw, shift_speed);
 	}
 
-	freeLedLine(ledLineTime);
+	freeLedLine(&ledLineTime);
 	
 	close(client_sock);
 

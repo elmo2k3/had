@@ -105,7 +105,7 @@ void sendPacket(void *packet, int type)
 	{
 		headP->address = GLCD_ADDRESS;
 		headP->command = GP_PACKET;
-		headP->count = 17;
+		headP->count = 18;
 		write(fd,packet,sizeof(glcdP));
 	}
 	else if(type == MPD_PACKET)
@@ -148,6 +148,8 @@ void sendPacket(void *packet, int type)
 void sendRgbPacket(unsigned char address, unsigned char red, unsigned char green, unsigned char blue, unsigned char smoothness)
 {
 	struct _rgbPacket rgbPacket;
+
+	memset(&rgbPacket, 0, sizeof(rgbPacket));
 
 	rgbPacket.headP.address = address;
 	rgbPacket.red = red;

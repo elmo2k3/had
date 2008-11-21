@@ -89,7 +89,7 @@ extern int allocateLedLine(struct _ledLine *ledLine, int line_length);
  *
  * @param ledLine line to be freed
  */
-extern void freeLedLine(struct _ledLine ledLine);
+extern void freeLedLine(struct _ledLine *ledLine);
 
 /** Append a character to line
  *

@@ -39,7 +39,7 @@ static int sock, leave;
 
 static int net_blocked = 0;
 
-pthread_t *network_client_thread[MAX_CLIENTS];
+pthread_t network_client_thread[MAX_CLIENTS];
 
 static void networkClientHandler(int client_sock);
 
@@ -146,7 +146,10 @@ static void networkClientHandler(int client_sock)
 				if(relaisP.port & 4)
 				{
 					if(config.led_matrix_activated && !ledIsRunning())
+					{
 						pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+						pthread_detach(threads[2]);
+					}
 				}
 				else
 				{
@@ -162,7 +165,6 @@ static void networkClientHandler(int client_sock)
 			case CMD_NETWORK_LED_DISPLAY_TEXT:
 				recv(client_sock,&line_size, 2, 0);
 				verbose_printf(9,"LED line_size: %d\n",line_size);
-//				led_line = malloc(sizeof(char)*line_size);
 				recv(client_sock,&led_count, 2, 0);
 				recv(client_sock,led_line,line_size,0);
 				led_line[line_size] = '\0';
@@ -172,10 +174,14 @@ static void networkClientHandler(int client_sock)
 			
 			case CMD_NETWORK_BASE_LCD_ON:
 				setBaseLcdOn();
+				glcdP.backlight = 1;
+				updateGlcd();
 				break;
 
 			case CMD_NETWORK_BASE_LCD_OFF:
 				setBaseLcdOff();
+				glcdP.backlight = 0;
+				updateGlcd();
 				break;
 
 			case CMD_NETWORK_BASE_LCD_TEXT:
@@ -234,7 +240,10 @@ void networkThread(void)
 		verbose_printf(9, "Client %d connected\n",numConnectedClients+1);
 
 		if(numConnectedClients < MAX_CLIENTS)
-			pthread_create((void*)&network_client_thread[numConnectedClients++], NULL, (void*)networkClientHandler, (int*)client_sock);
+		{
+			pthread_create(&network_client_thread[numConnectedClients++], NULL, (void*)networkClientHandler, (int*)client_sock);
+			pthread_detach(network_client_thread[numConnectedClients-1]);
+		}
 		else
 			verbose_printf(0, "Maximale Anzahl Clients erreicht (%d)\n",numConnectedClients);
 	}

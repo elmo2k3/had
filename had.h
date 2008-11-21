@@ -55,6 +55,8 @@
                 printf(args); \
 	}
 
+extern void updateGlcd();
+
 extern pthread_t threads[3];
 
 extern char *theTime(void);
@@ -131,6 +133,7 @@ struct __attribute__((packed)) glcdMainPacket
 	unsigned char year;
 	unsigned char weekday;
 	int16_t temperature[4];
+	unsigned char backlight;
 	unsigned char wecker;
 }glcdP;
 

@@ -162,6 +162,7 @@ int main(int argc, char* argv[])
 	struct tm *ptm;
 	pid_t pid;
 	FILE *pid_file;
+	int database_status = 0;
 	
 	if(!loadConfig(HAD_CONFIG_FILE))
 	{
@@ -244,6 +245,8 @@ int main(int argc, char* argv[])
 	/* Inhalt des Arrays komplett mit 0 initialisieren */
 	memset(graphP.temperature_history,0,115);
 	memset(&rgbP,0,sizeof(rgbP)); // rgpP mit 0 initialisieren
+	memset(&rgbP1,0,sizeof(rgbP)); // rgpP mit 0 initialisieren
+	memset(&rgbP2,0,sizeof(rgbP)); // rgpP mit 0 initialisieren
 
 	lastTemperature[3][1][0] = -1;
 	lastTemperature[3][0][0] = -1;
@@ -262,22 +265,34 @@ int main(int argc, char* argv[])
 
 	/* Falls keine Verbindung zum Mysql-Server aufgebaut werden kann, einfach
 	 * immer wieder versuchen
+	 *
+	 * Schlecht, ohne mysql server funktioniert das RF->Uart garnicht mehr
 	 */
-	while(initDatabase() == -1)
+	/*while(initDatabase() == -1)
 	{
 		sleep(10);
+	}*/
+
+	glcdP.backlight = 1;
+
+	database_status = initDatabase();
+
+	if(database_status != -1)
+	{
+		getLastTemperature(3,1,&celsius,&decicelsius);
+		lastTemperature[3][1][0] = (int16_t)celsius;
+		lastTemperature[3][1][1] = (int16_t)decicelsius;
+
+		getLastTemperature(3,0,&celsius,&decicelsius);
+		lastTemperature[3][0][0] = (int16_t)celsius;
+		lastTemperature[3][0][1] = (int16_t)decicelsius;
 	}
 
-	getLastTemperature(3,1,&celsius,&decicelsius);
-	lastTemperature[3][1][0] = (int16_t)celsius;
-	lastTemperature[3][1][1] = (int16_t)decicelsius;
-
-	getLastTemperature(3,0,&celsius,&decicelsius);
-	lastTemperature[3][0][0] = (int16_t)celsius;
-	lastTemperature[3][0][1] = (int16_t)decicelsius;
+	sendBaseLcdText("had wurde gestartet ... ");
 
 	/* main loop */
-	while (1) {
+	while (1)
+	{
 		memset(buf,0,sizeof(buf));
 		res = readSerial(buf); // blocking read
 		if(res>1)
@@ -303,34 +318,21 @@ int main(int argc, char* argv[])
 					lastTemperature[modul_id][sensor_id][0] = (int16_t)celsius;
 					lastTemperature[modul_id][sensor_id][1] = (int16_t)decicelsius;
 					lastVoltage[modul_id] = voltage;
-					databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,ptm);
+					if(database_status == -1)
+						database_status = initDatabase();
+					if(database_status != -1)
+						databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,ptm);
+
+					sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
+							lastTemperature[3][1][0],
+							lastTemperature[3][1][1]/100,
+							lastTemperature[3][0][0],
+							lastTemperature[3][0][1]/100);
+					sendBaseLcdText(buf);
 					break;
 				
 				case 2:
-					ptm = localtime(&rawtime);
-					glcdP.hour = ptm->tm_hour;
-					glcdP.minute = ptm->tm_min;
-					glcdP.second = ptm->tm_sec;
-					glcdP.day = ptm->tm_mday;
-					glcdP.month = ptm->tm_mon+1;
-					glcdP.year = ptm->tm_year;
-					glcdP.weekday = 0;
-					glcdP.temperature[0] = lastTemperature[3][1][0]; // draussen
-					glcdP.temperature[1] = lastTemperature[3][1][1]; 
-					glcdP.temperature[2] = lastTemperature[3][0][0]; // schlaf
-					glcdP.temperature[3] = lastTemperature[3][0][1];
-//					glcdP.temperature[4] = lastTemperature[1][1][0]; // kuehl
-//					glcdP.temperature[5] = lastTemperature[1][1][1];
-//					glcdP.temperature[6] = lastTemperature[1][2][0];// gefrier
-//					glcdP.temperature[7] = lastTemperature[1][2][1];
-					if(fileExists("/had/wakeme"))
-					{
-						verbose_printf(9,"... Wecker aktiviert ...\n");
-						glcdP.wecker = 1;
-					}
-					else
-						glcdP.wecker = 0;
-					sendPacket(&glcdP,GP_PACKET);
+					updateGlcd();
 					verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
 					break;
 				case 3:
@@ -371,6 +373,7 @@ int main(int argc, char* argv[])
 					rgbP.headP.address = 0x10;
 					break;
 				case 10: verbose_printf(0,"Serial Modul hard-reset\r\n");
+					 sendBaseLcdText("Modul neu gestartet ....");
 					 break;
 				case 11: verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
 					 break;
@@ -420,5 +423,35 @@ static void hadSignalHandler(int signal)
 		verbose_printf(0,"Config reloaded\n");
 		loadConfig(HAD_CONFIG_FILE);
 	}
+}
+
+void updateGlcd()
+{
+	struct tm *ptm;
+	time_t rawtime;
+	
+	time(&rawtime);
+	ptm = localtime(&rawtime);
+
+	glcdP.hour = ptm->tm_hour;
+	glcdP.minute = ptm->tm_min;
+	glcdP.second = ptm->tm_sec;
+	glcdP.day = ptm->tm_mday;
+	glcdP.month = ptm->tm_mon+1;
+	glcdP.year = ptm->tm_year;
+	glcdP.weekday = 0;
+	glcdP.temperature[0] = lastTemperature[3][1][0]; // draussen
+	glcdP.temperature[1] = lastTemperature[3][1][1]; 
+	glcdP.temperature[2] = lastTemperature[3][0][0]; // schlaf
+	glcdP.temperature[3] = lastTemperature[3][0][1];
+	
+	if(fileExists("/had/wakeme"))
+	{
+		verbose_printf(9,"... Wecker aktiviert ...\n");
+		glcdP.wecker = 1;
+	}
+	else
+		glcdP.wecker = 0;
+	sendPacket(&glcdP,GP_PACKET);
 }
 
