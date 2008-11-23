@@ -69,7 +69,7 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 	if(!mysql_row[0])
 	{
 		mysql_free_result(mysql_res);
-		verbose_printf(1,"Keine Daten fuer den Graphen vorhanden!\n");
+		verbose_printf(2,"Keine Daten fuer den Graphen vorhanden!\n");
 		return;
 	}
 	*max = atof(mysql_row[0]);

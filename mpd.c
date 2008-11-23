@@ -121,7 +121,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 							last_artist, last_title, last_album,
 							last_time, last_track, last_time_started))
 					{
-						verbose_printf(1,"%s - %s submitted to lastfm!\n", last_artist, last_title);
+						verbose_printf(9,"%s - %s submitted to lastfm!\n", last_artist, last_title);
 					}
 					else
 					{
