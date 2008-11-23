@@ -398,6 +398,27 @@ int main(int argc, char* argv[])
 					 sendPacket(&relaisP, RELAIS_PACKET);	
 					 break;
 
+				case 30: // 1 open
+					 verbose_printf(1,"Door opened\n");
+					 hadState.input_state |= 1;
+					 break;
+				case 31: // 1 closed
+					 verbose_printf(1,"Door closed\n");
+					 hadState.input_state &= ~1;
+					 break;
+				case 32: // 2 open
+					 break;
+				case 33: // 2 closed
+					 break;
+				case 34: // 2 open
+					 break;
+				case 35: // 2 closed
+					 break;
+				case 36: // 2 open
+					 break;
+				case 37: // 2 closed
+					 break;
+
 				case 0: //decode Stream failed
 					verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
 					break;

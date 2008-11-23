@@ -33,9 +33,6 @@
 #include "had.h"
 #include "mpd.h"
 
-#define LMS_IP "192.168.0.93"
-#define LMS_PORT 9328
-
 static uint16_t charGetStart(char c);
 static int initNetwork(void);
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
@@ -326,7 +323,6 @@ void freeLedLine(struct _ledLine *ledLine)
 	
 	free(ledLine->column_red_output);
 	free(ledLine->column_green_output);
-	verbose_printf(0,"Free'd\n");
 }
 
 void ledPushToStack(char *string, int color, int shift, int lifetime)
