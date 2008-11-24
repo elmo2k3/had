@@ -21,6 +21,7 @@
 #define __HAD_H__
 
 #include <pthread.h>
+#include <inttypes.h>
 
 /** @file had.h
  */
@@ -94,7 +95,26 @@ struct _config
 	int led_matrix_activated; /**< led-matrix-display activated, 0 or 1 */
 	int scrobbler_activated; /**< audioscrobbler activated, 0 or 1 */
 	int led_shift_speed; /**< Shift speed for texts on the led matrix */
+
+	char statefile[100]; /**< had statefile */
 }config;
+
+struct _rgb
+{
+	uint8_t red;
+	uint8_t green;
+	uint8_t blue;
+	uint8_t smoothness;
+};
+
+struct _hadState
+{
+	struct _rgb rgbModuleValues[3];
+	uint8_t relais_state;
+	uint8_t input_state;
+	uint16_t last_voltage[3];
+}hadState;
+
 
 struct headPacket
 {
@@ -145,7 +165,7 @@ struct _rgbPacket
 	unsigned char green;
 	unsigned char blue;
 	unsigned char smoothness;
-}rgbP,rgbP1,rgbP2;
+};
 
 struct _relaisPacket
 {

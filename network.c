@@ -57,7 +57,7 @@ static void networkClientHandler(int client_sock)
 	unsigned char buf[BUF_SIZE];
 	int recv_size;
 
-	int i;
+	int i, gpcounter;
 	uint8_t modul,sensor;
 
 	uint8_t relais;
@@ -80,24 +80,21 @@ static void networkClientHandler(int client_sock)
 			case CMD_NETWORK_RGB: 
 				recv_size = recv(client_sock,&rgbTemp, sizeof(rgbTemp),0);
 				sendPacket(&rgbTemp,RGB_PACKET);
-				if(rgbTemp.headP.address == 0x10)
-					memcpy(&rgbP,&rgbTemp,sizeof(rgbTemp));
-				else if(rgbTemp.headP.address == 0x11)
-					memcpy(&rgbP1,&rgbTemp,sizeof(rgbTemp));
-				else if(rgbTemp.headP.address == 0x12)
-					memcpy(&rgbP2,&rgbTemp,sizeof(rgbTemp));
-				
-/*				rgbP.headP.address = GLCD_ADDRESS;
-				rgbP.headP.command = RGB_PACKET;
-				sendPacket(&rgbP,RGB_PACKET);
-				rgbP.headP.command = 0;
-*/
+				if(rgbTemp.headP.address >= 16 && rgbTemp.headP.address < 19)
+				{
+					hadState.rgbModuleValues[rgbTemp.headP.address-0x10].red = rgbTemp.red;
+					hadState.rgbModuleValues[rgbTemp.headP.address-0x10].green = rgbTemp.green;
+					hadState.rgbModuleValues[rgbTemp.headP.address-0x10].blue = rgbTemp.blue;
+					hadState.rgbModuleValues[rgbTemp.headP.address-0x10].smoothness = rgbTemp.smoothness;
+				}
+				else
+					verbose_printf(0,"RGB-Module address %d out of range!\n",rgbTemp.headP.address);
 				break;
-
+/* obsolete, will be replaced
 			case CMD_NETWORK_GET_RGB:
 				send(client_sock,&rgbP, sizeof(rgbP),0);
 				break;
-
+*/
 			case CMD_NETWORK_BLINK:
 				if(!net_blocked)
 				{
@@ -109,15 +106,16 @@ static void networkClientHandler(int client_sock)
 						sendRgbPacket(0x11,255,0,0,0);
 						sendRgbPacket(0x12,255,0,0,0);
 						
-						rgbP.smoothness = 0;
-						rgbP1.smoothness = 0;
-						rgbP2.smoothness = 0;
 						usleep(100000);
 						
 						/* vorherige Farben zurueckschreiben */
-						sendPacket(&rgbP,RGB_PACKET);
-						sendPacket(&rgbP1,RGB_PACKET);
-						sendPacket(&rgbP2,RGB_PACKET);
+						for(gpcounter = 0; gpcounter < 3; gpcounter++)
+						{
+							sendRgbPacket(gpcounter+0x10, hadState.rgbModuleValues[gpcounter].red, 
+								hadState.rgbModuleValues[gpcounter].green,
+								hadState.rgbModuleValues[gpcounter].blue,
+								0);
+						}
 						usleep(100000);
 					}
 					net_blocked = 0;
@@ -140,6 +138,7 @@ static void networkClientHandler(int client_sock)
 			case CMD_NETWORK_RELAIS:
 				recv_size = recv(client_sock,&relais, sizeof(relais),0);
 				relaisP.port = relais;
+				hadState.relais_state = relaisP.port;
 				verbose_printf(9, "Setting relais to ... %d\n",relaisP.port);
 				sendPacket(&relaisP,RELAIS_PACKET);
 

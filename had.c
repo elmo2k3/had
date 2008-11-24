@@ -163,12 +163,14 @@ int main(int argc, char* argv[])
 	pid_t pid;
 	FILE *pid_file;
 	int database_status = 0;
+	int gpcounter;
 	
 	if(!loadConfig(HAD_CONFIG_FILE))
 	{
 		verbose_printf(0,"Could not load config ... aborting\n\n");
 		exit(EX_NOINPUT);
 	}
+
 
 
 	if(argc > 2)
@@ -240,13 +242,25 @@ int main(int argc, char* argv[])
 		setvbuf(stderr, NULL, _IONBF, 0);
 
 	}
+	
 
 	verbose_printf(0, "had gestartet\n");
+	
+	if(loadStateFile(config.statefile))
+	{
+		verbose_printf(9, "Statefile successfully read\n");
+		relaisP.port = hadState.relais_state;
+	}
+	else
+	{
+		memset(&hadState, 0, sizeof(hadState));
+		memset(&relaisP, 0, sizeof(relaisP));
+	}
+
+
 	/* Inhalt des Arrays komplett mit 0 initialisieren */
 	memset(graphP.temperature_history,0,115);
-	memset(&rgbP,0,sizeof(rgbP)); // rgpP mit 0 initialisieren
-	memset(&rgbP1,0,sizeof(rgbP)); // rgpP mit 0 initialisieren
-	memset(&rgbP2,0,sizeof(rgbP)); // rgpP mit 0 initialisieren
+
 
 	lastTemperature[3][1][0] = -1;
 	lastTemperature[3][0][0] = -1;
@@ -254,8 +268,11 @@ int main(int argc, char* argv[])
 	pthread_create(&threads[0],NULL,(void*)&mpdThread,NULL);	
 	pthread_create(&threads[1],NULL,(void*)&networkThread,NULL);
 
-//	if(config.led_matrix_activated)
-//		pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+	if(config.led_matrix_activated && (relaisP.port & 4))
+	{
+		pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+		pthread_detach(threads[2]);
+	}
 
 	if(!initSerial(config.tty)) // serielle Schnittstelle aktivieren
 	{
@@ -344,7 +361,7 @@ int main(int argc, char* argv[])
 					verbose_printf(9,"MPD Packet request\r\n");
 					sendPacket(&mpdP,MPD_PACKET);
 					break;
-				case 5: // MPD prev
+				case 5:// MPD prev
 					verbose_printf(9,"MPD prev\r\n");
 					mpdPrev();
 					break;
@@ -359,67 +376,66 @@ int main(int argc, char* argv[])
 					rgbP.headP.command = 0;
 					break;*/
 				case 8: // RGB Packet set
-					rgbP.red = celsius;
-					rgbP.green = decicelsius;
-					rgbP.blue = voltage;
-					rgbP.headP.address = 0x10;
-					sendPacket(&rgbP, RGB_PACKET);
-					rgbP.headP.address = 0x11;
-					sendPacket(&rgbP, RGB_PACKET);
-					memcpy(&rgbP1,&rgbP,sizeof(rgbP));
-					rgbP.headP.address = 0x12;
-					sendPacket(&rgbP, RGB_PACKET);
-					memcpy(&rgbP2,&rgbP,sizeof(rgbP));
-					rgbP.headP.address = 0x10;
+					for(gpcounter = 0; gpcounter < 3; gpcounter++)
+					{
+						hadState.rgbModuleValues[gpcounter].red = celsius;
+						hadState.rgbModuleValues[gpcounter].green = decicelsius;
+						hadState.rgbModuleValues[gpcounter].blue = voltage;
+					}
+					sendRgbPacket(0x10, celsius, decicelsius, voltage, 0);
+					sendRgbPacket(0x11, celsius, decicelsius, voltage, 0);
+					sendRgbPacket(0x12, celsius, decicelsius, voltage, 0);
 					break;
-				case 10: verbose_printf(0,"Serial Modul hard-reset\r\n");
-					 sendBaseLcdText("Modul neu gestartet ....");
-					 break;
-				case 11: verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
-					 break;
-				case 12: verbose_printf(0,"Serial Modul uart timeout\r\n");
-					 break;
-				case 13: mpdTogglePlayPause();
-					 break;
-				case 14: relaisP.port ^= 4;
-					 sendPacket(&relaisP, RELAIS_PACKET);
-					 if(relaisP.port & 4)
-					 {
-						 if(config.led_matrix_activated && !ledIsRunning())
-							 pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
-					 }
-					 else
-					 {
-						 if(ledIsRunning())
-							 stopLedMatrixThread();
-					 }
-					 break;
-				case 15: relaisP.port ^= 32;
-					 sendPacket(&relaisP, RELAIS_PACKET);	
-					 break;
+				case 10:verbose_printf(0,"Serial Modul hard-reset\r\n");
+					sendBaseLcdText("Modul neu gestartet ....");
+					break;
+				case 11:verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
+					break;
+				case 12:verbose_printf(0,"Serial Modul uart timeout\r\n");
+					break;
+				case 13:mpdTogglePlayPause();
+					break;
+				case 14:relaisP.port ^= 4;
+					sendPacket(&relaisP, RELAIS_PACKET);
+					if(relaisP.port & 4)
+					{
+						if(config.led_matrix_activated && !ledIsRunning())
+						pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+					}
+					else
+					{
+						if(ledIsRunning())
+							stopLedMatrixThread();
+					}
+					hadState.relais_state = relaisP.port;
+					break;
+				case 15:relaisP.port ^= 32;
+					sendPacket(&relaisP, RELAIS_PACKET);	
+					hadState.relais_state = relaisP.port;
+					break;
 
-				case 30: // 1 open
-					 verbose_printf(1,"Door opened\n");
-					 hadState.input_state |= 1;
-					 break;
-				case 31: // 1 closed
-					 verbose_printf(1,"Door closed\n");
-					 hadState.input_state &= ~1;
-					 break;
-				case 32: // 2 open
-					 break;
-				case 33: // 2 closed
-					 break;
-				case 34: // 2 open
-					 break;
-				case 35: // 2 closed
-					 break;
-				case 36: // 2 open
-					 break;
-				case 37: // 2 closed
-					 break;
+				case 30:// 1 open
+					verbose_printf(1,"Door opened\n");
+					hadState.input_state |= 1;
+					break;
+				case 31:// 1 closed
+					verbose_printf(1,"Door closed\n");
+					hadState.input_state &= ~1;
+					break;
+				case 32:// 2 open
+					break;
+				case 33:// 2 closed
+					break;
+				case 34:// 2 open
+					break;
+				case 35:// 2 closed
+					break;
+				case 36:// 2 open
+					break;
+				case 37:// 2 closed
+					break;
 
-				case 0: //decode Stream failed
+				case 0://decode Stream failed
 					verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
 					break;
 			}
@@ -436,6 +452,7 @@ static void hadSignalHandler(int signal)
 		if(config.daemonize)
 			unlink(config.pid_file);
 		pthread_kill(threads[1],SIGQUIT);
+		writeStateFile(config.statefile);
 		verbose_printf(0,"Shutting down\n");
 		exit(EXIT_SUCCESS);
 	}

@@ -131,6 +131,7 @@ void sendPacket(void *packet, int type)
 	}
 	else if(type == RGB_PACKET)
 	{
+		struct _rgbPacket rgbP;
 		headP->count = 5;
 		write(fd,packet,sizeof(rgbP));
 	}		
