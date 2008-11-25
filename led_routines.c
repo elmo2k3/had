@@ -385,7 +385,11 @@ void ledMatrixThread(void)
 	
 	allocateLedLine(&ledLineTime, LINE_LENGTH);
 
-	initNetwork();
+	if(initNetwork() < 0)
+	{
+		verbose_printf(0, "Stopping led_matrix thread\n");
+		running = 0;
+	}
 
 	ledLineToDraw = &ledLineTime;
 	while(running)
