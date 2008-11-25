@@ -189,6 +189,14 @@ static void networkClientHandler(int client_sock)
 				recv(client_sock, led_line, line_size, 0);
 				sendBaseLcdText(led_line);
 				break;
+
+			case CMD_NETWORK_GET_HAD_STATE:
+				send(client_sock, &hadState, sizeof(hadState),0);
+				break;
+
+			case CMD_NETWORK_SET_HAD_STATE:
+				recv(client_sock, &hadState, sizeof(hadState),0);
+				break;
 				     
 		}	
 		usleep(1000);

@@ -37,6 +37,8 @@ extern void networkThread(void);
 #define CMD_NETWORK_BASE_LCD_ON 9
 #define CMD_NETWORK_BASE_LCD_OFF 10
 #define CMD_NETWORK_BASE_LCD_TEXT 11
+#define CMD_NETWORK_GET_HAD_STATE 12
+#define CMD_NETWORK_SET_HAD_STATE 13
 
 #define BUF_SIZE 1024
 #define MAX_CLIENTS 10
