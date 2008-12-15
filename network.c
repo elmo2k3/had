@@ -54,6 +54,12 @@ static void networkThreadStop(void)
 
 static void networkClientHandler(int client_sock)
 {
+	/* very important:
+	 * what we need here is a kind of "garbage collector" for unnormally
+	 * exited client connections. every one of these leaves back a thread
+	 * that will never be closed
+	 */
+
 	unsigned char buf[BUF_SIZE];
 	int recv_size;
 
@@ -154,7 +160,7 @@ static void networkClientHandler(int client_sock)
 				{
 					if(ledIsRunning())
 						stopLedMatrixThread();
-					}
+				}
 					
 				break;
 			case CMD_NETWORK_GET_RELAIS:

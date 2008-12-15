@@ -169,6 +169,24 @@ int readSerial(char *buf)
 	return res;
 }
 
+void setBeepOn()
+{
+	struct headPacket headP;
+	headP.address = 0x02;
+	headP.count = 1;
+	headP.command = 3;
+	write(fd,&headP,sizeof(headP));
+}
+
+void setBeepOff()
+{
+	struct headPacket headP;
+	headP.address = 0x02;
+	headP.count = 1;
+	headP.command = 4;
+	write(fd,&headP,sizeof(headP));
+}
+
 void setBaseLcdOn()
 {
 	struct headPacket headP;

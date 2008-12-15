@@ -417,10 +417,17 @@ int main(int argc, char* argv[])
 				case 30:// 1 open
 					verbose_printf(1,"Door opened\n");
 					hadState.input_state |= 1;
+					/* check for opened window */
+					if(hadState.input_state & 8)
+					{
+						setBeepOn();
+						verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
+					}
 					break;
 				case 31:// 1 closed
 					verbose_printf(1,"Door closed\n");
 					hadState.input_state &= ~1;
+					setBeepOff();
 					break;
 				case 32:// 2 open
 					break;
@@ -430,9 +437,13 @@ int main(int argc, char* argv[])
 					break;
 				case 35:// 2 closed
 					break;
-				case 36:// 2 open
+				case 36:// window close
+					verbose_printf(1,"Window closed\n");
+					hadState.input_state &= ~8;
 					break;
-				case 37:// 2 closed
+				case 37:// window open
+					verbose_printf(1,"Window opened\n");
+					hadState.input_state |= 8;
 					break;
 
 				case 0://decode Stream failed

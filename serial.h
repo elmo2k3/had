@@ -64,5 +64,8 @@ void setBaseLcdOff();
  */
 void sendBaseLcdText(char *text);
 
+void setBeepOn();
+void setBeepOff();
+
 #endif
 

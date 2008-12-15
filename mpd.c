@@ -65,7 +65,7 @@ static int mpdInit(void)
 			config.mpd_password);
 
 	mpd_signal_connect_status_changed(mpd,(StatusChangedCallback)mpdStatusChanged, NULL);
-	mpd_signal_connect_error(mpd,(ErrorCallback)mpdErrorCallback, NULL);
+//	mpd_signal_connect_error(mpd,(ErrorCallback)mpdErrorCallback, NULL);
 
 	mpd_set_connection_timeout(mpd,10);
 
