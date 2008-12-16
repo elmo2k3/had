@@ -109,7 +109,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			/* Auf PIN4 liegt die Stereoanlage
 			 * Nur wenn diese an ist zu last.fm submitten!
 			 */
-			if((relaisP.port & 4) && config.scrobbler_activated)
+			if((relaisP.port & 4) && config.scrobbler_activated && hadState.scrobbler_user_activated)
 			{
 				/* check if the track ran at least 2:40 or half of its runtime */
 				if(last_time && last_time_started && 
@@ -212,7 +212,7 @@ void mpdThread(void)
 
 	allocateLedLine(&ledLineMpd, LINE_LENGTH);
 	
-	if(config.scrobbler_activated)
+	if(config.scrobbler_activated && hadState.scrobbler_user_activated)
 	{
 		if(!scrobblerHandshake(session_id, now_playing_url, submission_url))
 		{

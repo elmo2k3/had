@@ -253,8 +253,11 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
+		verbose_printf(9, "Statefile could not be read, using default values\n");
 		memset(&hadState, 0, sizeof(hadState));
 		memset(&relaisP, 0, sizeof(relaisP));
+		hadState.scrobbler_user_activated = config.scrobbler_activated;
+		hadState.ledmatrix_user_activated = config.led_matrix_activated;
 	}
 
 
@@ -268,7 +271,7 @@ int main(int argc, char* argv[])
 	pthread_create(&threads[0],NULL,(void*)&mpdThread,NULL);	
 	pthread_create(&threads[1],NULL,(void*)&networkThread,NULL);
 
-	if(config.led_matrix_activated && (relaisP.port & 4))
+	if(config.led_matrix_activated && (relaisP.port & 4) && hadState.ledmatrix_user_activated)
 	{
 		pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
 		pthread_detach(threads[2]);
@@ -400,10 +403,15 @@ int main(int argc, char* argv[])
 					if(relaisP.port & 4)
 					{
 						if(config.led_matrix_activated && !ledIsRunning())
-						pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+						{
+							pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+							pthread_detach(threads[2]);
+							hadState.ledmatrix_user_activated = 1;
+						}
 					}
 					else
 					{
+						mpdPause();
 						if(ledIsRunning())
 							stopLedMatrixThread();
 					}
@@ -469,8 +477,28 @@ static void hadSignalHandler(int signal)
 	}
 	else if(signal == SIGHUP)
 	{
+		struct _config configTemp;
+		memcpy(&configTemp, &config, sizeof(config));
+
 		verbose_printf(0,"Config reloaded\n");
 		loadConfig(HAD_CONFIG_FILE);
+
+		// check if ledmatrix should be turned off
+		if(configTemp.led_matrix_activated != config.led_matrix_activated)
+		{
+			if(config.led_matrix_activated)
+			{
+				if(!ledIsRunning() && (hadState.relais_state & 4))
+				{
+					pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+					pthread_detach(threads[2]);
+				}
+				hadState.ledmatrix_user_activated = 1;
+			}
+			else
+				stopLedMatrixThread();
+		}
+
 	}
 }
 

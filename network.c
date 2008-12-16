@@ -69,6 +69,8 @@ static void networkClientHandler(int client_sock)
 	uint8_t relais;
 
 	struct _rgbPacket rgbTemp;
+
+	struct _hadState hadStateTemp;
 	
 	/* led-display stuff */
 	uint16_t line_size;
@@ -141,28 +143,6 @@ static void networkClientHandler(int client_sock)
 				send(client_sock, &lastVoltage[modul], sizeof(int16_t), 0);
 				break;
 
-			case CMD_NETWORK_RELAIS:
-				recv_size = recv(client_sock,&relais, sizeof(relais),0);
-				relaisP.port = relais;
-				hadState.relais_state = relaisP.port;
-				verbose_printf(9, "Setting relais to ... %d\n",relaisP.port);
-				sendPacket(&relaisP,RELAIS_PACKET);
-
-				if(relaisP.port & 4)
-				{
-					if(config.led_matrix_activated && !ledIsRunning())
-					{
-						pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
-						pthread_detach(threads[2]);
-					}
-				}
-				else
-				{
-					if(ledIsRunning())
-						stopLedMatrixThread();
-				}
-					
-				break;
 			case CMD_NETWORK_GET_RELAIS:
 				send(client_sock,&relaisP, sizeof(relaisP),0);
 				break;
@@ -201,12 +181,62 @@ static void networkClientHandler(int client_sock)
 				break;
 
 			case CMD_NETWORK_SET_HAD_STATE:
-				recv(client_sock, &hadState, sizeof(hadState),0);
+				recv(client_sock, &hadStateTemp, sizeof(hadState),0);
+
+				// check if user switched off ledmatrix
+				if(hadStateTemp.ledmatrix_user_activated != 
+						hadState.ledmatrix_user_activated)
+				{
+					if(hadStateTemp.ledmatrix_user_activated &&
+							config.led_matrix_activated &&
+							!ledIsRunning() &&
+							(hadState.relais_state & 4))
+					{
+						pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+						pthread_detach(threads[2]);
+					}
+					else if(!hadStateTemp.ledmatrix_user_activated &&
+							ledIsRunning())
+					{
+						stopLedMatrixThread();
+					}
+					else
+						hadStateTemp.ledmatrix_user_activated = 0;
+				}
+
+				// check if state of hifi rack changed
+				if(hadStateTemp.relais_state != hadState.relais_state)
+				{
+					if(hadStateTemp.relais_state & 4)
+					{
+						if(config.led_matrix_activated && !ledIsRunning() &&
+								hadStateTemp.ledmatrix_user_activated)
+						{
+							pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+							pthread_detach(threads[2]);
+						}
+					}
+					else
+					{
+						mpdPause();
+						if(ledIsRunning())
+							stopLedMatrixThread();
+					}
+					relaisP.port = hadStateTemp.relais_state;
+					sendPacket(&relaisP,RELAIS_PACKET);
+				}
+
+
+				memcpy(&hadState, &hadStateTemp, sizeof(hadState));
 				break;
 				     
 		}	
 		usleep(1000);
-	}while(buf[0] != CMD_NETWORK_QUIT);
+	// recv is blocking ... if we get a zero from it, we assume the connection
+	// has been terminated
+	if(!recv_size)
+		verbose_printf(1,"Connection ungracefully terminated ... \n");
+	}while(buf[0] != CMD_NETWORK_QUIT && recv_size);
 
 	close(client_sock);
 	numConnectedClients--;
