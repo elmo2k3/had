@@ -204,6 +204,11 @@ void mpdPrev(void)
 	mpd_player_prev(mpd);
 }
 
+void mpdPause(void)
+{
+	mpd_player_pause(mpd);
+}
+
 void mpdThread(void)
 {
 	int second_counter=0;

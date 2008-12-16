@@ -50,5 +50,7 @@ extern void mpdNext(void);
  */
 extern void mpdPrev(void);
 
+extern void mpdPause(void);
+
 #endif
 
