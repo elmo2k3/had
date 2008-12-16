@@ -154,7 +154,7 @@ static void networkClientHandler(int client_sock)
 				recv(client_sock,led_line,line_size,0);
 				led_line[line_size] = '\0';
 
-				ledPushToStack(led_line, COLOR_RED, 2, led_count);
+				ledPushToStack(led_line, 2, led_count);
 				break;
 			
 			case CMD_NETWORK_BASE_LCD_ON:

@@ -50,7 +50,7 @@ extern void mpdNext(void);
  */
 extern void mpdPrev(void);
 
-extern void mpdPause(void);
+extern void mpdToggleRandom(void);
 
 #endif
 

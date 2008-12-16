@@ -132,11 +132,10 @@ extern int shiftLeft(struct _ledLine *ledLine);
  * When called while stack is not empty, the new string will be shown first for lifetime
  *
  * @param *string null-terminated string
- * @param color can be COLOR_RED, COLOR_GREEN or COLOR_AMBER
  * @param shift currently ignored
  * @param lifetime num of cycled this string will be displayed
  */
-extern void ledPushToStack(char *string, int color, int shift, int lifetime);
+extern void ledPushToStack(char *string, int shift, int lifetime);
 
 
 #endif

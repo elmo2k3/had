@@ -299,6 +299,8 @@ int main(int argc, char* argv[])
 
 		database_status = initDatabase();
 
+		char buffer[1024];
+
 		if(database_status != -1)
 		{
 			getLastTemperature(3,1,&celsius,&decicelsius);
@@ -381,6 +383,8 @@ int main(int argc, char* argv[])
 						rgbP.headP.command = 0;
 						break;*/
 					case 8: // RGB Packet set
+						sprintf(buffer,"\rLicht %d %d %d",celsius, decicelsius, voltage);
+						ledPushToStack(buffer, 2, 2);
 						for(gpcounter = 0; gpcounter < 3; gpcounter++)
 						{
 							hadState.rgbModuleValues[gpcounter].red = celsius;
@@ -413,7 +417,6 @@ int main(int argc, char* argv[])
 						}
 						else
 						{
-							mpdPause();
 							if(ledIsRunning())
 								stopLedMatrixThread();
 						}
@@ -454,6 +457,11 @@ int main(int argc, char* argv[])
 					case 37:// window open
 						verbose_printf(1,"Window opened\n");
 						hadState.input_state |= 8;
+						break;
+					case 38: // toggle random
+						mpdToggleRandom();
+						break;
+					case 39: // button 4 on state 1 of remote control
 						break;
 
 					case 0://decode Stream failed

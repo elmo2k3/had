@@ -209,6 +209,20 @@ void mpdPause(void)
 	mpd_player_pause(mpd);
 }
 
+void mpdToggleRandom(void)
+{
+	if(mpd_player_get_random(mpd))
+	{
+		ledPushToStack("Random off", 2, 1);
+		mpd_player_set_random(mpd, 0);
+	}
+	else
+	{
+		ledPushToStack("Random on", 2, 1);
+		mpd_player_set_random(mpd, 1);
+	}
+}
+
 void mpdThread(void)
 {
 	int second_counter=0;

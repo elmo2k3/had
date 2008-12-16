@@ -325,7 +325,7 @@ void freeLedLine(struct _ledLine *ledLine)
 	free(ledLine->column_green_output);
 }
 
-void ledPushToStack(char *string, int color, int shift, int lifetime)
+void ledPushToStack(char *string, int shift, int lifetime)
 {
 	if(!running)
 		return;
