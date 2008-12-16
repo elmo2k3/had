@@ -24,12 +24,12 @@
 #include "config.h"
 #include "had.h"
 
-#define NUM_PARAMS 22
+#define NUM_PARAMS 23
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
 	"db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
 	"scrobbler_hash", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
 	"tty","led_matrix_ip","led_matrix_port","led_matrix_activated","scrobbler_activated",
-	"pid_file","led_matrix_shift_speed","statefile"};
+	"pid_file","led_matrix_shift_speed","statefile","serial_activated"};
 
 
 int loadConfig(char *conf)
@@ -55,6 +55,7 @@ int loadConfig(char *conf)
 	strcpy(config.pid_file, PID_FILE);
 	strcpy(config.logfile,LOG_FILE);
 	config.led_shift_speed = 15000;
+	config.serial_activated = 1;
 
 	/* step through every line */
 	while(fgets(line, sizeof(line), config_file) != NULL)
@@ -152,6 +153,9 @@ int loadConfig(char *conf)
 					break;
 				/* statefile */
 				case 21: strcpy(config.statefile, value);
+					break;
+				/* serial activated */
+				case 22: config.serial_activated = atoi(value);
 					break;
 			}
 		}

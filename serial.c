@@ -100,48 +100,51 @@ int initSerial(char *device)
 void sendPacket(void *packet, int type)
 {
 	struct headPacket *headP = (struct headPacket*)packet;
+	
+	if(config.serial_activated)
+	{
+		if(type == GP_PACKET)
+		{
+			headP->address = GLCD_ADDRESS;
+			headP->command = GP_PACKET;
+			headP->count = 18;
+			write(fd,packet,sizeof(glcdP));
+		}
+		else if(type == MPD_PACKET)
+		{
+			headP->address = GLCD_ADDRESS;
+			headP->command = MPD_PACKET;
+			headP->count = 32;
+			write(fd,packet,sizeof(mpdP));
+		}
+		else if(type == GRAPH_PACKET)
+		{
+			/* Very dirty! Zweistufiges Senden wegen Pufferueberlauf */
+			headP->address = GLCD_ADDRESS;
+			headP->count = 61;
+			headP->command = GRAPH_PACKET;
+			write(fd,packet,63);
+			usleep(1000000);
 
-	if(type == GP_PACKET)
-	{
-		headP->address = GLCD_ADDRESS;
-		headP->command = GP_PACKET;
-		headP->count = 18;
-		write(fd,packet,sizeof(glcdP));
+			headP->command = GRAPH_PACKET2;
+			char *ptr = (char*)packet;
+			write(fd,ptr,3);
+			write(fd,ptr+62,60);
+		}
+		else if(type == RGB_PACKET)
+		{
+			struct _rgbPacket rgbP;
+			headP->count = 5;
+			write(fd,packet,sizeof(rgbP));
+		}		
+		else if(type == RELAIS_PACKET)
+		{
+			headP->address = 0x02;
+			headP->count = 2;
+			headP->command = 0;
+			write(fd,packet,sizeof(relaisP));
+		}
 	}
-	else if(type == MPD_PACKET)
-	{
-		headP->address = GLCD_ADDRESS;
-		headP->command = MPD_PACKET;
-		headP->count = 32;
-		write(fd,packet,sizeof(mpdP));
-	}
-	else if(type == GRAPH_PACKET)
-	{
-		/* Very dirty! Zweistufiges Senden wegen Pufferueberlauf */
-		headP->address = GLCD_ADDRESS;
-		headP->count = 61;
-		headP->command = GRAPH_PACKET;
-		write(fd,packet,63);
-		usleep(1000000);
-
-		headP->command = GRAPH_PACKET2;
-		char *ptr = (char*)packet;
-		write(fd,ptr,3);
-		write(fd,ptr+62,60);
-	}
-	else if(type == RGB_PACKET)
-	{
-		struct _rgbPacket rgbP;
-		headP->count = 5;
-		write(fd,packet,sizeof(rgbP));
-	}		
-	else if(type == RELAIS_PACKET)
-	{
-		headP->address = 0x02;
-		headP->count = 2;
-		headP->command = 0;
-		write(fd,packet,sizeof(relaisP));
-	}		
 //	usleep(50000); // warten bis Packet wirklich abgeschickt wurde
 //	usleep(30000); // warten bis Packet wirklich abgeschickt wurde
 }
@@ -175,7 +178,8 @@ void setBeepOn()
 	headP.address = 0x02;
 	headP.count = 1;
 	headP.command = 3;
-	write(fd,&headP,sizeof(headP));
+	if(config.serial_activated)
+		write(fd,&headP,sizeof(headP));
 }
 
 void setBeepOff()
@@ -184,7 +188,8 @@ void setBeepOff()
 	headP.address = 0x02;
 	headP.count = 1;
 	headP.command = 4;
-	write(fd,&headP,sizeof(headP));
+	if(config.serial_activated)
+		write(fd,&headP,sizeof(headP));
 }
 
 void setBaseLcdOn()
@@ -193,7 +198,8 @@ void setBaseLcdOn()
 	headP.address = 0x02;
 	headP.count = 1;
 	headP.command = 1;
-	write(fd,&headP,sizeof(headP));
+	if(config.serial_activated)
+		write(fd,&headP,sizeof(headP));
 }
 
 void setBaseLcdOff()
@@ -202,7 +208,8 @@ void setBaseLcdOff()
 	headP.address = 0x02;
 	headP.count = 1;
 	headP.command = 2;
-	write(fd,&headP,sizeof(headP));
+	if(config.serial_activated)
+		write(fd,&headP,sizeof(headP));
 }
 
 void sendBaseLcdText(char *text)
@@ -219,7 +226,8 @@ void sendBaseLcdText(char *text)
 	lcd_text.headP.command = 5;
 	strncpy(lcd_text.text,text,32);
 	lcd_text.text[32] = '\0';
-	write(fd,&lcd_text,sizeof(lcd_text));
+	if(config.serial_activated)
+		write(fd,&lcd_text,sizeof(lcd_text));
 }
 
 

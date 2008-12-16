@@ -276,190 +276,201 @@ int main(int argc, char* argv[])
 		pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
 		pthread_detach(threads[2]);
 	}
-
-	if(!initSerial(config.tty)) // serielle Schnittstelle aktivieren
+	
+	if(config.serial_activated)
 	{
-		verbose_printf(0,"Serielle Schnittstelle konnte nicht geoeffnet werden!\n");
-		exit(EX_NOINPUT);
-	}
-
-	/* Falls keine Verbindung zum Mysql-Server aufgebaut werden kann, einfach
-	 * immer wieder versuchen
-	 *
-	 * Schlecht, ohne mysql server funktioniert das RF->Uart garnicht mehr
-	 */
-	/*while(initDatabase() == -1)
-	{
-		sleep(10);
-	}*/
-
-	glcdP.backlight = 1;
-
-	database_status = initDatabase();
-
-	if(database_status != -1)
-	{
-		getLastTemperature(3,1,&celsius,&decicelsius);
-		lastTemperature[3][1][0] = (int16_t)celsius;
-		lastTemperature[3][1][1] = (int16_t)decicelsius;
-
-		getLastTemperature(3,0,&celsius,&decicelsius);
-		lastTemperature[3][0][0] = (int16_t)celsius;
-		lastTemperature[3][0][1] = (int16_t)decicelsius;
-	}
-
-	sendBaseLcdText("had wurde gestartet ... ");
-
-	/* main loop */
-	while (1)
-	{
-		memset(buf,0,sizeof(buf));
-		res = readSerial(buf); // blocking read
-		if(res>1)
+		if(!initSerial(config.tty)) // serielle Schnittstelle aktivieren
 		{
-			verbose_printf(9,"Res=%d\n",res);
-			time(&rawtime);
-			ptm = gmtime(&rawtime);
-			switch(decodeStream(buf,&modul_id,&sensor_id,&celsius,&decicelsius,&voltage))
+			verbose_printf(0,"Serielle Schnittstelle konnte nicht geoeffnet werden!\n");
+			exit(EX_NOINPUT);
+		}
+
+		/* Falls keine Verbindung zum Mysql-Server aufgebaut werden kann, einfach
+		 * immer wieder versuchen
+		 *
+		 * Schlecht, ohne mysql server funktioniert das RF->Uart garnicht mehr
+		 */
+		/*while(initDatabase() == -1)
+		{
+			sleep(10);
+		}*/
+
+		glcdP.backlight = 1;
+
+		database_status = initDatabase();
+
+		if(database_status != -1)
+		{
+			getLastTemperature(3,1,&celsius,&decicelsius);
+			lastTemperature[3][1][0] = (int16_t)celsius;
+			lastTemperature[3][1][1] = (int16_t)decicelsius;
+
+			getLastTemperature(3,0,&celsius,&decicelsius);
+			lastTemperature[3][0][0] = (int16_t)celsius;
+			lastTemperature[3][0][1] = (int16_t)decicelsius;
+		}
+
+		sendBaseLcdText("had wurde gestartet ... ");
+
+		/* main loop */
+		while (1)
+		{
+			memset(buf,0,sizeof(buf));
+			res = readSerial(buf); // blocking read
+			if(res>1)
 			{
-				case 1:
-					verbose_printf(9,"%02d:%02d:%02d\t",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
-					verbose_printf(9,"Modul ID: %d\t",modul_id);
-					verbose_printf(9,"Sensor ID: %d\t",sensor_id);
-					verbose_printf(9,"Temperatur: %d,%d\t",celsius,decicelsius);
-					switch(modul_id)
-					{
-						case 1: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_1/voltage); break;
-						case 3: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_3/voltage); break;
-						default: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_DEFAULT/voltage);
-					}		
-				
-					//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
-					lastTemperature[modul_id][sensor_id][0] = (int16_t)celsius;
-					lastTemperature[modul_id][sensor_id][1] = (int16_t)decicelsius;
-					lastVoltage[modul_id] = voltage;
-					if(database_status == -1)
-						database_status = initDatabase();
-					if(database_status != -1)
-						databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,ptm);
-
-					sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
-							lastTemperature[3][1][0],
-							lastTemperature[3][1][1]/100,
-							lastTemperature[3][0][0],
-							lastTemperature[3][0][1]/100);
-					sendBaseLcdText(buf);
-					break;
-				
-				case 2:
-					updateGlcd();
-					verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
-					break;
-				case 3:
-					getDailyGraph(celsius,decicelsius, &graphP);
-					//sendPacket(&graphP,GRAPH_PACKET);
-					verbose_printf(9,"Graph gesendet\r\n");
-					break;
-				case 4:	// MPD Packet request
-					verbose_printf(9,"MPD Packet request\r\n");
-					sendPacket(&mpdP,MPD_PACKET);
-					break;
-				case 5:// MPD prev
-					verbose_printf(9,"MPD prev\r\n");
-					mpdPrev();
-					break;
-				case 6: // MPD next song
-					verbose_printf(9,"MPD next song\r\n");
-					mpdNext();
-					break;
-/*				case 7: // RGB Packet request
-					rgbP.headP.address = GLCD_ADDRESS;
-					rgbP.headP.command = RGB_PACKET;
-					sendPacket(&rgbP,RGB_PACKET);
-					rgbP.headP.command = 0;
-					break;*/
-				case 8: // RGB Packet set
-					for(gpcounter = 0; gpcounter < 3; gpcounter++)
-					{
-						hadState.rgbModuleValues[gpcounter].red = celsius;
-						hadState.rgbModuleValues[gpcounter].green = decicelsius;
-						hadState.rgbModuleValues[gpcounter].blue = voltage;
-					}
-					sendRgbPacket(0x10, celsius, decicelsius, voltage, 0);
-					sendRgbPacket(0x11, celsius, decicelsius, voltage, 0);
-					sendRgbPacket(0x12, celsius, decicelsius, voltage, 0);
-					break;
-				case 10:verbose_printf(0,"Serial Modul hard-reset\r\n");
-					sendBaseLcdText("Modul neu gestartet ....");
-					break;
-				case 11:verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
-					break;
-				case 12:verbose_printf(0,"Serial Modul uart timeout\r\n");
-					break;
-				case 13:mpdTogglePlayPause();
-					break;
-				case 14:relaisP.port ^= 4;
-					sendPacket(&relaisP, RELAIS_PACKET);
-					if(relaisP.port & 4)
-					{
-						if(config.led_matrix_activated && !ledIsRunning())
+				verbose_printf(9,"Res=%d\n",res);
+				time(&rawtime);
+				ptm = gmtime(&rawtime);
+				switch(decodeStream(buf,&modul_id,&sensor_id,&celsius,&decicelsius,&voltage))
+				{
+					case 1:
+						verbose_printf(9,"%02d:%02d:%02d\t",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
+						verbose_printf(9,"Modul ID: %d\t",modul_id);
+						verbose_printf(9,"Sensor ID: %d\t",sensor_id);
+						verbose_printf(9,"Temperatur: %d,%d\t",celsius,decicelsius);
+						switch(modul_id)
 						{
-							pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
-							pthread_detach(threads[2]);
-							hadState.ledmatrix_user_activated = 1;
+							case 1: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_1/voltage); break;
+							case 3: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_3/voltage); break;
+							default: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_DEFAULT/voltage);
+						}		
+					
+						//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
+						lastTemperature[modul_id][sensor_id][0] = (int16_t)celsius;
+						lastTemperature[modul_id][sensor_id][1] = (int16_t)decicelsius;
+						lastVoltage[modul_id] = voltage;
+						if(database_status == -1)
+							database_status = initDatabase();
+						if(database_status != -1)
+							databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,ptm);
+
+						sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
+								lastTemperature[3][1][0],
+								lastTemperature[3][1][1]/100,
+								lastTemperature[3][0][0],
+								lastTemperature[3][0][1]/100);
+						sendBaseLcdText(buf);
+						break;
+					
+					case 2:
+						updateGlcd();
+						verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
+						break;
+					case 3:
+						getDailyGraph(celsius,decicelsius, &graphP);
+						//sendPacket(&graphP,GRAPH_PACKET);
+						verbose_printf(9,"Graph gesendet\r\n");
+						break;
+					case 4:	// MPD Packet request
+						verbose_printf(9,"MPD Packet request\r\n");
+						sendPacket(&mpdP,MPD_PACKET);
+						break;
+					case 5:// MPD prev
+						verbose_printf(9,"MPD prev\r\n");
+						mpdPrev();
+						break;
+					case 6: // MPD next song
+						verbose_printf(9,"MPD next song\r\n");
+						mpdNext();
+						break;
+	/*				case 7: // RGB Packet request
+						rgbP.headP.address = GLCD_ADDRESS;
+						rgbP.headP.command = RGB_PACKET;
+						sendPacket(&rgbP,RGB_PACKET);
+						rgbP.headP.command = 0;
+						break;*/
+					case 8: // RGB Packet set
+						for(gpcounter = 0; gpcounter < 3; gpcounter++)
+						{
+							hadState.rgbModuleValues[gpcounter].red = celsius;
+							hadState.rgbModuleValues[gpcounter].green = decicelsius;
+							hadState.rgbModuleValues[gpcounter].blue = voltage;
 						}
-					}
-					else
-					{
-						mpdPause();
-						if(ledIsRunning())
-							stopLedMatrixThread();
-					}
-					hadState.relais_state = relaisP.port;
-					break;
-				case 15:relaisP.port ^= 32;
-					sendPacket(&relaisP, RELAIS_PACKET);	
-					hadState.relais_state = relaisP.port;
-					break;
+						sendRgbPacket(0x10, celsius, decicelsius, voltage, 0);
+						sendRgbPacket(0x11, celsius, decicelsius, voltage, 0);
+						sendRgbPacket(0x12, celsius, decicelsius, voltage, 0);
+						break;
+					case 10:verbose_printf(0,"Serial Modul hard-reset\r\n");
+						sendBaseLcdText("Modul neu gestartet ....");
+						break;
+					case 11:verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
+						break;
+					case 12:verbose_printf(0,"Serial Modul uart timeout\r\n");
+						break;
+					case 13:mpdTogglePlayPause();
+						break;
+					case 14:relaisP.port ^= 4;
+						sendPacket(&relaisP, RELAIS_PACKET);
+						if(relaisP.port & 4)
+						{
+							if(config.led_matrix_activated && !ledIsRunning())
+							{
+								pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+								pthread_detach(threads[2]);
+								hadState.ledmatrix_user_activated = 1;
+							}
+						}
+						else
+						{
+							mpdPause();
+							if(ledIsRunning())
+								stopLedMatrixThread();
+						}
+						hadState.relais_state = relaisP.port;
+						break;
+					case 15:relaisP.port ^= 32;
+						sendPacket(&relaisP, RELAIS_PACKET);	
+						hadState.relais_state = relaisP.port;
+						break;
 
-				case 30:// 1 open
-					verbose_printf(1,"Door opened\n");
-					hadState.input_state |= 1;
-					/* check for opened window */
-					if(hadState.input_state & 8)
-					{
-						setBeepOn();
-						verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
-					}
-					break;
-				case 31:// 1 closed
-					verbose_printf(1,"Door closed\n");
-					hadState.input_state &= ~1;
-					setBeepOff();
-					break;
-				case 32:// 2 open
-					break;
-				case 33:// 2 closed
-					break;
-				case 34:// 2 open
-					break;
-				case 35:// 2 closed
-					break;
-				case 36:// window close
-					verbose_printf(1,"Window closed\n");
-					hadState.input_state &= ~8;
-					break;
-				case 37:// window open
-					verbose_printf(1,"Window opened\n");
-					hadState.input_state |= 8;
-					break;
+					case 30:// 1 open
+						verbose_printf(1,"Door opened\n");
+						hadState.input_state |= 1;
+						/* check for opened window */
+						if(hadState.input_state & 8)
+						{
+							setBeepOn();
+							verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
+						}
+						break;
+					case 31:// 1 closed
+						verbose_printf(1,"Door closed\n");
+						hadState.input_state &= ~1;
+						setBeepOff();
+						break;
+					case 32:// 2 open
+						break;
+					case 33:// 2 closed
+						break;
+					case 34:// 2 open
+						break;
+					case 35:// 2 closed
+						break;
+					case 36:// window close
+						verbose_printf(1,"Window closed\n");
+						hadState.input_state &= ~8;
+						break;
+					case 37:// window open
+						verbose_printf(1,"Window opened\n");
+						hadState.input_state |= 8;
+						break;
 
-				case 0://decode Stream failed
-					verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
-					break;
-			}
-		} // endif res>1
-				
+					case 0://decode Stream failed
+						verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
+						break;
+				}
+			} // endif res>1
+					
+		}
+	} // config.serial_activated
+	else
+	{
+		verbose_printf(0,"Serial port deactivated\n");
+		while(1)
+		{
+			sleep(1);
+		}
 	}
 	return 0;
 }
