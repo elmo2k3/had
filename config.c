@@ -27,7 +27,7 @@
 #define NUM_PARAMS 23
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
 	"db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
-	"scrobbler_hash", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
+	"scrobbler_pass", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
 	"tty","led_matrix_ip","led_matrix_port","led_matrix_activated","scrobbler_activated",
 	"pid_file","led_matrix_shift_speed","statefile","serial_activated"};
 
@@ -116,7 +116,7 @@ int loadConfig(char *conf)
 				case 8: strcpy(config.scrobbler_user, value);
 					break;
 				/* lastm hash */
-				case 9: strcpy(config.scrobbler_hash, value);
+				case 9: strcpy(config.scrobbler_pass, value);
 					 break;
 				/* lastfm tmpfile */
 				case 10: strcpy(config.scrobbler_tmpfile, value);

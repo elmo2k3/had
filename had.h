@@ -82,7 +82,7 @@ struct _config
 	int mpd_port; /**< mpd port, default 6600 */
 
 	char scrobbler_user[20]; /**< audioscrobbler user */
-	char scrobbler_hash[34]; /**< audioscrobbler password hash, see audioscrobbler docu */
+	char scrobbler_pass[34]; /**< audioscrobbler password hash, see audioscrobbler docu */
 	char scrobbler_tmpfile[100]; /**< tempfile. ugly. wont be needed in future versions */
 	
 	char pid_file[100]; /**< had pid file */

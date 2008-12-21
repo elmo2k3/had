@@ -22,6 +22,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <string.h>
+#include <openssl/md5.h>
+#include <curl/curl.h>
 
 #include "had.h"
 #include "scrobbler.h"
@@ -71,23 +73,27 @@ int scrobblerHandshake(char *session_id, char *now_playing, char *submission)
 
 static char *scrobblerGetAuthHash(time_t timestamp)
 {
-	/* Nur passend fuer TMP_DIR Laenge max 4 */
 	char executeString[160];
+	unsigned char digest[MD5_DIGEST_LENGTH];
+	int i;
 
-	char *authHash = (char*)malloc(sizeof(char)*40);
-	FILE *md5File;
-
-	sprintf(executeString, SCROBBLER_MD5_EXECUTE, config.scrobbler_hash, (long long int)timestamp);
-	system(executeString);
+	char *authHash = (char*)malloc(sizeof(char)*MD5_DIGEST_LENGTH*2+1);
 	
-	md5File = fopen(config.scrobbler_tmpfile,"r");
-	fscanf(md5File,"%s",authHash);
-	if(md5File)
+	MD5(config.scrobbler_pass, strlen(config.scrobbler_pass), digest);
+	
+	for(i=0; i < MD5_DIGEST_LENGTH; i++)
 	{
-		fclose(md5File);
-		unlink(config.scrobbler_tmpfile);
+		sprintf(&authHash[i*2],"%02x", digest[i]);
 	}
 
+	sprintf(executeString, "%s%qd", authHash, (long long int)timestamp);
+	MD5(executeString, strlen(executeString), digest);
+	
+	for(i=0; i < MD5_DIGEST_LENGTH; i++)
+	{
+		sprintf(&authHash[i*2],"%02x", digest[i]);
+	}
+	
 	return authHash;
 }
 
