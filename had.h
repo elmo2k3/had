@@ -97,6 +97,11 @@ struct _config
 	int scrobbler_activated; /**< audioscrobbler activated, 0 or 1 */
 	int led_shift_speed; /**< Shift speed for texts on the led matrix */
 
+	int sms_activated;
+	char sipgate_user[100];
+	char sipgate_pass[100];
+	char cellphone[100];
+
 	char statefile[100]; /**< had statefile */
 }config;
 

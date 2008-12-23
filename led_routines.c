@@ -29,13 +29,20 @@
 #include <time.h>
 
 #include "led_routines.h"
-#include "arial_bold_14.h"
+#include "fonts/arial_bold_14.h"
+#include "fonts/arial_8.h"
+#include "fonts/Comic_8.h"
+#include "fonts/Comic_9.h"
+#include "fonts/Comic_10.h"
 #include "had.h"
 #include "mpd.h"
 
 static uint16_t charGetStart(char c);
 static int initNetwork(void);
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
+
+//static uint8_t *font = &Arial_Bold_14;
+static uint8_t *font = Arial_Bold_14;
 
 /* Diese Arrays werden nur zur Uebertragung ans Modul genutzt */
 static uint16_t RED[4][16];
@@ -74,13 +81,13 @@ void updateDisplay(struct _ledLine ledLine)
 				/* was there a shift yet? if no, print the unshifted arrays */
 				if(ledLine.shift_position)
 				{
-					RED[m][i+ledLine.y] |= ((ledLine.column_red_output[p+m*16] & (1<<i))>>(i)<<p);
-					GREEN[m][i+ledLine.y] |= ((ledLine.column_green_output[p+m*16] & (1<<i))>>(i)<<p);
+					RED[m][i] |= ((ledLine.column_red_output[p+m*16] & (1<<i))>>(i)<<p);
+					GREEN[m][i] |= ((ledLine.column_green_output[p+m*16] & (1<<i))>>(i)<<p);
 				}
 				else
 				{
-					RED[m][i+ledLine.y] |= ((ledLine.column_red[p+m*16] & (1<<i))>>(i)<<p);
-					GREEN[m][i+ledLine.y] |= ((ledLine.column_green[p+m*16] & (1<<i))>>(i)<<p);
+					RED[m][i] |= ((ledLine.column_red[p+m*16] & (1<<i))>>(i)<<p);
+					GREEN[m][i] |= ((ledLine.column_green[p+m*16] & (1<<i))>>(i)<<p);
 				}
 
 			}
@@ -91,11 +98,11 @@ void updateDisplay(struct _ledLine ledLine)
 
 }
 
-/* Achtung, funktioniert derzeit nur fuer Arial_Bold_14 ! */
+/* Achtung, funktioniert derzeit nur fuer font ! */
 static uint16_t charGetStart(char c)
 {
-	uint8_t first_char = Arial_Bold_14[4];
-	uint8_t char_height = Arial_Bold_14[3];
+	uint8_t first_char = font[4];
+	uint8_t char_height = font[3];
 
 	uint8_t factor = 1;
 
@@ -107,23 +114,54 @@ static uint16_t charGetStart(char c)
 
 	for(counter=0;counter<(c-first_char);counter++)
 	{
-		position += Arial_Bold_14[6+counter]*factor;
+		position += font[6+counter]*factor;
 	}
 
 	return position;
+}
+
+int charWidth(char c)
+{
+	if(c == '\a' || c == '\b' || c == '\n' || c == '\r')
+		return 0;
+	else if(c == 32)
+		return 4;
+	else
+		return font[6+c-font[4]] + 1;
+}
+
+
+int stringWidth(char *string)
+{
+	int width = 0;
+	if(!string)
+		string = "null";
+	while(*string)
+	{
+		width += charWidth(*string++);
+	}
+	return width - 1;
 }
 
 
 int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 {
 
-	uint8_t first_char = Arial_Bold_14[4];
-	uint8_t char_count = Arial_Bold_14[5];
+	uint8_t first_char = font[4];
+	uint8_t char_count = font[5];
 	uint8_t char_width;
+	uint8_t char_height = font[3];
 
 	uint16_t start;
 
 	uint8_t i;
+
+	if(c == '\n')
+	{
+		ledLine->x = 0;
+		ledLine->y = 8;
+		return 1;
+	}
 
 	/* if char is not in our font just leave */
 	if(c < first_char || c > (first_char + char_count))
@@ -134,14 +172,14 @@ int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 		char_width = 4;
 	else
 	{
-		char_width = Arial_Bold_14[6+c-first_char];
+		char_width = font[6+c-first_char];
 		start = charGetStart(c);
 	}
 	
 	if((ledLine->x + char_width) >= LINE_LENGTH-50)
 		return 0;
 
-	if(c == 32)
+	if(c == ' ')
 	{
 		ledLine->x += 4;
 		return 1;
@@ -151,16 +189,16 @@ int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 	{
 		if(color == COLOR_RED)
 		{
-			ledLine->column_red[i+ledLine->x] = Arial_Bold_14[6+char_count+start+i];
+			ledLine->column_red[i+ledLine->x] |= font[6+char_count+start+i]<<ledLine->y;
 		}
 		else if(color == COLOR_GREEN)
 		{
-			ledLine->column_green[i+ledLine->x] = Arial_Bold_14[6+char_count+start+i];
+			ledLine->column_green[i+ledLine->x] |= font[6+char_count+start+i]<<ledLine->y;
 		}
 		else if(color == COLOR_AMBER)
 		{
-			ledLine->column_red[i+ledLine->x] = Arial_Bold_14[6+char_count+start+i];
-			ledLine->column_green[i+ledLine->x] = Arial_Bold_14[6+char_count+start+i];
+			ledLine->column_red[i+ledLine->x] |= font[6+char_count+start+i]<<ledLine->y;
+			ledLine->column_green[i+ledLine->x] |= font[6+char_count+start+i]<<ledLine->y;
 		}
 	}
 	/* unteren Teil der Zeichen schreiben (noch nicht dynamisch fuer verschiedene Schriftgroessen) */
@@ -169,16 +207,16 @@ int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 		if(color == COLOR_RED)
 		{
 			/* Man erklaere mir was ich hier geschrieben. Aber funktionieren tuts! :-) */
-			ledLine->column_red[i+ledLine->x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
+			ledLine->column_red[i+ledLine->x] |= font[6+char_count+start+i+char_width]<<(char_height - 8)<<ledLine->y;
 		}
 		else if(color == COLOR_GREEN)
 		{
-			ledLine->column_green[i+ledLine->x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
+			ledLine->column_green[i+ledLine->x] |= font[6+char_count+start+i+char_width]<<(char_height - 8)<<ledLine->y;
 		}
 		else if(color == COLOR_AMBER)
 		{
-			ledLine->column_red[i+ledLine->x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
-			ledLine->column_green[i+ledLine->x] |= Arial_Bold_14[6+char_count+start+i+char_width]<<6;
+			ledLine->column_red[i+ledLine->x] |= font[6+char_count+start+i+char_width]<<(char_height - 8)<<ledLine->y;
+			ledLine->column_green[i+ledLine->x] |= font[6+char_count+start+i+char_width]<<(char_height -8)<<ledLine->y;
 		}
 	}
 
@@ -195,7 +233,7 @@ void putString(char *string, struct _ledLine *ledLine)
 		string = "null";
 	while(*string)
 	{
-		if(*string == '\n')
+		if(*string == '\b')
 			color = COLOR_GREEN;
 		else if(*string == '\r')
 			color = COLOR_RED;
@@ -265,7 +303,13 @@ static int initNetwork(void)
 		verbose_printf(0,"Keine Verbindung zum LED-Modul\n");
 	server.sin_family = AF_INET;
 	server.sin_port = htons(config.led_matrix_port);
+#ifdef _WIN32
+        unsigned long addr;
+        addr = inet_addr(config.led_matrix_ip);
+        memcpy( (char *)&server.sin_addr, &addr, sizeof(addr));
+#else
 	inet_aton(config.led_matrix_ip, &server.sin_addr);
+#endif
 	
 
 	if(connect(client_sock, (struct sockaddr*)&server, sizeof(server)) != 0)
@@ -303,7 +347,7 @@ int allocateLedLine(struct _ledLine *ledLine, int line_length)
 	clearScreen(ledLine);
 
 	ledLine->x = 0;
-	ledLine->y = 0;
+	ledLine->y = 1;
 	ledLine->shift_position = 0;
 	return 1;
 }
@@ -413,14 +457,19 @@ void ledMatrixThread(void)
 			if(mpdGetState() == MPD_PLAYER_PLAY)
 			{
 				ledLineToDraw = &ledLineMpd;
-				shift_speed = 2;
+				if(ledLineMpd.x >= 63)
+					shift_speed = 2;
+				else
+					shift_speed = 0;
 			}
 			else
 			{
 				time(&rawtime);
 				ptm = localtime(&rawtime);
-				sprintf(time_string,"  \r%02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
+				sprintf(time_string,"\r%02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
 				clearScreen(&ledLineTime);
+				ledLineTime.x = (64-stringWidth(time_string))/2;
+				ledLineTime.y = 2;
 				putString(time_string,&ledLineTime);
 				ledLineToDraw = &ledLineTime;
 				shift_speed = 0;

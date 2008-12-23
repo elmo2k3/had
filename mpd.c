@@ -103,7 +103,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			char stringToPrint[100];
 			putString("\r",&ledLineMpd);
 			putString(song->artist,&ledLineMpd);
-			putString("\a - \n",&ledLineMpd);
+			putString("\a - \b",&ledLineMpd);
 			putString(song->title,&ledLineMpd);
 
 			/* Auf PIN4 liegt die Stereoanlage
@@ -207,6 +207,11 @@ void mpdPrev(void)
 void mpdPause(void)
 {
 	mpd_player_pause(mpd);
+}
+
+void mpdPlayNumber(int number)
+{
+	mpd_player_play_id(mpd, number);
 }
 
 void mpdToggleRandom(void)

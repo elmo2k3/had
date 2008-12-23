@@ -37,6 +37,7 @@
 #include "network.h"
 #include "config.h"
 #include "led_routines.h"
+#include "sms.h"
 
 
 pthread_t threads[3];
@@ -245,7 +246,7 @@ int main(int argc, char* argv[])
 	
 
 	verbose_printf(0, "had gestartet\n");
-	
+
 	if(loadStateFile(config.statefile))
 	{
 		verbose_printf(9, "Statefile successfully read\n");
@@ -462,6 +463,7 @@ int main(int argc, char* argv[])
 						mpdToggleRandom();
 						break;
 					case 39: // button 4 on state 1 of remote control
+						mpdPlayNumber(1);
 						break;
 
 					case 0://decode Stream failed

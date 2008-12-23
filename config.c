@@ -24,12 +24,13 @@
 #include "config.h"
 #include "had.h"
 
-#define NUM_PARAMS 23
+#define NUM_PARAMS 27
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
 	"db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
 	"scrobbler_pass", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
 	"tty","led_matrix_ip","led_matrix_port","led_matrix_activated","scrobbler_activated",
-	"pid_file","led_matrix_shift_speed","statefile","serial_activated"};
+	"pid_file","led_matrix_shift_speed","statefile","serial_activated",
+	"sms_activated","sipgate_user","sipgate_pass","cellphone"};
 
 
 int loadConfig(char *conf)
@@ -157,6 +158,18 @@ int loadConfig(char *conf)
 				/* serial activated */
 				case 22: config.serial_activated = atoi(value);
 					break;
+				/* sms activated */
+				case 23: config.sms_activated = atoi(value);
+					break;
+				/* sipgate user */
+				case 24: strcpy(config.sipgate_user, value);
+					 break;
+				/* sipgate pass */
+				case 25: strcpy(config.sipgate_pass, value);
+					 break;
+				/* cellphone number */
+				case 26: strcpy(config.cellphone, value);
+					 break;
 			}
 		}
 	}

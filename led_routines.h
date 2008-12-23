@@ -137,6 +137,9 @@ extern int shiftLeft(struct _ledLine *ledLine);
  */
 extern void ledPushToStack(char *string, int shift, int lifetime);
 
+extern int stringWidth(char *string);
+extern int charWidth(char c);
+
 
 #endif
 
