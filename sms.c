@@ -42,7 +42,7 @@ static size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp)
 }
 
 
-void sms(char *number, char *message)
+void sms(char *message)
 {
 	char buf[2048];
 	char buf2[2048];
@@ -66,7 +66,7 @@ void sms(char *number, char *message)
 	
 	curl_slist_free_all(headers);
 
-	sprintf(buf2, sms_string, number, message);
+	sprintf(buf2, sms_string, config.cellphone, message);
 	headers = NULL;
 	headers = curl_slist_append(headers, "Content-Type: text/xml");
 	sprintf(buf, "Content-length: %d", (int)strlen(buf2));
@@ -77,7 +77,7 @@ void sms(char *number, char *message)
 	curl_easy_setopt(curlhandler, CURLOPT_HTTPHEADER, headers);
 	curl_easy_setopt(curlhandler, CURLOPT_POSTFIELDSIZE, strlen(buf2));
 
-	verbose_printf(0,"sms to number %s send\n",number);
+	verbose_printf(0,"sms send %s\n",message);
 //	printf(buf);
 	curl_easy_perform(curlhandler);
 }

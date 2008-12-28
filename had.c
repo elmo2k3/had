@@ -165,6 +165,7 @@ int main(int argc, char* argv[])
 	FILE *pid_file;
 	int database_status = 0;
 	int gpcounter;
+	int belowMinTemp = 0;
 	
 	if(!loadConfig(HAD_CONFIG_FILE))
 	{
@@ -354,6 +355,19 @@ int main(int argc, char* argv[])
 								lastTemperature[3][0][0],
 								lastTemperature[3][0][1]/100);
 						sendBaseLcdText(buf);
+
+						if(lastTemperature[3][0][0] < 15 && !belowMinTemp &&
+								config.sms_activated)
+						{
+							char stringToSend[100];
+							belowMinTemp = 1;
+							sprintf(stringToSend,"%s had: Temperature is now %2d.%2d",theTime(),
+									lastTemperature[3][0][0],
+								lastTemperature[3][0][1]);
+							sms(stringToSend);
+						}
+						else if(lastTemperature[3][0][0] > 16)
+							belowMinTemp = 0;
 						break;
 					
 					case 2:
