@@ -26,7 +26,7 @@
 #include "serial.h"
 #include "had.h"
 
-int fd;
+static int fd;
 
 int initSerial(char *device) 
 {

@@ -34,6 +34,7 @@
 #include "serial.h"
 #include "database.h"
 #include "led_routines.h"
+#include "hr20.h"
 
 static int sock, leave;
 
@@ -77,6 +78,8 @@ static void networkClientHandler(int client_sock)
 	uint16_t led_count;
 
 	char led_line[1024];
+
+	struct _hr20info hr20info;
 
 	do
 	{
@@ -229,8 +232,14 @@ static void networkClientHandler(int client_sock)
 
 				memcpy(&hadState, &hadStateTemp, sizeof(hadState));
 				break;
-				     
-		}	
+
+			case CMD_NETWORK_GET_HR20:
+				hr20GetStatus(&hr20info);
+				send(client_sock, &hr20info, sizeof(hr20info), 0);
+				break;
+
+		}
+
 		usleep(1000);
 	// recv is blocking ... if we get a zero from it, we assume the connection
 	// has been terminated

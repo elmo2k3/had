@@ -102,6 +102,9 @@ struct _config
 	char sipgate_pass[100];
 	char cellphone[100];
 
+	int hr20_activated;
+	char hr20_port[255];
+
 	char statefile[100]; /**< had statefile */
 }config;
 
