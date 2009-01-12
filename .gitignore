@@ -1,7 +1,4 @@
-*.o
-main
-had
 *.swp
-tags
 build
 doc
+Session.vim
