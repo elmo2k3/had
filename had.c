@@ -44,6 +44,7 @@
 #include "config.h"
 #include "led_routines.h"
 #include "sms.h"
+#include "version.h"
 
 
 pthread_t threads[3];
@@ -251,8 +252,11 @@ int main(int argc, char* argv[])
 
 	}
 	
-
-	verbose_printf(0, "had gestartet\n");
+#ifdef VERSION
+	verbose_printf(0, "had %s started\n",VERSION);
+#else
+	verbose_printf(0, "had started\n");
+#endif
 
 	if(loadStateFile(config.statefile))
 	{
