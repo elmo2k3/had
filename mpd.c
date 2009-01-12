@@ -17,6 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+ * \file	mpd.c
+ * \brief	mpd communication functions
+ * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #include <stdio.h>
 #include <libmpd/libmpd.h>
 #include <stdlib.h>

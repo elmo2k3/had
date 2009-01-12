@@ -17,14 +17,17 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+ * \file	had.h
+ * \brief	had header file. some constant and struct definitions
+ * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #ifndef __HAD_H__
 #define __HAD_H__
 
 #include <pthread.h>
 #include <inttypes.h>
-
-/** @file had.h
- */
 
 #define HAD_CONFIG_FILE "/etc/had.conf"
 

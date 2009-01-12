@@ -17,13 +17,16 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+ * \file	serial.h
+ * \brief	header for functions to communicate with serial had base module
+ * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #ifndef __SERIAL_H__
 #define __SERIAL_H__
 
 #define BAUDRATE B19200
-
-/** @file serial.h
- */
 
 /** Init serial device
  * @return 0 on failure, 1 on success

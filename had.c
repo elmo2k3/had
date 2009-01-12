@@ -17,6 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+ * \file	had.c
+ * \brief	main file for had
+ * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/signal.h>
@@ -24,7 +30,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libmpd.h>
+#include <libmpd/libmpd.h>
 #include <pthread.h>
 #include <signal.h>
 #include <sys/stat.h>

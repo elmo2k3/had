@@ -17,6 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+* \file	network.c
+* \brief	had network server
+* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -80,6 +86,7 @@ static void networkClientHandler(int client_sock)
 	char led_line[1024];
 
 	struct _hr20info hr20info;
+	int16_t temperature;
 
 	do
 	{
@@ -238,6 +245,10 @@ static void networkClientHandler(int client_sock)
 				send(client_sock, &hr20info, sizeof(hr20info), 0);
 				break;
 
+			case CMD_NETWORK_SET_HR20_TEMPERATURE:
+				recv(client_sock, &temperature, sizeof(temperature),0);
+				hr20SetTemperature((int)temperature);
+				break;
 		}
 
 		usleep(1000);

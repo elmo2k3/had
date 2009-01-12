@@ -17,6 +17,13 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+ * \file	mpd.h
+ * \brief	header for mpd communication
+ * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
+
 #ifndef __MPD_H__
 #define __MPD_H__
 

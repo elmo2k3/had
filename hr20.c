@@ -1,7 +1,34 @@
+/*
+ * Copyright (C) 2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this program; if not, write to the
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ */
+
+/*!
+* \file	hr20.c
+* \brief	functions to communicate with openhr20
+* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #include <termios.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "hr20.h"
 #include "had.h"
@@ -9,7 +36,11 @@
 
 static int fd;
 
-static int initSerial(char *device) 
+static void hr20GetStatusLine(char *line);
+static int hr20InitSerial(char *device);
+static int hr20SerialCommand(char *command, char *buffer);
+
+static int hr20InitSerial(char *device) 
 {
 	struct termios newtio;
 	
@@ -78,7 +109,7 @@ static int initSerial(char *device)
 	return 1;
 }
 
-static int serialCommand(char *command, char *buffer)
+static int hr20SerialCommand(char *command, char *buffer)
 {
 	int cmd_length = strlen(command);
 	int res;
@@ -86,7 +117,6 @@ static int serialCommand(char *command, char *buffer)
 	tcflush(fd,TCIOFLUSH);
 
 	write(fd,command,cmd_length);
-	usleep(100000);	
 	
 	if(buffer)
 	{
@@ -97,6 +127,109 @@ static int serialCommand(char *command, char *buffer)
 	return 0;
 }
 
+/*!
+ ********************************************************************************
+ * hr20SetTemperature
+ *
+ * set the wanted temperature
+ *
+ * \param temperature the wanted temperature multiplied with 10. only steps
+ *  	of 5 are allowed
+ * \returns returns 1 on success, 0 on failure
+ *******************************************************************************/
+int hr20SetTemperature(int temperature)
+{
+	char buffer[255];
+	char response[255];
+
+	if(temperature % 5) // temperature may only be XX.5°C
+		return 0;
+
+	hr20InitSerial(config.hr20_port);
+
+	sprintf(buffer,"A%x\r", temperature/5);
+
+	hr20SerialCommand(buffer,response);
+
+	close(fd);
+	return 1;
+}
+
+/*!
+ ********************************************************************************
+ * hr20SetDateAndTime
+ *
+ * transfer current date and time to the openhr20 device
+ *
+ * \returns returns 1 on success
+ *******************************************************************************/
+int hr20SetDateAndTime()
+{
+	time_t rawtime;
+	struct tm *ptm;
+
+	char send_string[255];
+	
+	hr20InitSerial(config.hr20_port);
+
+	time(&rawtime);
+	ptm = localtime(&rawtime);
+
+	sprintf(send_string,"Y%02x%02x%02x\r",ptm->tm_year-100, ptm->tm_mon+1, ptm->tm_mday);
+	hr20SerialCommand(send_string, 0);
+	
+	sprintf(send_string,"H%02x%02x%02x\r",ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+	hr20SerialCommand(send_string, 0);
+
+	close(fd);
+	return 1;
+}
+
+/*!
+ ********************************************************************************
+ * hr20SetModeManu
+ *
+ * set the mode to manual control
+ *******************************************************************************/
+void hr20SetModeManu()
+{
+	hr20InitSerial(config.hr20_port);
+	hr20SerialCommand("M00\r", 0);
+	close(fd);
+}
+
+/*!
+ ********************************************************************************
+ * hr20SetModeAuto
+ *
+ * set the mode to automatic control
+ *******************************************************************************/
+void hr20SetModeAuto()
+{
+	hr20InitSerial(config.hr20_port);
+	hr20SerialCommand("M01\r", 0);
+	close(fd);
+}
+
+/*!
+ ********************************************************************************
+ * hr20GetStatusLine
+ *
+ * gets the statusline from openhr20. still can't get a better solution than
+ * trying to read the line several times
+ *
+ * \param *line will return the statusline
+ *******************************************************************************/
+static void hr20GetStatusLine(char *line)
+{
+	int i;
+	for(i=0; i < 5; i++)
+	{
+		hr20SerialCommand("D\r", line);
+		if(line[0] == 'D' )
+			break;
+	}
+}
 
 int hr20GetStatus(struct _hr20info *hr20info)
 {
@@ -106,8 +239,8 @@ int hr20GetStatus(struct _hr20info *hr20info)
 	
 	char line[255];
 
-	initSerial(config.hr20_port);
-	serialCommand("D\r", line);
+	hr20InitSerial(config.hr20_port);
+	hr20GetStatusLine(line);
 
 	if(!line)
 	{

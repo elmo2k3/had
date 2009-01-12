@@ -17,6 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+ * \file	serial.c
+ * \brief	functions to communicate with serial had base module
+ * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #include <termios.h>
 #include <fcntl.h>
 #include <stdlib.h>

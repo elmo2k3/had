@@ -17,6 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+* \file	network.h
+* \brief	header for network server
+* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #ifndef __NETWORK_H__
 #define __NETWORK_H__
 
@@ -40,6 +46,7 @@ extern void networkThread(void);
 #define CMD_NETWORK_GET_HAD_STATE 12
 #define CMD_NETWORK_SET_HAD_STATE 13
 #define CMD_NETWORK_GET_HR20 14
+#define CMD_NETWORK_SET_HR20_TEMPERATURE 15
 
 #define BUF_SIZE 1024
 #define MAX_CLIENTS 10
