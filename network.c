@@ -87,6 +87,7 @@ static void networkClientHandler(int client_sock)
 
 	struct _hr20info hr20info;
 	int16_t temperature;
+	int8_t mode;
 
 	do
 	{
@@ -228,7 +229,6 @@ static void networkClientHandler(int client_sock)
 					}
 					else
 					{
-						mpdPause();
 						if(ledIsRunning())
 							stopLedMatrixThread();
 					}
@@ -248,6 +248,15 @@ static void networkClientHandler(int client_sock)
 			case CMD_NETWORK_SET_HR20_TEMPERATURE:
 				recv(client_sock, &temperature, sizeof(temperature),0);
 				hr20SetTemperature((int)temperature);
+				break;
+			
+			case CMD_NETWORK_SET_HR20_MODE:
+				recv(client_sock, &mode, sizeof(mode),0);
+				if(mode == HR20_MODE_MANU)
+					hr20SetModeManu();
+				else if(mode == HR20_MODE_AUTO)
+					hr20SetModeAuto();
+
 				break;
 		}
 

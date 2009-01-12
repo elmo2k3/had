@@ -47,6 +47,10 @@ extern void networkThread(void);
 #define CMD_NETWORK_SET_HAD_STATE 13
 #define CMD_NETWORK_GET_HR20 14
 #define CMD_NETWORK_SET_HR20_TEMPERATURE 15
+#define CMD_NETWORK_SET_HR20_MODE 16
+
+#define HR20_MODE_MANU 1
+#define HR20_MODE_AUTO 2
 
 #define BUF_SIZE 1024
 #define MAX_CLIENTS 10
