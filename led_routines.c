@@ -17,6 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+* \file	ledroutines.c
+* \brief	functions for the ledmatrix display
+* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #include <inttypes.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

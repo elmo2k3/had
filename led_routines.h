@@ -17,12 +17,14 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+* \file	ledroutines.c
+* \brief	header for functions for the ledmatrix display
+* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #ifndef __LED_ROUTINES_H__
 #define __LED_ROUTINES_H__
-
-/** @file led_routines.h
- * Module for the led-matrix-display
- */
 
 #include <inttypes.h>
 

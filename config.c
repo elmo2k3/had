@@ -17,6 +17,13 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+* \file	config.c
+* \brief	config file handling
+* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

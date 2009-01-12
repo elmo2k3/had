@@ -17,6 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+ * \file	database.h
+ * \brief	header for mysql database functions
+ * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #ifndef __DATABASE_H__
 #define __DATABASE_H__
 

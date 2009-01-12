@@ -73,7 +73,7 @@ extern int16_t lastVoltage[9];
  */
 struct _config
 {
-	int serial_activated;
+	int serial_activated; /**< communication to base station activated? */
 	char database_server[50]; /**< mysql server, can be hostname or ip */
 	char database_user[20]; /**< mysql user */
 	char database_password[30]; /**< mysql password */
@@ -100,13 +100,13 @@ struct _config
 	int scrobbler_activated; /**< audioscrobbler activated, 0 or 1 */
 	int led_shift_speed; /**< Shift speed for texts on the led matrix */
 
-	int sms_activated;
-	char sipgate_user[100];
-	char sipgate_pass[100];
-	char cellphone[100];
+	int sms_activated; /**< send sms at several events? */
+	char sipgate_user[100]; /**< sipgate.de user for sending sms*/
+	char sipgate_pass[100]; /**< sipgate.de password */
+	char cellphone[100]; /**< cellphone number for sms (format +4912378877) */
 
-	int hr20_activated;
-	char hr20_port[255];
+	int hr20_activated; /**< communication with hr20 thermostat activated? */
+	char hr20_port[255]; /**< serial port for hr20 communication */
 
 	char statefile[100]; /**< had statefile */
 }config;

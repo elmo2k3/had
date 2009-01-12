@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+
 #include "serial.h"
 #include "had.h"
 
@@ -103,6 +104,13 @@ int initSerial(char *device)
 	return 1;
 }
 
+/*!
+ *******************************************************************************
+ * send a packet to the base module via serial port
+ *
+ * \param *packet pointer to a certain struct
+ * \param type type of the struct
+ *******************************************************************************/
 void sendPacket(void *packet, int type)
 {
 	struct headPacket *headP = (struct headPacket*)packet;

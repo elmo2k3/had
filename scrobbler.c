@@ -17,6 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/*!
+ * \file	scrobbler.c
+ * \brief	audioscrobbler plugin
+ * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
