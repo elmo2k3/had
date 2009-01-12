@@ -18,7 +18,7 @@
  */
 
 #include <stdio.h>
-#include <libmpd.h>
+#include <libmpd/libmpd.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>

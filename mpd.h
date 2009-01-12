@@ -20,11 +20,7 @@
 #ifndef __MPD_H__
 #define __MPD_H__
 
-/** @file mpd.h
- * MusicPlayerDaemon routines
- */
-
-#include <libmpd.h>
+#include <libmpd/libmpd.h>
 
 
 extern struct _ledLine ledLineMpd;
