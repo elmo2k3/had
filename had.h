@@ -133,7 +133,7 @@ struct _hadState
 	uint16_t last_voltage[3]; /**< last voltage values of rf modules */
 	uint8_t scrobbler_user_activated; /**< scrobbler activated? */
 	uint8_t ledmatrix_user_activated; /**< ledmatrix activated? */
-};
+}hadState;
 
 
 /**
