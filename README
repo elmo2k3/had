@@ -16,4 +16,5 @@ Functions:
 	- submitting tracks from mpd to lastfm
 	- controlling 64x16 led matrix connected over ethernet
 	- sending sms on special events
+	- communication with Honeywell HR20 thermometer (see http://openhr20.sourceforge.net)
 
