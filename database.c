@@ -32,7 +32,7 @@
 #include "database.h"
 
 
-MYSQL *mysql_connection;
+static MYSQL *mysql_connection;
 
 int initDatabase(void)
 {

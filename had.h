@@ -111,51 +111,66 @@ struct _config
 	char statefile[100]; /**< had statefile */
 }config;
 
+/**
+ * struct holding the params of one light module
+ */ 
 struct _rgb
 {
-	uint8_t red;
-	uint8_t green;
-	uint8_t blue;
-	uint8_t smoothness;
+	uint8_t red; /**< red */
+	uint8_t green; /**< green */
+	uint8_t blue; /**< blue */
+	uint8_t smoothness; /**< smoothness (time for fading from one color to the other */
 };
 
+/**
+ * struct for getting the current state of had
+ */ 
 struct _hadState
 {
-	struct _rgb rgbModuleValues[3];
-	uint8_t relais_state;
-	uint8_t input_state;
-	uint16_t last_voltage[3];
-	uint8_t scrobbler_user_activated;
-	uint8_t ledmatrix_user_activated;
-}hadState;
-
-
-struct headPacket
-{
-	unsigned char address;
-	unsigned char count;
-	unsigned char command;
+	struct _rgb rgbModuleValues[3]; /**< array holding current values of each light module */
+	uint8_t relais_state; /**< state of the relais */
+	uint8_t input_state; /**< state of the input port */
+	uint16_t last_voltage[3]; /**< last voltage values of rf modules */
+	uint8_t scrobbler_user_activated; /**< scrobbler activated? */
+	uint8_t ledmatrix_user_activated; /**< ledmatrix activated? */
 };
 
 
-/* 23 Bytes */
+/**
+ * header for packages transmitted to the base station
+ *
+ * every packet send to the base station has to include it
+ */ 
+struct headPacket
+{
+	unsigned char address; /**< to address */
+	unsigned char count; /**< how many bytes? payload + 1 byte for command! */
+	unsigned char command; /**< what to do with the payload? */
+};
+
+
+/**
+ * struct for transmitting the current artist/title to glcd
+ */
 struct mpdPacket
 {
 	struct headPacket headP;
 	char currentSong[31];
 }mpdP;
 
-/* 123 Bytes */
+/**
+ * struct for trasmitting a full graph (y-points) to the glcd module
+ */
 struct graphPacket
 {
-	struct headPacket headP;
-	unsigned char numberOfPoints;
-	signed char max[2];
-	signed char min[2];
-	signed char temperature_history[115];
+	struct headPacket headP; /**< header */
+	unsigned char numberOfPoints; /**< how many points? */
+	signed char max[2]; /**< max temperature in this interval */
+	signed char min[2]; /**< min temperature */
+	signed char temperature_history[115]; /**< the y points */
 }graphP;
 
-/* 19 Byte */
+
 struct __attribute__((packed)) glcdMainPacket
 {
 	struct headPacket headP;
@@ -171,20 +186,26 @@ struct __attribute__((packed)) glcdMainPacket
 	unsigned char wecker;
 }glcdP;
 
-/* 6 Byte */
+/**
+ *
+ * struct for trasmitting the light settings to a module
+ */ 
 struct _rgbPacket
 {
-	struct headPacket headP;
-	unsigned char red;
-	unsigned char green;
-	unsigned char blue;
-	unsigned char smoothness;
+	struct headPacket headP; /**< header */
+	unsigned char red; /**< red color */
+	unsigned char green; /**< green color */
+	unsigned char blue; /**< blue color */
+	unsigned char smoothness; /**< time for overblending */
 };
 
+/**
+ * struct for transmitting the setting for the relais port
+ */
 struct _relaisPacket
 {
-	struct headPacket headP;
-	unsigned char port;
+	struct headPacket headP; /**< header */
+	unsigned char port; /**< port setting */
 }relaisP;
 
 

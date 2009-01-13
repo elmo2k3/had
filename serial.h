@@ -49,7 +49,11 @@ void sendPacket(void *packet, int type);
 
 /** Send a RGB packet
  *
- * @param address address of the rgb modul. Currently can be 1,3 or 4
+ * \param address address of the rgb modul. Currently can be 1,3 or 4
+ * \param red red color
+ * \param green green color
+ * \param blue blue color
+ * \param smoothness time for overblending
  */
 void sendRgbPacket(unsigned char address, unsigned char red, unsigned char green, unsigned char blue, unsigned char smoothness);
 
@@ -67,7 +71,10 @@ void setBaseLcdOff();
  */
 void sendBaseLcdText(char *text);
 
+/** let the base station beep */
 void setBeepOn();
+
+/** turn the base station beep off */
 void setBeepOff();
 
 #endif

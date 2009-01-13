@@ -18,7 +18,7 @@
  */
 
 /*!
-* \file	ledroutines.c
+* \file	led_routines.c
 * \brief	functions for the ledmatrix display
 * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */

@@ -31,10 +31,31 @@
 #include "mysql/mysql.h"
 #include "had.h"
 
-
+/** init the database connection */
 int initDatabase(void);
+
+/** get the daily graph
+ * \param modul modul number
+ * \param sensor sensor number
+ * \param *graph graphPacket to store the graph in
+ */
 void getDailyGraph(int modul, int sensor, struct graphPacket *graph);
+
+/** get the last measured temperature
+ * \param modul modul
+ * \param sensor sensor
+ * \param *temp store celsius here
+ * \param *temp_deci store decicelsius here
+ */
 void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci);
+
+/** insert measured temperature
+ * \param modul modul
+ * \param sensor sensor
+ * \param celsius degree celsius
+ * \param decicelsius decicelsius
+ * \param *ptm struct holding time of measurement
+ */
 void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, struct tm *ptm);
 
 #endif

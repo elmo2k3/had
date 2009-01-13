@@ -26,6 +26,12 @@
 #ifndef __SMS_H__
 #define __SMS_H__
 
+/** send a sms
+ *
+ * the destination number, sipgate user and pass are taken from the config struct
+ *
+ * \param *message null terminated string with message
+ */
 extern void sms(char *message);
 
 #endif

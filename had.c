@@ -46,12 +46,16 @@
 #include "sms.h"
 #include "version.h"
 
-
+/*! thread variable array for network, mpd and ledmatrix */
 pthread_t threads[3];
 
+/*! big array for the last measured temperatures */
 int16_t lastTemperature[9][9][2];
+
+/*! big array for the last measured voltages at the rf temperature modules */
 int16_t lastVoltage[9];
 
+/*! convert the number of a month to its abbreviation */
 static char *monthToName[12] = {"Jan","Feb","Mar","Apr","May",
 	"Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
 
@@ -59,7 +63,14 @@ static int killDaemon(int signal);
 static int fileExists(const char *filename);
 static void printUsage(void);
 static void hadSignalHandler(int signal);
+static int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *decicelsius, int *voltage);
 
+/*!
+ *******************************************************************************
+ * check if a file exists
+ * 
+ * \returns 1 if file exists, 0 if not
+ *******************************************************************************/
 static int fileExists(const char *filename)
 {
 	FILE *fp = fopen(filename,"r");
@@ -72,6 +83,16 @@ static int fileExists(const char *filename)
 		return 0;
 }
 
+/*!
+ *******************************************************************************
+ * get the current time and date in a specific format
+ * 
+ * this function is _not_ thread safe! the returned value is an internally statically
+ * allocated char array that will be overwritten by every call to this function
+ * this function is to be used by the verbose_printf macro
+ *
+ * \returns the date and time in format Dec 1 12:31:19
+ *******************************************************************************/
 char *theTime(void)
 {
 	static char returnValue[9];
@@ -87,7 +108,7 @@ char *theTime(void)
 	return returnValue;
 }
 
-int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *decicelsius, int *voltage)
+static int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *decicelsius, int *voltage)
 {
 	char *trenner;
 
@@ -547,6 +568,13 @@ static void hadSignalHandler(int signal)
 	}
 }
 
+/*!
+ *******************************************************************************
+ * send data to the GLCD module connected to the base station
+ *
+ * the following data is transmitted: current date and time, last measured 
+ * temperatures of outside and living room
+ *******************************************************************************/
 void updateGlcd()
 {
 	struct tm *ptm;
@@ -567,13 +595,7 @@ void updateGlcd()
 	glcdP.temperature[2] = lastTemperature[3][0][0]; // schlaf
 	glcdP.temperature[3] = lastTemperature[3][0][1];
 	
-	if(fileExists("/had/wakeme"))
-	{
-		verbose_printf(9,"... Wecker aktiviert ...\n");
-		glcdP.wecker = 1;
-	}
-	else
-		glcdP.wecker = 0;
+	glcdP.wecker = 0;
 	sendPacket(&glcdP,GP_PACKET);
 }
 

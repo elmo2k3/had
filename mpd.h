@@ -32,8 +32,9 @@
 
 extern struct _ledLine ledLineMpd;
 
-/** MPD main thread
- */
+/** 
+ * MPD main thread
+ * */
 extern void mpdThread(void);
 
 /** 
@@ -49,12 +50,15 @@ extern void mpdTogglePlayPause(void);
  */
 extern void mpdNext(void);
 
-/** Previous song
- */
+/** Previous song */
 extern void mpdPrev(void);
 
+/** toggle random */
 extern void mpdToggleRandom(void);
 
+/** play specified song
+ * \param number number of song in current playlist
+ */
 extern void mpdPlayNumber(int number);
 
 #endif

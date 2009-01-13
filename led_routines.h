@@ -18,7 +18,7 @@
  */
 
 /*!
-* \file	ledroutines.c
+* \file	led_routines.h
 * \brief	header for functions for the ledmatrix display
 * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
@@ -139,7 +139,10 @@ extern int shiftLeft(struct _ledLine *ledLine);
  */
 extern void ledPushToStack(char *string, int shift, int lifetime);
 
+/** get the width of a string in columns */
 extern int stringWidth(char *string);
+
+/** get the width of a char in columns */
 extern int charWidth(char c);
 
 

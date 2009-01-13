@@ -26,19 +26,33 @@
 #ifndef __HR20_H__
 #define __HR20_H__
 
+/** struct holding complete status information from the hr20 device */
 struct _hr20info
 {
-	int16_t tempis;
-	int16_t tempset;
-	int8_t valve;
-	int16_t voltage;
-	int8_t mode;
+	int16_t tempis; /**< current temperature */
+	int16_t tempset; /**< user set temperature */
+	int8_t valve; /**< how open is the valve? in percent */
+	int16_t voltage; /**< voltage of the batteries */
+	int8_t mode; /**< mode, 1 for manual, 2 for automatic control */
 };
 
+/** read the status information 
+ * \param *hr20info struct where the data will be stored
+ */
 extern int hr20GetStatus(struct _hr20info *hr20info);
+
+/** set wanted temperature
+ * \param temperature wanted temperature
+ */
 extern int hr20SetTemperature(int temperature);
+
+/** set current date and time on hr20 device */
 extern int hr20SetDateAndTime();
+
+/** set mode to manual control */
 extern void hr20SetModeManu();
+
+/** set mode to automatic control */
 extern void hr20SetModeAuto();
 
 #endif
