@@ -2,8 +2,18 @@ had - home automation daemon
 
 Bjoern Biesenbach <bjoern@bjoern-b.de>
 
-Important: this code needs to be partly rewritten and commented! 
-
 By now this project is very specialised for me and my hardware. By time
 I will document and publish everything. If you have any questions
 don't hesitate to contact me.
+
+Functions:
+
+	- communication with base station (atmega8, io ports, rf module) using serial port
+	- handling devices connected to base station using rf (temperature module, remote control)
+	- inserting temperatures into a mysql database
+	- network server
+	- controlling mpd using libmpd
+	- submitting tracks from mpd to lastfm
+	- controlling 64x16 led matrix connected over ethernet
+	- sending sms on special events
+
