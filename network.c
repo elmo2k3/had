@@ -241,21 +241,29 @@ static void networkClientHandler(int client_sock)
 				break;
 
 			case CMD_NETWORK_GET_HR20:
-				hr20GetStatus(&hr20info);
+				if(config.hr20_activated)
+					hr20GetStatus(&hr20info);
 				send(client_sock, &hr20info, sizeof(hr20info), 0);
 				break;
 
 			case CMD_NETWORK_SET_HR20_TEMPERATURE:
 				recv(client_sock, &temperature, sizeof(temperature),0);
-				hr20SetTemperature((int)temperature);
+				if(config.hr20_activated)
+					hr20SetTemperature((int)temperature);
 				break;
 			
 			case CMD_NETWORK_SET_HR20_MODE:
 				recv(client_sock, &mode, sizeof(mode),0);
 				if(mode == HR20_MODE_MANU)
-					hr20SetModeManu();
+				{
+					if(config.hr20_activated)
+						hr20SetModeManu();
+				}
 				else if(mode == HR20_MODE_AUTO)
-					hr20SetModeAuto();
+				{
+					if(config.hr20_activated)
+						hr20SetModeAuto();
+				}
 
 				break;
 		}

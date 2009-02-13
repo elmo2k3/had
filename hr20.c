@@ -104,7 +104,7 @@ static int hr20InitSerial(char *device)
 	/* 
 	now clean the modem line and activate the settings for the port
 	*/
-	tcflush(fd, TCIFLUSH);
+	tcflush(fd,TCIOFLUSH);
 	tcsetattr(fd,TCSANOW,&newtio);
 	return 1;
 }
@@ -114,7 +114,6 @@ static int hr20SerialCommand(char *command, char *buffer)
 	int cmd_length = strlen(command);
 	int res;
 
-	tcflush(fd,TCIOFLUSH);
 
 	write(fd,command,cmd_length);
 	
@@ -223,11 +222,12 @@ void hr20SetModeAuto()
 static void hr20GetStatusLine(char *line)
 {
 	int i;
-	for(i=0; i < 5; i++)
+	for(i=0;i<255;i++)
 	{
-		hr20SerialCommand("D\r", line);
+		hr20SerialCommand("\rD\r", line);
 		if(line[0] == 'D' )
 			break;
+		usleep(100000);
 	}
 }
 
@@ -241,6 +241,8 @@ int hr20GetStatus(struct _hr20info *hr20info)
 
 	hr20InitSerial(config.hr20_port);
 	hr20GetStatusLine(line);
+
+	hr20SerialCommand("\r\r\r\r",0);
 
 	if(!line)
 	{
