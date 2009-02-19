@@ -301,7 +301,9 @@ int main(int argc, char* argv[])
 	lastTemperature[3][1][0] = -1;
 	lastTemperature[3][0][0] = -1;
 	
-	pthread_create(&threads[0],NULL,(void*)&mpdThread,NULL);	
+	if(config.mpd_activated)
+		pthread_create(&threads[0],NULL,(void*)&mpdThread,NULL);	
+
 	pthread_create(&threads[1],NULL,(void*)&networkThread,NULL);
 
 	if(config.led_matrix_activated && (relaisP.port & 4) && hadState.ledmatrix_user_activated)

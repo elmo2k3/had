@@ -80,6 +80,7 @@ struct _config
 	char database_database[20]; /**< database name */
 	int database_port; /**< database port. default 3306 */
 	
+	int mpd_activated; /**< mpd activated */
 	char mpd_server[50]; /**< mpd server, hostname or ip */
 	char mpd_password[30]; /**< mpd password */
 	int mpd_port; /**< mpd port, default 6600 */
