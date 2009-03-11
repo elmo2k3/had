@@ -305,3 +305,55 @@ int hr20GetStatus(struct _hr20info *hr20info)
 	return 1;
 }
 
+static int hr20checkPlausibility(struct _hr20info *hr20info)
+{
+	if(hr20info->mode < 1 || hr20info->mode > 2)
+		return 0;
+	if(hr20info->tempis < 500 || hr20info->tempis > 4000)
+		return 0;
+	if(hr20info->tempset < 500 || hr20info->tempset > 3000)
+		return 0;
+	if(hr20info->valve < 0 || hr20info->valve > 100)
+		return 0;
+	if(hr20info->voltage < 2000 || hr20info->voltage > 4000)
+		return 0;
+	return 1;
+}
+
+
+void hr20thread()
+{
+	struct tm *ptm;
+	time_t rawtime;
+	struct _hr20info hr20info;
+	int decicelsius;
+	int celsius;
+
+	while(1)
+	{
+		time(&rawtime);
+		ptm = gmtime(&rawtime);
+		hr20GetStatus(&hr20info);
+		if(hr20checkPlausibility(&hr20info) && config.hr20_database_number != 0)
+		{
+			celsius = hr20info.tempis / 100;
+			decicelsius = hr20info.tempis - (celsius*100);
+			databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, ptm);
+			celsius = hr20info.tempset / 100;
+			decicelsius = hr20info.tempset - (celsius*100);
+			databaseInsertTemperature(config.hr20_database_number,1, celsius, decicelsius, ptm);
+			databaseInsertTemperature(config.hr20_database_number,2, hr20info.valve, 0, ptm);
+			celsius = hr20info.voltage / 1000;
+			decicelsius = hr20info.voltage - (celsius*1000);
+			databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, ptm);
+			verbose_printf(10,"hr20 read successfull\n");
+			sleep(300);
+		}
+		else
+		{
+			verbose_printf(10,"hr20 read unsuccessfull\n");
+			sleep(1);
+		}
+	}
+}
+

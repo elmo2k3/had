@@ -55,5 +55,7 @@ extern void hr20SetModeManu();
 /** set mode to automatic control */
 extern void hr20SetModeAuto();
 
+extern void hr20thread(void);
+
 #endif
 

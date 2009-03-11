@@ -31,14 +31,15 @@
 #include "config.h"
 #include "had.h"
 
-#define NUM_PARAMS 30
+#define NUM_PARAMS 36
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
 	"db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
 	"scrobbler_pass", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
 	"tty","led_matrix_ip","led_matrix_port","led_matrix_activated","scrobbler_activated",
 	"pid_file","led_matrix_shift_speed","statefile","serial_activated",
 	"sms_activated","sipgate_user","sipgate_pass","cellphone","hr20_activated","hr20_port",
-	"mpd_activated"};
+	"mpd_activated","usbtemp_activated","usbtemp_device_id","usbtemp_device_module","usbtemp_device_sensor",
+	"hr20_database_activated","hr20_database_number"};
 
 
 int loadConfig(char *conf)
@@ -186,6 +187,25 @@ int loadConfig(char *conf)
 					 break;
 				/* mpd activated */
 				case 29: config.mpd_activated = atoi(value);
+					break;
+				/* usbtemp activated */
+				case 30: config.usbtemp_activated = atoi(value);
+					break;
+				/* usbtemp device id */
+				case 31: strcpy(config.usbtemp_device_id[config.usbtemp_num_devices], value);
+					break;
+				/* usbtemp modul id for database */
+				case 32: config.usbtemp_device_modul[config.usbtemp_num_devices] = atoi(value);
+					break;
+				/* usbtemp sensor id for database */
+				case 33: config.usbtemp_device_sensor[config.usbtemp_num_devices] = atoi(value);
+					config.usbtemp_num_devices++;
+					break;
+				/* hr20 insert values into database activated */
+				case 34: config.hr20_database_activated = atoi(value);
+					break;
+				/* which module name will appear for hr20 data in database? */
+				case 35: config.hr20_database_number = atoi(value);
 					break;
 			}
 		}

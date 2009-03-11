@@ -33,6 +33,8 @@
 
 #define ADC_RES 1024
 
+#define MAX_USB_SENSORS 10
+
 /* Experimental discovered values */
 #define ADC_MODUL_1 ADC_RES*1.22
 #define ADC_MODUL_3 ADC_RES*1.3
@@ -61,7 +63,7 @@
 
 extern void updateGlcd();
 
-extern pthread_t threads[3];
+extern pthread_t threads[5];
 
 extern char *theTime(void);
 
@@ -108,8 +110,16 @@ struct _config
 
 	int hr20_activated; /**< communication with hr20 thermostat activated? */
 	char hr20_port[255]; /**< serial port for hr20 communication */
+	int hr20_database_activated;
+	int hr20_database_number;
 
 	char statefile[100]; /**< had statefile */
+
+	int usbtemp_activated;
+	char usbtemp_device_id[MAX_USB_SENSORS][14];
+	int usbtemp_device_modul[MAX_USB_SENSORS];
+	int usbtemp_device_sensor[MAX_USB_SENSORS];
+	int usbtemp_num_devices;
 }config;
 
 /**

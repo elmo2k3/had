@@ -31,9 +31,6 @@
 #include "mysql/mysql.h"
 #include "had.h"
 
-/** init the database connection */
-int initDatabase(void);
-
 /** get the daily graph
  * \param modul modul number
  * \param sensor sensor number
