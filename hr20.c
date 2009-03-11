@@ -222,12 +222,12 @@ void hr20SetModeAuto()
 static void hr20GetStatusLine(char *line)
 {
 	int i;
-	for(i=0;i<255;i++)
+	for(i=0;i<10;i++)
 	{
 		hr20SerialCommand("\rD\r", line);
 		if(line[0] == 'D' )
 			break;
-		usleep(100000);
+		usleep(100000*i);
 	}
 }
 
@@ -237,15 +237,24 @@ int hr20GetStatus(struct _hr20info *hr20info)
 	  D: d6 10.01.09 22:19:14 M V: 54 I: 1975 S: 2000 B: 3171 Is: 00b9 X
 	 */
 	
-	char line[255];
-
+	char line[2048];
+	int length;
 	hr20InitSerial(config.hr20_port);
 	hr20GetStatusLine(line);
 
 	hr20SerialCommand("\r\r\r\r",0);
 
+	length = strlen(line);
+	
 	if(!line)
 	{
+		close(fd);
+		return 0;
+	}
+	if(length < 60 || length > 70)
+	{
+		verbose_printf(0,"hr20.c: length of line = %d\n",length);
+		verbose_printf(0,"hr20.c: read line was %s\n",line);
 		close(fd);
 		return 0;
 	}

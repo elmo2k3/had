@@ -241,6 +241,7 @@ static void networkClientHandler(int client_sock)
 				break;
 
 			case CMD_NETWORK_GET_HR20:
+				memset(&hr20info, 0, sizeof(hr20info));
 				if(config.hr20_activated)
 					hr20GetStatus(&hr20info);
 				send(client_sock, &hr20info, sizeof(hr20info), 0);
