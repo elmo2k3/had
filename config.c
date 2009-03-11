@@ -64,7 +64,7 @@ int loadConfig(char *conf)
 	strcpy(config.pid_file, PID_FILE);
 	strcpy(config.logfile,LOG_FILE);
 	config.led_shift_speed = 15000;
-	config.serial_activated = 1;
+	config.serial_activated = 0;
 
 	/* step through every line */
 	while(fgets(line, sizeof(line), config_file) != NULL)
