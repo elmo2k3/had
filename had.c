@@ -301,6 +301,9 @@ int main(int argc, char* argv[])
 
 	lastTemperature[3][1][0] = -1;
 	lastTemperature[3][0][0] = -1;
+
+	if(config.hr20_database_activated || config.serial_activated)
+		database_status = initDatabase();
 	
 	if(config.mpd_activated)
 		pthread_create(&threads[0],NULL,(void*)&mpdThread,NULL);	
@@ -315,9 +318,6 @@ int main(int argc, char* argv[])
 
 	if(config.hr20_database_activated)
 		pthread_create(&threads[4],NULL,(void*)&hr20thread,NULL);
-
-	if(config.hr20_database_activated || config.serial_activated)
-		database_status = initDatabase();
 	
 	if(config.serial_activated)
 	{
