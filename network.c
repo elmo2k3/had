@@ -38,7 +38,6 @@
 #include "network.h"
 #include "had.h"
 #include "serial.h"
-#include "database.h"
 #include "led_routines.h"
 #include "hr20.h"
 

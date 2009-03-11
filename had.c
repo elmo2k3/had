@@ -312,8 +312,12 @@ int main(int argc, char* argv[])
 		pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
 		pthread_detach(threads[2]);
 	}
+
 	if(config.hr20_database_activated)
 		pthread_create(&threads[4],NULL,(void*)&hr20thread,NULL);
+
+	if(config.hr20_database_activated || config.serial_activated)
+		database_status = initDatabase();
 	
 	if(config.serial_activated)
 	{
@@ -323,17 +327,30 @@ int main(int argc, char* argv[])
 			exit(EX_NOINPUT);
 		}
 
+		/* Falls keine Verbindung zum Mysql-Server aufgebaut werden kann, einfach
+		 * immer wieder versuchen
+		 *
+		 * Schlecht, ohne mysql server funktioniert das RF->Uart garnicht mehr
+		 */
+		/*while(initDatabase() == -1)
+		{
+			sleep(10);
+		}*/
+
 		glcdP.backlight = 1;
 
 		char buffer[1024];
 
-		getLastTemperature(3,1,&celsius,&decicelsius);
-		lastTemperature[3][1][0] = (int16_t)celsius;
-		lastTemperature[3][1][1] = (int16_t)decicelsius;
+		if(database_status != -1)
+		{
+			getLastTemperature(3,1,&celsius,&decicelsius);
+			lastTemperature[3][1][0] = (int16_t)celsius;
+			lastTemperature[3][1][1] = (int16_t)decicelsius;
 
-		getLastTemperature(3,0,&celsius,&decicelsius);
-		lastTemperature[3][0][0] = (int16_t)celsius;
-		lastTemperature[3][0][1] = (int16_t)decicelsius;
+			getLastTemperature(3,0,&celsius,&decicelsius);
+			lastTemperature[3][0][0] = (int16_t)celsius;
+			lastTemperature[3][0][1] = (int16_t)decicelsius;
+		}
 
 		sendBaseLcdText("had wurde gestartet ... ");
 
@@ -365,8 +382,10 @@ int main(int argc, char* argv[])
 						lastTemperature[modul_id][sensor_id][0] = (int16_t)celsius;
 						lastTemperature[modul_id][sensor_id][1] = (int16_t)decicelsius;
 						lastVoltage[modul_id] = voltage;
-						
-						databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,ptm);
+						if(database_status == -1)
+							database_status = initDatabase();
+						if(database_status != -1)
+							databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,ptm);
 
 						sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
 								lastTemperature[3][1][0],

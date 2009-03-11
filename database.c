@@ -33,32 +33,18 @@
 
 
 static MYSQL *mysql_connection;
-static int initDatabase(void);
 
-static int initDatabase(void)
+int initDatabase(void)
 {
-	int i,error;
 	mysql_connection = mysql_init(NULL);
-	error = 0;
-	for(i=0;i<3;i++)
+	
+	if (!mysql_real_connect(mysql_connection, 
+				config.database_server, 
+				config.database_user,
+				config.database_password,
+				config.database_database, 0, NULL, 0))
 	{
-		if (!mysql_real_connect(mysql_connection, 
-					config.database_server, 
-					config.database_user,
-					config.database_password,
-					config.database_database, 0, NULL, 0))
-		{
-			error = 1;
-		}
-		else
-		{
-			error = 0;
-			break;
-		}
-	}
-	if(error)
-	{
-		verbose_printf(0, "%s\n", mysql_error(mysql_connection));
+		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
 		return -1;
 	}
 	mysql_connection->reconnect=1;
@@ -74,8 +60,7 @@ static int transformY(float temperature, int max, int min)
 static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 {
 	char query[255];
-	
-	initDatabase();
+
 	MYSQL_RES *mysql_res;
 	MYSQL_ROW mysql_row;
 
@@ -98,7 +83,6 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 	*min = atof(mysql_row[1]);
 
 	mysql_free_result(mysql_res);
-	mysql_close(mysql_connection);
 }
 
 
@@ -114,7 +98,6 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	min = 0.0;
 	max = 0.0;
 
-	initDatabase();
 	
 	MYSQL_RES *mysql_res;
 	MYSQL_ROW mysql_row;
@@ -157,23 +140,20 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	verbose_printf(9,"Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
 	
 	mysql_free_result(mysql_res);
-	mysql_close(mysql_connection);
 }
 
 void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, struct tm *ptm)
 {
 	char query[255];
-	initDatabase();
+
 	sprintf(query,"INSERT INTO temperatures (date,modul_id,sensor_id,temperature) \
 		VALUES (\"%d-%d-%d %d:%d:%d\",%d,%d,\"%d.%d\")",ptm->tm_year+1900,ptm->tm_mon+1,ptm->tm_mday,ptm->tm_hour,
 		ptm->tm_min,ptm->tm_sec,modul,sensor,celsius,decicelsius);
 	while(mysql_query(mysql_connection,query));
-	mysql_close(mysql_connection);
 }
 
 void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
 {
-	initDatabase();
 	if(lastTemperature[modul][sensor][0] == -1)
 	{
 		char query[255];
@@ -202,6 +182,5 @@ void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
 		*temp = (int)lastTemperature[modul][sensor][0];
 		*temp_deci = (int)lastTemperature[modul][sensor][1];
 	}
-	mysql_close(mysql_connection);
 }
 
