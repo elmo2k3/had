@@ -332,7 +332,7 @@ void hr20thread()
 	while(1)
 	{
 		time(&rawtime);
-		ptm = gmtime(&rawtime);
+		ptm = localtime(&rawtime);
 		hr20GetStatus(&hr20info);
 		if(hr20checkPlausibility(&hr20info) && config.hr20_database_number != 0)
 		{
