@@ -324,6 +324,7 @@ static int hr20checkPlausibility(struct _hr20info *hr20info)
 void hr20thread()
 {
 	struct tm *ptm;
+	struct tm time_copy;
 	time_t rawtime;
 	struct _hr20info hr20info;
 	int decicelsius;
@@ -331,21 +332,22 @@ void hr20thread()
 
 	while(1)
 	{
-		time(&rawtime);
-		ptm = localtime(&rawtime);
 		hr20GetStatus(&hr20info);
 		if(hr20checkPlausibility(&hr20info) && config.hr20_database_number != 0)
 		{
+			time(&rawtime);
+			ptm = gmtime(&rawtime);
+			memcpy(&time_copy, ptm, sizeof(struct tm));
 			celsius = hr20info.tempis / 100;
 			decicelsius = hr20info.tempis - (celsius*100);
-			databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, ptm);
+			databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, &time_copy);
 			celsius = hr20info.tempset / 100;
 			decicelsius = hr20info.tempset - (celsius*100);
-			databaseInsertTemperature(config.hr20_database_number,1, celsius, decicelsius, ptm);
-			databaseInsertTemperature(config.hr20_database_number,2, hr20info.valve, 0, ptm);
+			databaseInsertTemperature(config.hr20_database_number,1, celsius, decicelsius, &time_copy);
+			databaseInsertTemperature(config.hr20_database_number,2, hr20info.valve, 0, &time_copy);
 			celsius = hr20info.voltage / 1000;
 			decicelsius = hr20info.voltage - (celsius*1000);
-			databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, ptm);
+			databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, &time_copy);
 			verbose_printf(10,"hr20 read successfull\n");
 			sleep(300);
 		}
