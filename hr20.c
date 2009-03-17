@@ -339,14 +339,14 @@ void hr20thread()
 			ptm = gmtime(&rawtime);
 			memcpy(&time_copy, ptm, sizeof(struct tm));
 			celsius = hr20info.tempis / 100;
-			decicelsius = hr20info.tempis - (celsius*100);
+			decicelsius = (hr20info.tempis - (celsius*100))*100;
 			databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, &time_copy);
 			celsius = hr20info.tempset / 100;
-			decicelsius = hr20info.tempset - (celsius*100);
+			decicelsius = (hr20info.tempset - (celsius*100))*100;
 			databaseInsertTemperature(config.hr20_database_number,1, celsius, decicelsius, &time_copy);
 			databaseInsertTemperature(config.hr20_database_number,2, hr20info.valve, 0, &time_copy);
 			celsius = hr20info.voltage / 1000;
-			decicelsius = hr20info.voltage - (celsius*1000);
+			decicelsius = (hr20info.voltage - (celsius*1000))*10;
 			databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, &time_copy);
 			verbose_printf(10,"hr20 read successfull\n");
 			sleep(300);
