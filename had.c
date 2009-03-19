@@ -531,7 +531,7 @@ int main(int argc, char* argv[])
 	} // config.serial_activated
 	else
 	{
-		verbose_printf(0,"Serial port deactivated\n");
+		verbose_printf(9,"Serial port deactivated\n");
 		while(1)
 		{
 			sleep(1);
