@@ -1,4 +1,8 @@
 /***
+ * Extended and made usable for project had by
+ * 2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
+ *
+ * Originally by:
  * USBtemp host control program
  * Copyright (C) 2008, 2009 Mathias Dalheimer (md@gonium.net)
  *
@@ -397,16 +401,17 @@ void usbTempLoop()
 					(int)temperature,decicelsius,&time_saved);
 			}
 			usb_close(handle);
+			sleep(30);
 		}
 		else
 		{
 			if(!error_count)
 			{
-				verbose_printf(0,"Could not connect to usbtemp device\n");
+				verbose_printf(2,"Could not connect to usbtemp device\n");
 				error_count = 1;
 			}
+			sleep(1);
 		}
-		sleep(30);
 	}
 }
 
