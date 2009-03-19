@@ -144,14 +144,22 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 
 void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, struct tm *ptm)
 {
+	static int justInserting = 0;
 	char query[512];
 	sprintf(query,"INSERT INTO temperatures (date,modul_id,sensor_id,temperature) \
 		VALUES (\"%d-%d-%d %d:%d:%d\",%d,%d,'%d.%04d')",ptm->tm_year+1900,ptm->tm_mon+1,ptm->tm_mday,ptm->tm_hour,
 		ptm->tm_min,ptm->tm_sec,modul,sensor,celsius,decicelsius);
+	/* the following is needed because libmysqlclient is not thread safe */
+	while(justInserting)
+	{
+		usleep(1000);
+	}
+	justInserting = 1;
 	while(mysql_query(mysql_connection,query))
 	{
 		usleep(1000);
 	}
+	justInserting = 0;
 }
 
 void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)

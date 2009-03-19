@@ -337,7 +337,7 @@ void hr20thread()
 		{
 			time(&rawtime);
 			ptm = gmtime(&rawtime);
-			memcpy(&time_copy, ptm, sizeof(struct tm));
+			memcpy(&time_copy, gmtime(&rawtime), sizeof(struct tm));
 			celsius = hr20info.tempis / 100;
 			decicelsius = (hr20info.tempis - (celsius*100))*100;
 			databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, &time_copy);
