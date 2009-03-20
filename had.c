@@ -305,6 +305,11 @@ int main(int argc, char* argv[])
 
 	if(config.hr20_database_activated || config.serial_activated || config.usbtemp_activated)
 		database_status = initDatabase();
+
+	if(database_status == -1 && !config.serial_activated)
+	{
+		while((database_status = initDatabase()) == -1);
+	}
 	
 	if(config.mpd_activated)
 		pthread_create(&threads[0],NULL,(void*)&mpdThread,NULL);	
