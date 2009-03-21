@@ -395,11 +395,10 @@ void usbTempLoop()
 				if(getTemperatureByName(handle, config.usbtemp_device_id[counter], &temperature))
 				{
 					time(&rawtime);
-					memcpy(&time_saved, gmtime(&rawtime), sizeof(struct tm));
 					decicelsius = abs((double)(temperature - (int)temperature)*10000.0);
 					databaseInsertTemperature(config.usbtemp_device_modul[counter],
 						config.usbtemp_device_sensor[counter],
-						(int)temperature,decicelsius,&time_saved);
+						(int)temperature,decicelsius,rawtime);
 				}
 			}
 			usb_close(handle);
