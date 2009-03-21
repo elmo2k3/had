@@ -371,11 +371,9 @@ int main(int argc, char* argv[])
 			{
 				verbose_printf(9,"Res=%d\n",res);
 				time(&rawtime);
-				ptm = gmtime(&rawtime);
 				switch(decodeStream(buf,&modul_id,&sensor_id,&celsius,&decicelsius,&voltage))
 				{
 					case 1:
-						verbose_printf(9,"%02d:%02d:%02d\t",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
 						verbose_printf(9,"Modul ID: %d\t",modul_id);
 						verbose_printf(9,"Sensor ID: %d\t",sensor_id);
 						verbose_printf(9,"Temperatur: %d,%d\t",celsius,decicelsius);
@@ -393,7 +391,7 @@ int main(int argc, char* argv[])
 						if(database_status == -1)
 							database_status = initDatabase();
 						if(database_status != -1)
-							databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,ptm);
+							databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,rawtime);
 
 						sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
 								lastTemperature[3][1][0],

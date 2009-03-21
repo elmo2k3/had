@@ -142,13 +142,12 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	mysql_free_result(mysql_res);
 }
 
-void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, struct tm *ptm)
+void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, time_t timestamp)
 {
 	static int justInserting = 0;
 	char query[512];
-	sprintf(query,"INSERT INTO temperatures (date,modul_id,sensor_id,temperature) \
-		VALUES (\"%d-%d-%d %d:%d:%d\",%d,%d,'%d.%04d')",ptm->tm_year+1900,ptm->tm_mon+1,ptm->tm_mday,ptm->tm_hour,
-		ptm->tm_min,ptm->tm_sec,modul,sensor,celsius,decicelsius);
+	sprintf(query,"INSERT INTO modul_%d (date,sensor,value) \
+		VALUES ('%d','%ld','%d.%04d')",modul, timestamp, sensor, celsius, decicelsius);
 	/* the following is needed because libmysqlclient is not thread safe */
 	while(justInserting)
 	{
@@ -171,7 +170,7 @@ void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
 		MYSQL_RES *mysql_res;
 		MYSQL_ROW mysql_row;
 
-		sprintf(query,"SELECT temperature FROM temperatures WHERE modul_id=%d AND sensor_id=%d ORDER BY id DESC LIMIT 1",modul,sensor);
+		sprintf(query,"SELECT value FROM modul_%d WHERE sensor=%d ORDER BY date DESC LIMIT 1",modul,sensor);
 		if(mysql_query(mysql_connection,query))
 		{
 			fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));

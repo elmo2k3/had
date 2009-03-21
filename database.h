@@ -54,7 +54,7 @@ void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci);
  * \param decicelsius decicelsius
  * \param *ptm struct holding time of measurement
  */
-void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, struct tm *ptm);
+void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, time_t timestamp);
 
 #endif
 
