@@ -31,7 +31,7 @@
 #include "config.h"
 #include "had.h"
 
-#define NUM_PARAMS 36
+#define NUM_PARAMS 39
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
 	"db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
 	"scrobbler_pass", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
@@ -39,7 +39,8 @@ static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_
 	"pid_file","led_matrix_shift_speed","statefile","serial_activated",
 	"sms_activated","sipgate_user","sipgate_pass","cellphone","hr20_activated","hr20_port",
 	"mpd_activated","usbtemp_activated","usbtemp_device_id","usbtemp_device_module","usbtemp_device_sensor",
-	"hr20_database_activated","hr20_database_number"};
+	"hr20_database_activated","hr20_database_number","door_sensor_id","window_sensor_id",
+	"digital_input_module"};
 
 
 int loadConfig(char *conf)
@@ -206,6 +207,15 @@ int loadConfig(char *conf)
 					break;
 				/* which module name will appear for hr20 data in database? */
 				case 35: config.hr20_database_number = atoi(value);
+					break;
+				/* door sensor id for database */
+				case 36: config.door_sensor_id = atoi(value);
+					break;
+				/* window sensor id for database */
+				case 37: config.window_sensor_id = atoi(value);
+					break;
+				/* digital input module id for database */
+				case 38: config.digital_input_module = atoi(value);
 					break;
 			}
 		}

@@ -196,6 +196,7 @@ int main(int argc, char* argv[])
 	int database_status = 0;
 	int gpcounter;
 	int belowMinTemp = 0;
+	struct _hr20info hr20info;
 	
 	if(!loadConfig(HAD_CONFIG_FILE))
 	{
@@ -495,11 +496,17 @@ int main(int argc, char* argv[])
 							setBeepOn();
 							verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
 						}
+						if(config.door_sensor_id && config.digital_input_module)
+							databaseInsertTemperature(config.digital_input_module,
+								config.door_sensor_id, 1, 0, rawtime);
 						break;
 					case 31:// 1 closed
 						verbose_printf(1,"Door closed\n");
 						hadState.input_state &= ~1;
 						setBeepOff();
+						if(config.door_sensor_id && config.digital_input_module)
+							databaseInsertTemperature(config.digital_input_module,
+								config.door_sensor_id, 0, 0, rawtime);
 						break;
 					case 32:// 2 open
 						break;
@@ -512,10 +519,27 @@ int main(int argc, char* argv[])
 					case 36:// window close
 						verbose_printf(1,"Window closed\n");
 						hadState.input_state &= ~8;
+						setBeepOff();
+						if(config.window_sensor_id && config.digital_input_module)
+							databaseInsertTemperature(config.digital_input_module,
+								config.window_sensor_id, 0, 0, rawtime);
+						if(config.hr20_activated && hr20info.tempset >= 50
+							&& hr20info.tempset <= 300)
+						{
+							hr20SetTemperature(hr20info.tempset);
+						}
 						break;
 					case 37:// window open
 						verbose_printf(1,"Window opened\n");
 						hadState.input_state |= 8;
+						if(config.window_sensor_id && config.digital_input_module)
+							databaseInsertTemperature(config.digital_input_module,
+								config.window_sensor_id, 1, 0, rawtime);
+						if(config.hr20_activated)
+						{
+							hr20GetStatus(&hr20info);
+							hr20SetTemperature(50);
+						}
 						break;
 					case 38: // toggle random
 						mpdToggleRandom();

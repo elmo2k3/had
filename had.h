@@ -120,6 +120,10 @@ struct _config
 	int usbtemp_device_modul[MAX_USB_SENSORS];
 	int usbtemp_device_sensor[MAX_USB_SENSORS];
 	int usbtemp_num_devices;
+
+	int digital_input_module;
+	int door_sensor_id;
+	int window_sensor_id;
 }config;
 
 /**
