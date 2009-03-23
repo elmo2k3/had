@@ -374,6 +374,8 @@ int printSensors(usb_dev_handle *handle) {
 
 void usbTempLoop()
 {
+	int last_celsius[config.usbtemp_num_devices];
+	int last_celsius_error_count[config.usbtemp_num_devices];
 	int error, success;
 	int error_count = 0;
 	double temperature;
@@ -385,6 +387,12 @@ void usbTempLoop()
 	int counter;
 	usb_dev_handle      *handle = NULL;
   	usb_init();
+
+	for(counter = 0; counter < config.usbtemp_num_devices; counter++)
+	{
+		last_celsius[counter] = -100;
+		last_celsius_error_count[counter] = 0;
+	}
 	while(1)
 	{
 		if(!usbOpenDevice(&handle, USBDEV_SHARED_VENDOR, "gonium.net", USBDEV_SHARED_PRODUCT, "usbtemp"))
@@ -396,9 +404,25 @@ void usbTempLoop()
 				{
 					time(&rawtime);
 					decicelsius = abs((double)(temperature - (int)temperature)*10000.0);
-					databaseInsertTemperature(config.usbtemp_device_modul[counter],
-						config.usbtemp_device_sensor[counter],
-						(int)temperature,decicelsius,rawtime);
+					if(last_celsius[counter] == -100 || (abs((int)temperature - last_celsius[counter]) < 10))
+					{
+						databaseInsertTemperature(config.usbtemp_device_modul[counter],
+							config.usbtemp_device_sensor[counter],
+							(int)temperature,decicelsius,rawtime);
+						last_celsius[counter] = (int)temperature;
+						last_celsius_error_count[counter] = 0;
+					}
+					else
+					{
+						verbose_printf(2,"usbtemp.c: abs((int)temperature - last_celsius[counter]) = %d\n",
+							abs((int)temperature - last_celsius[counter]));
+						last_celsius_error_count[counter]++;
+					}
+				}
+				if(last_celsius_error_count[counter] > 3)
+				{
+					verbose_printf(0,"usbtemp.c: last_celsius_error_count[%d] > 3\n", counter);
+					last_celsius[counter] = -100;
 				}
 			}
 			usb_close(handle);
