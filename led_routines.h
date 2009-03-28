@@ -36,6 +36,8 @@
 #define LINE_LENGTH 512
 #define LED_MAX_STACK 30
 
+//#define LED_HEADFIRST
+
 /** Struct holding a line drawable at the display
  *
  */

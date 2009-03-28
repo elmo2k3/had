@@ -78,12 +78,25 @@ void updateDisplay(struct _ledLine ledLine)
 	memset(&RED,0,sizeof(RED));
 	memset(&GREEN,0,sizeof(GREEN));
 
-	for(m=0;m<4;m++)
+	for(m=0;m<4;m++) // for every module
 	{
-		for(i=0;i<16;i++)
+		for(i=0;i<16;i++) // for every row
 		{
-			for(p=0;p<16;p++)
+			for(p=0;p<16;p++) // for every single led in row
 			{
+#ifdef LED_HEADFIRST
+				/* was there a shift yet? if no, print the unshifted arrays */
+				if(ledLine.shift_position)
+				{
+					RED[3-m][15-i] |= ((ledLine.column_red_output[15-p+m*16] & (1<<i))>>(i)<<p);
+					GREEN[3-m][15-i] |= ((ledLine.column_green_output[15-p+m*16] & (1<<i))>>(i)<<p);
+				}
+				else
+				{
+					RED[3-m][15-i] |= ((ledLine.column_red[15-p+m*16] & (1<<i))>>(i)<<p);
+					GREEN[3-m][15-i] |= ((ledLine.column_green[15-p+m*16] & (1<<i))>>(i)<<p);
+				}
+#else
 				/* was there a shift yet? if no, print the unshifted arrays */
 				if(ledLine.shift_position)
 				{
@@ -95,6 +108,7 @@ void updateDisplay(struct _ledLine ledLine)
 					RED[m][i] |= ((ledLine.column_red[p+m*16] & (1<<i))>>(i)<<p);
 					GREEN[m][i] |= ((ledLine.column_green[p+m*16] & (1<<i))>>(i)<<p);
 				}
+#endif
 
 			}
 		}
