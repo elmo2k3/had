@@ -34,6 +34,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <signal.h>
+#include <openssl/md5.h>
 
 #include "network.h"
 #include "had.h"
@@ -56,6 +57,28 @@ static void networkThreadStop(void)
 	close(sock);
 	leave = 1;
 	verbose_printf(0, "NetworkThread stopped\n");
+}
+
+static int networkAuthenticate(int client_sock)
+{
+	long int i;
+	char buf[255];
+	char pass_salted[200];
+	time_t rawtime = time(NULL);
+	unsigned char digest[MD5_DIGEST_LENGTH];
+	recv(client_sock, buf, MD5_DIGEST_LENGTH, 0);
+	buf[MD5_DIGEST_LENGTH] = '\0';
+	for(i = rawtime -5; i < rawtime +5; i++)
+	{
+		sprintf(pass_salted,"%s%ld",config.password, i);
+		MD5(pass_salted, strlen(pass_salted), digest);
+		digest[MD5_DIGEST_LENGTH] = '\0';
+		if(!strcmp(digest,buf))
+		{
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static void networkClientHandler(int client_sock)
@@ -88,6 +111,20 @@ static void networkClientHandler(int client_sock)
 	int16_t temperature;
 	int8_t mode;
 
+	if(!networkAuthenticate(client_sock) && config.password[0])
+	{
+		verbose_printf(0,"wrong password!\n");
+		buf[0] = 0;
+		send(client_sock, buf, 1, 0);
+		close(client_sock);
+		numConnectedClients--;
+		return;
+	}
+	else
+	{
+		buf[0] = 1;
+		send(client_sock, buf, 1, 0);
+	}
 	do
 	{
 		buf[0] = 255;
@@ -108,11 +145,6 @@ static void networkClientHandler(int client_sock)
 				else
 					verbose_printf(0,"RGB-Module address %d out of range!\n",rgbTemp.headP.address);
 				break;
-/* obsolete, will be replaced
-			case CMD_NETWORK_GET_RGB:
-				send(client_sock,&rgbP, sizeof(rgbP),0);
-				break;
-*/
 			case CMD_NETWORK_BLINK:
 				if(!net_blocked)
 				{

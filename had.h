@@ -75,6 +75,7 @@ extern int16_t lastVoltage[9];
  */
 struct _config
 {
+	char password[128];
 	int serial_activated; /**< communication to base station activated? */
 	char database_server[50]; /**< mysql server, can be hostname or ip */
 	char database_user[20]; /**< mysql user */
