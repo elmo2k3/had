@@ -495,6 +495,8 @@ int main(int argc, char* argv[])
 						{
 							setBeepOn();
 							verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
+							sleep(1);
+							setBeepOff();
 						}
 						if(config.door_sensor_id && config.digital_input_module)
 							databaseInsertTemperature(config.digital_input_module,
