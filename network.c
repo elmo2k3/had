@@ -64,19 +64,18 @@ static int networkAuthenticate(int client_sock)
 	long int i;
 	char buf[255];
 	char pass_salted[200];
-	time_t rawtime = time(NULL);
+	uint32_t rawtime = (uint32_t)time(NULL);
 	unsigned char digest[MD5_DIGEST_LENGTH];
+	send(client_sock, &rawtime, sizeof(rawtime), 0);
 	recv(client_sock, buf, MD5_DIGEST_LENGTH, 0);
 	buf[MD5_DIGEST_LENGTH] = '\0';
-	for(i = rawtime -5; i < rawtime +5; i++)
+	
+	sprintf(pass_salted,"%s%ld",config.password, rawtime);
+	MD5(pass_salted, strlen(pass_salted), digest);
+	digest[MD5_DIGEST_LENGTH] = '\0';
+	if(!strcmp(digest,buf))
 	{
-		sprintf(pass_salted,"%s%ld",config.password, i);
-		MD5(pass_salted, strlen(pass_salted), digest);
-		digest[MD5_DIGEST_LENGTH] = '\0';
-		if(!strcmp(digest,buf))
-		{
-			return 1;
-		}
+		return 1;
 	}
 	return 0;
 }
@@ -114,7 +113,7 @@ static void networkClientHandler(int client_sock)
 	if(!networkAuthenticate(client_sock) && config.password[0])
 	{
 		verbose_printf(0,"wrong password!\n");
-		buf[0] = 0;
+		buf[0] = CMD_NETWORK_AUTH_FAILURE;
 		send(client_sock, buf, 1, 0);
 		close(client_sock);
 		numConnectedClients--;
@@ -122,7 +121,7 @@ static void networkClientHandler(int client_sock)
 	}
 	else
 	{
-		buf[0] = 1;
+		buf[0] = CMD_NETWORK_AUTH_SUCCESS;
 		send(client_sock, buf, 1, 0);
 	}
 	do

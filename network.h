@@ -49,6 +49,9 @@ extern void networkThread(void);
 #define CMD_NETWORK_SET_HR20_TEMPERATURE 15
 #define CMD_NETWORK_SET_HR20_MODE 16
 
+#define CMD_NETWORK_AUTH_FAILURE 0
+#define CMD_NETWORK_AUTH_SUCCESS 1
+
 #define HR20_MODE_MANU 1
 #define HR20_MODE_AUTO 2
 
