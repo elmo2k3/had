@@ -404,7 +404,7 @@ void usbTempLoop()
 				{
 					time(&rawtime);
 					decicelsius = abs((double)(temperature - (int)temperature)*10000.0);
-					if(last_celsius[counter] == -100 || (abs((int)temperature - last_celsius[counter]) < 10))
+					if(last_celsius[counter] == -100 || (abs((int)temperature - last_celsius[counter]) < 5))
 					{
 						databaseInsertTemperature(config.usbtemp_device_modul[counter],
 							config.usbtemp_device_sensor[counter],
