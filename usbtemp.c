@@ -421,7 +421,7 @@ void usbTempLoop()
 				}
 				if(last_celsius_error_count[counter] > 3)
 				{
-					verbose_printf(0,"usbtemp.c: last_celsius_error_count[%d] > 3\n", counter);
+					verbose_printf(1,"usbtemp.c: last_celsius_error_count[%d] > 3\n", counter);
 					last_celsius[counter] = -100;
 				}
 			}
