@@ -34,6 +34,7 @@ struct _hr20info
 	int8_t valve; /**< how open is the valve? in percent */
 	int16_t voltage; /**< voltage of the batteries */
 	int8_t mode; /**< mode, 1 for manual, 2 for automatic control */
+	int16_t auto_temperature[4];
 };
 
 /** read the status information 

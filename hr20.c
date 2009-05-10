@@ -39,6 +39,8 @@ static int fd;
 static void hr20GetStatusLine(char *line);
 static int hr20InitSerial(char *device);
 static int hr20SerialCommand(char *command, char *buffer);
+static int16_t hexCharToInt(char c);
+static int16_t hr20GetAutoTemperature(int slot);
 
 static int hr20InitSerial(char *device) 
 {
@@ -154,6 +156,24 @@ int hr20SetTemperature(int temperature)
 	return 1;
 }
 
+int hr20SetAutoTemperature(int slot, int temperature)
+{
+	char buffer[255];
+	char response[255];
+
+	if(temperature % 5) // temperature may only be XX.5°C
+		return 0;
+
+	hr20InitSerial(config.hr20_port);
+
+	sprintf(buffer,"S%02x%x\r",slot+1, temperature/5);
+
+	hr20SerialCommand(buffer,response);
+
+	close(fd);
+	return 1;
+}
+
 /*!
  ********************************************************************************
  * hr20SetDateAndTime
@@ -239,6 +259,7 @@ int hr20GetStatus(struct _hr20info *hr20info)
 	
 	char line[2048];
 	int length;
+	int i;
 	hr20InitSerial(config.hr20_port);
 	hr20GetStatusLine(line);
 
@@ -251,10 +272,10 @@ int hr20GetStatus(struct _hr20info *hr20info)
 		close(fd);
 		return 0;
 	}
-	if(length < 60 || length > 70)
+	if(length < 4)
 	{
-		verbose_printf(0,"hr20.c: length of line = %d\n",length);
-		verbose_printf(0,"hr20.c: read line was %s\n",line);
+//		verbose_printf(0,"hr20.c: length of line = %d\n",length);
+//		verbose_printf(0,"hr20.c: read line was %s\n",line);
 		close(fd);
 		return 0;
 	}
@@ -299,7 +320,10 @@ int hr20GetStatus(struct _hr20info *hr20info)
 	trenner = (char*)strtok(NULL," ");
 	if(trenner)
 		hr20info->voltage = atoi(trenner);
-
+	for(i=0;i<4;i++)
+	{
+		hr20info->auto_temperature[i] = hr20GetAutoTemperature(i);
+	}
 	close(fd);
 
 	return 1;
@@ -307,6 +331,7 @@ int hr20GetStatus(struct _hr20info *hr20info)
 
 static int hr20checkPlausibility(struct _hr20info *hr20info)
 {
+	int i;
 	if(hr20info->mode < 1 || hr20info->mode > 2)
 		return 0;
 	if(hr20info->tempis < 500 || hr20info->tempis > 4000)
@@ -317,7 +342,46 @@ static int hr20checkPlausibility(struct _hr20info *hr20info)
 		return 0;
 	if(hr20info->voltage < 2000 || hr20info->voltage > 4000)
 		return 0;
+	for(i=0;i<4;i++)
+	{
+		if(hr20info->auto_temperature[i] < 500 || hr20info->auto_temperature[i] > 3000)
+			return 0;
+	}
 	return 1;
+}
+
+static int16_t hr20GetAutoTemperature(int slot)
+{
+	int i;
+	char buffer[255];
+	char response[255];
+	char *result;
+	
+	sprintf(buffer,"\rG%02x\r",slot+1);
+	
+	for(i=0;i<10;i++)
+	{
+		hr20SerialCommand(buffer, response);
+		if(response[0] == 'G' )
+			break;
+		usleep(1000);
+	}
+	if(response[0] == 'G' && response[5] == '=')
+	{
+		result = strtok(response,"=");
+		result = strtok(NULL,"=");
+	
+		return (hexCharToInt(result[0])*16 + hexCharToInt(result[1]))*50;
+	}
+	else
+		return 0;
+}
+
+static int16_t hexCharToInt(char c)
+{
+	if(c <= 57)
+		return c - 48;
+	return c - 87;
 }
 
 

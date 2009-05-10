@@ -108,6 +108,7 @@ static void networkClientHandler(int client_sock)
 
 	struct _hr20info hr20info;
 	int16_t temperature;
+	int8_t slot;
 	int8_t mode;
 
 	if(!networkAuthenticate(client_sock) && config.password[0])
@@ -281,6 +282,13 @@ static void networkClientHandler(int client_sock)
 				recv(client_sock, &temperature, sizeof(temperature),0);
 				if(config.hr20_activated)
 					hr20SetTemperature((int)temperature);
+				break;
+
+			case CMD_NETWORK_SET_HR20_AUTO_TEMPERATURE:
+				recv(client_sock, &slot, sizeof(slot),0);
+				recv(client_sock, &temperature, sizeof(temperature),0);
+				if(config.hr20_activated)
+					hr20SetAutoTemperature((int)slot, (int)temperature);
 				break;
 			
 			case CMD_NETWORK_SET_HR20_MODE:
