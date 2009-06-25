@@ -53,8 +53,8 @@ static int hr20InitSerial(char *device)
 	{
 		return 0;
 	}
-
-	bzero(&newtio, sizeof(newtio)); /* clear struct for new port settings */
+	
+	memset(&newtio,0, sizeof(newtio)); /* clear struct for new port settings */
 	/* 
 	BAUDRATE: Set bps rate. You could also use cfsetispeed and cfsetospeed.
 	CRTSCTS : output hardware flow control (only used if the cable has

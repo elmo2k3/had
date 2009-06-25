@@ -47,7 +47,7 @@ int initSerial(char *device)
 		return 0;
 	}
 
-	bzero(&newtio, sizeof(newtio)); /* clear struct for new port settings */
+	memset(&newtio, 0, sizeof(newtio)); /* clear struct for new port settings */
 	/* 
 	BAUDRATE: Set bps rate. You could also use cfsetispeed and cfsetospeed.
 	CRTSCTS : output hardware flow control (only used if the cable has
@@ -176,6 +176,17 @@ void sendRgbPacket(unsigned char address, unsigned char red, unsigned char green
 	rgbPacket.smoothness = smoothness;
 
 	sendPacket(&rgbPacket,RGB_PACKET);
+}
+
+void setCurrentRgbValues()
+{
+	int i;
+	for(i=0;i<3;i++)
+	{
+		sendRgbPacket(0x10+i, hadState.rgbModuleValues[i].red,
+			hadState.rgbModuleValues[i].green,
+			hadState.rgbModuleValues[i].blue, 0);
+	}
 }
 
 int readSerial(char *buf)

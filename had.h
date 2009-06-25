@@ -70,6 +70,25 @@ extern char *theTime(void);
 extern int16_t lastTemperature[9][9][2];
 extern int16_t lastVoltage[9];
 
+struct _remote_control_keys
+{
+	int backup;
+	int restore;
+	int mpd_play_pause;
+	int mpd_random;
+	int mpd_prev;
+	int mpd_next;
+	int hifi_on_off;
+	int light_on;
+	int light_off;
+	int red;
+	int green;
+	int blue;
+	int brightlight;
+	int music_on_hifi_on;
+	int everything_off;
+};
+
 /** Struct holding all config vars
  * 
  */
@@ -125,6 +144,8 @@ struct _config
 	int digital_input_module;
 	int door_sensor_id;
 	int window_sensor_id;
+
+	struct _remote_control_keys rkeys;
 }config;
 
 /**
@@ -144,6 +165,7 @@ struct _rgb
 struct _hadState
 {
 	struct _rgb rgbModuleValues[3]; /**< array holding current values of each light module */
+	struct _rgb rgbModuleValuesTemp[3]; /**< array holding temporary values of each light module */
 	uint8_t relais_state; /**< state of the relais */
 	uint8_t input_state; /**< state of the input port */
 	uint16_t last_voltage[3]; /**< last voltage values of rf modules */

@@ -77,5 +77,7 @@ void setBeepOn();
 /** turn the base station beep off */
 void setBeepOff();
 
+extern void setCurrentRgbValues();
+
 #endif
 

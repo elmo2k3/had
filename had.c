@@ -197,6 +197,7 @@ int main(int argc, char* argv[])
 	int gpcounter;
 	int belowMinTemp = 0;
 	struct _hr20info hr20info;
+	int result;
 	
 	if(!loadConfig(HAD_CONFIG_FILE))
 	{
@@ -372,153 +373,116 @@ int main(int argc, char* argv[])
 			{
 				verbose_printf(9,"Res=%d\n",res);
 				time(&rawtime);
-				switch(decodeStream(buf,&modul_id,&sensor_id,&celsius,&decicelsius,&voltage))
+				result = decodeStream(buf,&modul_id,&sensor_id,&celsius,&decicelsius,&voltage);
+				if( result == 1)
 				{
-					case 1:
-						verbose_printf(9,"Modul ID: %d\t",modul_id);
-						verbose_printf(9,"Sensor ID: %d\t",sensor_id);
-						verbose_printf(9,"Temperatur: %d,%d\t",celsius,decicelsius);
-						switch(modul_id)
-						{
-							case 1: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_1/voltage); break;
-							case 3: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_3/voltage); break;
-							default: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_DEFAULT/voltage);
-						}		
-					
-						//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
-						lastTemperature[modul_id][sensor_id][0] = (int16_t)celsius;
-						lastTemperature[modul_id][sensor_id][1] = (int16_t)decicelsius;
-						lastVoltage[modul_id] = voltage;
-						if(database_status == -1)
-							database_status = initDatabase();
-						if(database_status != -1)
-							databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,rawtime);
+					verbose_printf(9,"Modul ID: %d\t",modul_id);
+					verbose_printf(9,"Sensor ID: %d\t",sensor_id);
+					verbose_printf(9,"Temperatur: %d,%d\t",celsius,decicelsius);
+					switch(modul_id)
+					{
+						case 1: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_1/voltage); break;
+						case 3: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_3/voltage); break;
+						default: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_DEFAULT/voltage);
+					}		
+				
+					//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
+					lastTemperature[modul_id][sensor_id][0] = (int16_t)celsius;
+					lastTemperature[modul_id][sensor_id][1] = (int16_t)decicelsius;
+					lastVoltage[modul_id] = voltage;
+					if(database_status == -1)
+						database_status = initDatabase();
+					if(database_status != -1)
+						databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,rawtime);
 
-						sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
-								lastTemperature[3][1][0],
-								lastTemperature[3][1][1]/100,
+					sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
+							lastTemperature[3][1][0],
+							lastTemperature[3][1][1]/100,
+							lastTemperature[3][0][0],
+							lastTemperature[3][0][1]/100);
+					sendBaseLcdText(buf);
+
+					if(lastTemperature[3][0][0] < 15 && !belowMinTemp &&
+							config.sms_activated)
+					{
+						char stringToSend[100];
+						belowMinTemp = 1;
+						sprintf(stringToSend,"%s had: Temperature is now %2d.%2d",theTime(),
 								lastTemperature[3][0][0],
-								lastTemperature[3][0][1]/100);
-						sendBaseLcdText(buf);
-
-						if(lastTemperature[3][0][0] < 15 && !belowMinTemp &&
-								config.sms_activated)
-						{
-							char stringToSend[100];
-							belowMinTemp = 1;
-							sprintf(stringToSend,"%s had: Temperature is now %2d.%2d",theTime(),
-									lastTemperature[3][0][0],
-								lastTemperature[3][0][1]);
-							sms(stringToSend);
-						}
-						else if(lastTemperature[3][0][0] > 16)
-							belowMinTemp = 0;
-						break;
-					
-					case 2:
-						updateGlcd();
-						verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
-						break;
-					case 3:
-						getDailyGraph(celsius,decicelsius, &graphP);
-						//sendPacket(&graphP,GRAPH_PACKET);
-						verbose_printf(9,"Graph gesendet\r\n");
-						break;
-					case 4:	// MPD Packet request
-						verbose_printf(9,"MPD Packet request\r\n");
-						sendPacket(&mpdP,MPD_PACKET);
-						break;
-					case 5:// MPD prev
-						verbose_printf(9,"MPD prev\r\n");
-						mpdPrev();
-						break;
-					case 6: // MPD next song
-						verbose_printf(9,"MPD next song\r\n");
-						mpdNext();
-						break;
-	/*				case 7: // RGB Packet request
-						rgbP.headP.address = GLCD_ADDRESS;
-						rgbP.headP.command = RGB_PACKET;
-						sendPacket(&rgbP,RGB_PACKET);
-						rgbP.headP.command = 0;
-						break;*/
-					case 8: // RGB Packet set
-						sprintf(buffer,"\rLicht %d %d %d",celsius, decicelsius, voltage);
-						ledPushToStack(buffer, 2, 2);
-						for(gpcounter = 0; gpcounter < 3; gpcounter++)
-						{
-							hadState.rgbModuleValues[gpcounter].red = celsius;
-							hadState.rgbModuleValues[gpcounter].green = decicelsius;
-							hadState.rgbModuleValues[gpcounter].blue = voltage;
-						}
-						sendRgbPacket(0x10, celsius, decicelsius, voltage, 0);
-						sendRgbPacket(0x11, celsius, decicelsius, voltage, 0);
-						sendRgbPacket(0x12, celsius, decicelsius, voltage, 0);
-						break;
-					case 10:verbose_printf(0,"Serial Modul hard-reset\r\n");
-						sendBaseLcdText("Modul neu gestartet ....");
-						break;
-					case 11:verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
-						break;
-					case 12:verbose_printf(0,"Serial Modul uart timeout\r\n");
-						break;
-					case 13:mpdTogglePlayPause();
-						break;
-					case 14:relaisP.port ^= 4;
-						sendPacket(&relaisP, RELAIS_PACKET);
-						if(relaisP.port & 4)
-						{
-							if(config.led_matrix_activated && !ledIsRunning())
-							{
-								pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
-								pthread_detach(threads[2]);
-								hadState.ledmatrix_user_activated = 1;
-							}
-						}
-						else
-						{
-							if(ledIsRunning())
-								stopLedMatrixThread();
-						}
-						hadState.relais_state = relaisP.port;
-						break;
-					case 15:relaisP.port ^= 32;
-						sendPacket(&relaisP, RELAIS_PACKET);	
-						hadState.relais_state = relaisP.port;
-						break;
-
-					case 30:// 1 open
-						verbose_printf(1,"Door opened\n");
-						hadState.input_state |= 1;
-						/* check for opened window */
-						if(hadState.input_state & 8)
-						{
-							setBeepOn();
-							verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
-							sleep(1);
-							setBeepOff();
-						}
-						if(config.door_sensor_id && config.digital_input_module)
-							databaseInsertTemperature(config.digital_input_module,
-								config.door_sensor_id, 1, 0, rawtime);
-						break;
-					case 31:// 1 closed
-						verbose_printf(1,"Door closed\n");
-						hadState.input_state &= ~1;
+							lastTemperature[3][0][1]);
+						sms(stringToSend);
+					}
+					else if(lastTemperature[3][0][0] > 16)
+						belowMinTemp = 0;
+				}
+				else if(result == 2)
+				{
+					updateGlcd();
+					verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
+				}
+				else if(result == 3)
+				{
+					getDailyGraph(celsius,decicelsius, &graphP);
+					//sendPacket(&graphP,GRAPH_PACKET);
+					verbose_printf(9,"Graph gesendet\r\n");
+				}
+				else if(result == 4)
+				{
+					verbose_printf(9,"MPD Packet request\r\n");
+					sendPacket(&mpdP,MPD_PACKET);
+				}
+				else if(result == 10)
+				{
+					verbose_printf(0,"Serial Modul hard-reset\r\n");
+					sendBaseLcdText("Modul neu gestartet ....");
+				}
+				else if(result == 11)
+				{
+					verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
+				}
+				else if(result == 12)
+				{
+					verbose_printf(0,"Serial Modul uart timeout\r\n");
+				}
+				else if(result == 30) // 1 open
+				{
+					verbose_printf(1,"Door opened\n");
+					hadState.input_state |= 1;
+					/* check for opened window */
+					if(hadState.input_state & 8)
+					{
+						setBeepOn();
+						verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
+						sleep(1);
 						setBeepOff();
-						if(config.door_sensor_id && config.digital_input_module)
-							databaseInsertTemperature(config.digital_input_module,
-								config.door_sensor_id, 0, 0, rawtime);
-						break;
-					case 32:// 2 open
-						break;
-					case 33:// 2 closed
-						break;
-					case 34:// 2 open
-						break;
-					case 35:// 2 closed
-						break;
-					case 36:// window close
+					}
+					if(config.door_sensor_id && config.digital_input_module)
+						databaseInsertTemperature(config.digital_input_module,
+							config.door_sensor_id, 1, 0, rawtime);
+				}
+				else if(result == 31) // 1 closed
+				{
+					verbose_printf(1,"Door closed\n");
+					hadState.input_state &= ~1;
+					setBeepOff();
+					if(config.door_sensor_id && config.digital_input_module)
+						databaseInsertTemperature(config.digital_input_module,
+							config.door_sensor_id, 0, 0, rawtime);
+				}
+				else if(result == 32) // 2 open
+				{
+				}
+				else if(result == 33) // 2 closed
+				{
+				}
+				else if(result == 34) // 2 open
+				{
+				}
+				else if(result == 35) // 2 closed
+				{
+				}
+				else if(result == 36)
+				{
 						verbose_printf(1,"Window closed\n");
 						hadState.input_state &= ~8;
 						setBeepOff();
@@ -530,29 +494,126 @@ int main(int argc, char* argv[])
 						{
 							hr20SetTemperature(hr20info.tempset);
 						}
-						break;
-					case 37:// window open
-						verbose_printf(1,"Window opened\n");
-						hadState.input_state |= 8;
-						if(config.window_sensor_id && config.digital_input_module)
-							databaseInsertTemperature(config.digital_input_module,
-								config.window_sensor_id, 1, 0, rawtime);
-						if(config.hr20_activated)
-						{
-							hr20GetStatus(&hr20info);
-							hr20SetTemperature(50);
-						}
-						break;
-					case 38: // toggle random
-						mpdToggleRandom();
-						break;
-					case 39: // button 4 on state 1 of remote control
-						mpdPlayNumber(1);
-						break;
+				}
+				else if(result == 37)
+				{
+					verbose_printf(1,"Window opened\n");
+					hadState.input_state |= 8;
+					if(config.window_sensor_id && config.digital_input_module)
+						databaseInsertTemperature(config.digital_input_module,
+							config.window_sensor_id, 1, 0, rawtime);
+					if(config.hr20_activated)
+					{
+						hr20GetStatus(&hr20info);
+						hr20SetTemperature(50);
+					}
+				}
+				else if(result == config.rkeys.mpd_random)
+				{
 
-					case 0://decode Stream failed
-						verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
-						break;
+					/* 50 - 82 reserved for remote control */
+					mpdToggleRandom();
+				}
+				else if(result == config.rkeys.mpd_prev)
+				{
+						verbose_printf(9,"MPD prev\r\n");
+						mpdPrev();
+				}
+				else if(result == config.rkeys.mpd_next)
+				{
+					verbose_printf(9,"MPD next song\r\n");
+					mpdNext();
+				}
+				else if(result == config.rkeys.mpd_play_pause)
+				{
+					mpdTogglePlayPause();
+				}
+				else if(result == config.rkeys.hifi_on_off)
+				{
+					relaisP.port ^= 4;
+					sendPacket(&relaisP, RELAIS_PACKET);
+					if(relaisP.port & 4)
+					{
+						if(config.led_matrix_activated && !ledIsRunning())
+						{
+							pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+							pthread_detach(threads[2]);
+							hadState.ledmatrix_user_activated = 1;
+						}
+					}
+					else
+					{
+						if(ledIsRunning())
+							stopLedMatrixThread();
+					}
+					hadState.relais_state = relaisP.port;
+				}
+				else if(result == config.rkeys.brightlight)
+				{
+					relaisP.port ^= 32;
+					sendPacket(&relaisP, RELAIS_PACKET);	
+					hadState.relais_state = relaisP.port;
+				}
+				else if(result == config.rkeys.light_off)
+				{
+					for(gpcounter = 0; gpcounter < 3; gpcounter++)
+					{
+						hadState.rgbModuleValues[gpcounter].red = 0;
+						hadState.rgbModuleValues[gpcounter].green = 0;
+						hadState.rgbModuleValues[gpcounter].blue = 0;
+					}
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.light_on)
+				{
+					for(gpcounter = 0; gpcounter < 3; gpcounter++)
+					{
+						hadState.rgbModuleValues[gpcounter].red = 255;
+						hadState.rgbModuleValues[gpcounter].green = 255 ;
+						hadState.rgbModuleValues[gpcounter].blue = 0;
+					}
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.red)
+				{
+					for(gpcounter = 0; gpcounter < 3; gpcounter++)
+					{
+						hadState.rgbModuleValues[gpcounter].red += 64;
+						if(hadState.rgbModuleValues[gpcounter].red == 0)
+							hadState.rgbModuleValues[gpcounter].red = 255;
+						if(hadState.rgbModuleValues[gpcounter].red == 63)
+							hadState.rgbModuleValues[gpcounter].red = 	0;
+					}
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.green)
+				{
+					for(gpcounter = 0; gpcounter < 3; gpcounter++)
+					{
+						hadState.rgbModuleValues[gpcounter].green += 64;
+						if(hadState.rgbModuleValues[gpcounter].green == 0)
+							hadState.rgbModuleValues[gpcounter].green = 255;
+						if(hadState.rgbModuleValues[gpcounter].green == 63)
+							hadState.rgbModuleValues[gpcounter].green = 	0;
+					}
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.blue)
+				{
+					for(gpcounter = 0; gpcounter < 3; gpcounter++)
+					{
+						hadState.rgbModuleValues[gpcounter].blue += 64;
+						if(hadState.rgbModuleValues[gpcounter].blue == 0)
+							hadState.rgbModuleValues[gpcounter].blue = 255;
+						if(hadState.rgbModuleValues[gpcounter].blue == 63)
+							hadState.rgbModuleValues[gpcounter].blue = 	0;
+					}
+					setCurrentRgbValues();
+				}
+
+				else if(result == 0)
+				{
+					verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
 				}
 			} // endif res>1
 					
