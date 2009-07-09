@@ -66,6 +66,7 @@ static int fileExists(const char *filename);
 static void printUsage(void);
 static void hadSignalHandler(int signal);
 static int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *decicelsius, int *voltage);
+static void incrementColor(uint8_t *color);
 
 /*!
  *******************************************************************************
@@ -554,7 +555,7 @@ int main(int argc, char* argv[])
 					sendPacket(&relaisP, RELAIS_PACKET);	
 					hadState.relais_state = relaisP.port;
 				}
-				else if(result == config.rkeys.light_off)
+				else if(result == config.rkeys.light_off[0] || result == config.rkeys.light_off[1])
 				{
 					for(gpcounter = 0; gpcounter < 3; gpcounter++)
 					{
@@ -562,6 +563,27 @@ int main(int argc, char* argv[])
 						hadState.rgbModuleValues[gpcounter].green = 0;
 						hadState.rgbModuleValues[gpcounter].blue = 0;
 					}
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.light_single_off[0])
+				{
+					hadState.rgbModuleValues[0].red = 0;
+					hadState.rgbModuleValues[0].green = 0;
+					hadState.rgbModuleValues[0].blue = 0;
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.light_single_off[1])
+				{
+					hadState.rgbModuleValues[1].red = 0;
+					hadState.rgbModuleValues[1].green = 0;
+					hadState.rgbModuleValues[1].blue = 0;
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.light_single_off[2])
+				{
+					hadState.rgbModuleValues[2].red = 0;
+					hadState.rgbModuleValues[2].green = 0;
+					hadState.rgbModuleValues[2].blue = 0;
 					setCurrentRgbValues();
 				}
 				else if(result == config.rkeys.light_on)
@@ -578,11 +600,7 @@ int main(int argc, char* argv[])
 				{
 					for(gpcounter = 0; gpcounter < 3; gpcounter++)
 					{
-						hadState.rgbModuleValues[gpcounter].red += 64;
-						if(hadState.rgbModuleValues[gpcounter].red == 0)
-							hadState.rgbModuleValues[gpcounter].red = 255;
-						if(hadState.rgbModuleValues[gpcounter].red == 63)
-							hadState.rgbModuleValues[gpcounter].red = 	0;
+						incrementColor(&hadState.rgbModuleValues[gpcounter].red);
 					}
 					setCurrentRgbValues();
 				}
@@ -590,11 +608,7 @@ int main(int argc, char* argv[])
 				{
 					for(gpcounter = 0; gpcounter < 3; gpcounter++)
 					{
-						hadState.rgbModuleValues[gpcounter].green += 64;
-						if(hadState.rgbModuleValues[gpcounter].green == 0)
-							hadState.rgbModuleValues[gpcounter].green = 255;
-						if(hadState.rgbModuleValues[gpcounter].green == 63)
-							hadState.rgbModuleValues[gpcounter].green = 	0;
+						incrementColor(&hadState.rgbModuleValues[gpcounter].green);
 					}
 					setCurrentRgbValues();
 				}
@@ -602,12 +616,53 @@ int main(int argc, char* argv[])
 				{
 					for(gpcounter = 0; gpcounter < 3; gpcounter++)
 					{
-						hadState.rgbModuleValues[gpcounter].blue += 64;
-						if(hadState.rgbModuleValues[gpcounter].blue == 0)
-							hadState.rgbModuleValues[gpcounter].blue = 255;
-						if(hadState.rgbModuleValues[gpcounter].blue == 63)
-							hadState.rgbModuleValues[gpcounter].blue = 	0;
+						incrementColor(&hadState.rgbModuleValues[gpcounter].blue);
 					}
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.red_single[0])
+				{
+					incrementColor(&hadState.rgbModuleValues[0].red);
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.red_single[1])
+				{
+					incrementColor(&hadState.rgbModuleValues[1].red);
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.red_single[2])
+				{
+					incrementColor(&hadState.rgbModuleValues[2].red);
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.green_single[0])
+				{
+					incrementColor(&hadState.rgbModuleValues[0].green);
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.green_single[1])
+				{
+					incrementColor(&hadState.rgbModuleValues[1].green);
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.green_single[2])
+				{
+					incrementColor(&hadState.rgbModuleValues[2].green);
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.blue_single[0])
+				{
+					incrementColor(&hadState.rgbModuleValues[0].blue);
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.blue_single[1])
+				{
+					incrementColor(&hadState.rgbModuleValues[1].blue);
+					setCurrentRgbValues();
+				}
+				else if(result == config.rkeys.blue_single[2])
+				{
+					incrementColor(&hadState.rgbModuleValues[2].blue);
 					setCurrentRgbValues();
 				}
 
@@ -699,3 +754,11 @@ void updateGlcd()
 	sendPacket(&glcdP,GP_PACKET);
 }
 
+static void incrementColor(uint8_t *color)
+{
+	*color +=64;
+	if(*color == 0)
+		*color = 255;
+	if(*color == 63)
+		*color = 0;
+}

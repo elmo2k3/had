@@ -80,13 +80,17 @@ struct _remote_control_keys
 	int mpd_next;
 	int hifi_on_off;
 	int light_on;
-	int light_off;
+	int light_off[2];
 	int red;
 	int green;
 	int blue;
 	int brightlight;
 	int music_on_hifi_on;
 	int everything_off;
+	int red_single[3];
+	int green_single[3];
+	int blue_single[3];
+	int light_single_off[3];
 };
 
 /** Struct holding all config vars

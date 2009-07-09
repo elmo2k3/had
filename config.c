@@ -71,7 +71,7 @@ int loadConfig(char *conf)
 	config.rkeys.backup = 50;
 	config.rkeys.restore = 58;
 	config.rkeys.light_on = 66;
-	config.rkeys.light_off = 74;
+	config.rkeys.light_off[0] = 74;
 	config.rkeys.mpd_play_pause = 51;
 	config.rkeys.mpd_random = 59;
 	config.rkeys.mpd_prev = 67;
@@ -81,7 +81,20 @@ int loadConfig(char *conf)
 	config.rkeys.red = 53;
 	config.rkeys.green = 61;
 	config.rkeys.blue = 69;
-	config.rkeys.music_on_hifi_on = 99;
+	config.rkeys.light_off[1] = 77;
+	config.rkeys.light_single_off[0] = 78;
+	config.rkeys.light_single_off[1] = 79;
+	config.rkeys.light_single_off[2] = 80;
+	config.rkeys.red_single[0] = 54;
+	config.rkeys.red_single[1] = 55;
+	config.rkeys.red_single[2] = 56;
+	config.rkeys.green_single[0] = 62;
+	config.rkeys.green_single[1] = 63;
+	config.rkeys.green_single[2] = 64;
+	config.rkeys.blue_single[0] = 70;
+	config.rkeys.blue_single[1] = 71;
+	config.rkeys.blue_single[2] = 72;
+	config.rkeys.music_on_hifi_on = 100;
 	config.rkeys.everything_off = 99;
 
 	/* step through every line */
