@@ -200,6 +200,16 @@ void mpdTogglePlayPause(void)
 		mpd_player_play(mpd);
 }
 
+void mpdPlay(void)
+{
+	mpd_player_play(mpd);
+}
+
+void mpdPause(void)
+{
+	mpd_player_pause(mpd);
+}
+
 void mpdNext(void)
 {
 	mpd_player_next(mpd);
@@ -208,11 +218,6 @@ void mpdNext(void)
 void mpdPrev(void)
 {
 	mpd_player_prev(mpd);
-}
-
-void mpdPause(void)
-{
-	mpd_player_pause(mpd);
 }
 
 void mpdPlayNumber(int number)

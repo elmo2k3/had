@@ -68,8 +68,8 @@ int loadConfig(char *conf)
 	config.led_shift_speed = 15000;
 	config.serial_activated = 0;
 
-	config.rkeys.backup = 50;
-	config.rkeys.restore = 58;
+	config.rkeys.music_on_hifi_on = 50;
+	config.rkeys.everything_off = 58;
 	config.rkeys.light_on = 66;
 	config.rkeys.light_off[0] = 74;
 	config.rkeys.mpd_play_pause = 51;
@@ -94,8 +94,6 @@ int loadConfig(char *conf)
 	config.rkeys.blue_single[0] = 70;
 	config.rkeys.blue_single[1] = 71;
 	config.rkeys.blue_single[2] = 72;
-	config.rkeys.music_on_hifi_on = 100;
-	config.rkeys.everything_off = 99;
 
 	/* step through every line */
 	while(fgets(line, sizeof(line), config_file) != NULL)

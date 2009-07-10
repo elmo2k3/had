@@ -529,6 +529,38 @@ int main(int argc, char* argv[])
 				{
 					mpdTogglePlayPause();
 				}
+				else if(result == config.rkeys.music_on_hifi_on)
+				{
+					relaisP.port |= 4;
+					sendPacket(&relaisP, RELAIS_PACKET);
+					if(relaisP.port & 4)
+					{
+						if(config.led_matrix_activated && !ledIsRunning())
+						{
+							pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+							pthread_detach(threads[2]);
+							hadState.ledmatrix_user_activated = 1;
+						}
+					}
+					hadState.relais_state = relaisP.port;
+					mpdPlay();
+				}
+				else if(result == config.rkeys.everything_off)
+				{
+					relaisP.port &= ~4;
+					sendPacket(&relaisP, RELAIS_PACKET);
+					if(ledIsRunning())
+						stopLedMatrixThread();
+					hadState.relais_state = relaisP.port;
+					mpdPause();
+					for(gpcounter = 0; gpcounter < 3; gpcounter++)
+					{
+						hadState.rgbModuleValues[gpcounter].red = 0;
+						hadState.rgbModuleValues[gpcounter].green = 0;
+						hadState.rgbModuleValues[gpcounter].blue = 0;
+					}
+					setCurrentRgbValues();
+				}
 				else if(result == config.rkeys.hifi_on_off)
 				{
 					relaisP.port ^= 4;

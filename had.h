@@ -72,8 +72,6 @@ extern int16_t lastVoltage[9];
 
 struct _remote_control_keys
 {
-	int backup;
-	int restore;
 	int mpd_play_pause;
 	int mpd_random;
 	int mpd_prev;

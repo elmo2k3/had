@@ -61,5 +61,9 @@ extern void mpdToggleRandom(void);
  */
 extern void mpdPlayNumber(int number);
 
+extern void mpdPlay();
+extern void mpdPause();
+
+
 #endif
 
