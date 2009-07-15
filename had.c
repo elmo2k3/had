@@ -547,7 +547,7 @@ int main(int argc, char* argv[])
 				}
 				else if(result == config.rkeys.everything_off)
 				{
-					relaisP.port &= ~4;
+					relaisP.port = 0;
 					sendPacket(&relaisP, RELAIS_PACKET);
 					if(ledIsRunning())
 						stopLedMatrixThread();
