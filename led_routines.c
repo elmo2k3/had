@@ -61,6 +61,7 @@ int led_line_stack_shift[LED_MAX_STACK];
 
 static int client_sock;
 static int running;
+static int toggle;
 
 volatile int led_stack_size = 0;
 
@@ -436,18 +437,30 @@ void ledMatrixThread(void)
 		return;
 	verbose_printf(9,"LedMatrixThread gestartet\n");
 
+	enum _screenToDraw
+	{
+		SCREEN_VOID,
+		SCREEN_TIME,
+		SCREEN_MPD
+	}screen_to_draw;
+
 	struct _ledLine ledLineTime;
+	struct _ledLine ledLineVoid;
 	struct _ledLine *ledLineToDraw;
 	int shift_speed = 0;
 	time_t rawtime;
 	struct tm *ptm;
-
+	int last_mpd_state = 0;
 
 	char time_string[20];
 
 	running = 1;
+	toggle = 0;
+	screen_to_draw = SCREEN_TIME;
 	
 	allocateLedLine(&ledLineTime, LINE_LENGTH);
+	allocateLedLine(&ledLineVoid, LINE_LENGTH);
+	clearScreen(&ledLineVoid);
 
 	if(initNetwork() < 0)
 	{
@@ -474,7 +487,28 @@ void ledMatrixThread(void)
 		/* Important! else doesn't work here */
 		if(!led_stack_size)
 		{
-			if(mpdGetState() == MPD_PLAYER_PLAY)
+			if(toggle)
+			{
+				switch(screen_to_draw)
+				{
+					case SCREEN_MPD: screen_to_draw = SCREEN_TIME; break;
+					case SCREEN_TIME: screen_to_draw = SCREEN_VOID; break;
+					case SCREEN_VOID: if(mpdGetState() == MPD_PLAYER_PLAY) screen_to_draw = SCREEN_MPD;
+										else screen_to_draw = SCREEN_TIME; break;
+				}
+				toggle = 0;
+			}
+			else if(mpdGetState() == MPD_PLAYER_PLAY && last_mpd_state == 0)
+			{
+				last_mpd_state = 1;
+				screen_to_draw = SCREEN_MPD;
+			}
+			else if(mpdGetState() != MPD_PLAYER_PLAY && last_mpd_state == 1)
+			{
+				last_mpd_state = 0;
+				screen_to_draw = SCREEN_TIME;
+			}
+			else if(screen_to_draw == SCREEN_MPD)
 			{
 				ledLineToDraw = &ledLineMpd;
 				if(ledLineMpd.x >= 63)
@@ -482,7 +516,7 @@ void ledMatrixThread(void)
 				else
 					shift_speed = 0;
 			}
-			else
+			else if(screen_to_draw == SCREEN_TIME)
 			{
 				time(&rawtime);
 				ptm = localtime(&rawtime);
@@ -492,6 +526,11 @@ void ledMatrixThread(void)
 				ledLineTime.y = 2;
 				putString(time_string,&ledLineTime);
 				ledLineToDraw = &ledLineTime;
+				shift_speed = 0;
+			}
+			else if(screen_to_draw == SCREEN_VOID)
+			{
+				ledLineToDraw = &ledLineVoid;
 				shift_speed = 0;
 			}
 			ledDisplayMain(ledLineToDraw, shift_speed);
@@ -521,4 +560,11 @@ static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
 		usleep(1000);
 	}
 }
+
+void ledDisplayToggle(void)
+{
+	toggle = 1;
+}
+
+
 

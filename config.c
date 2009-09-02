@@ -94,6 +94,7 @@ int loadConfig(char *conf)
 	config.rkeys.blue_single[0] = 70;
 	config.rkeys.blue_single[1] = 71;
 	config.rkeys.blue_single[2] = 72;
+	config.rkeys.ledmatrix_toggle = 57;
 
 	/* step through every line */
 	while(fgets(line, sizeof(line), config_file) != NULL)

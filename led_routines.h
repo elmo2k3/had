@@ -147,6 +147,8 @@ extern int stringWidth(char *string);
 /** get the width of a char in columns */
 extern int charWidth(char c);
 
+extern void ledDisplayToggle(void);
+
 
 #endif
 

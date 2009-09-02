@@ -697,6 +697,10 @@ int main(int argc, char* argv[])
 					incrementColor(&hadState.rgbModuleValues[2].blue);
 					setCurrentRgbValues();
 				}
+				else if(result == config.rkeys.ledmatrix_toggle)
+				{
+					ledDisplayToggle();
+				}
 
 				else if(result == 0)
 				{
