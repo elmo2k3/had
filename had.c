@@ -701,7 +701,10 @@ int main(int argc, char* argv[])
 				{
 					ledDisplayToggle();
 				}
-
+				else if(result == config.rkeys.kill_and_unmount)
+				{
+					system("mpd --kill; sleep 5;umount /mnt/usbstick");
+				}
 				else if(result == 0)
 				{
 					verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);

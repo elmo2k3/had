@@ -90,6 +90,7 @@ struct _remote_control_keys
 	int blue_single[3];
 	int light_single_off[3];
 	int ledmatrix_toggle;
+	int kill_and_unmount;
 };
 
 /** Struct holding all config vars
