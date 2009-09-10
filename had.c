@@ -452,7 +452,7 @@ int main(int argc, char* argv[])
 					/* check for opened window */
 					if(hadState.input_state & 8)
 					{
-						setBeepOn();
+						//setBeepOn();
 						verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
 						sleep(1);
 						setBeepOff();
