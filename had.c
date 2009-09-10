@@ -531,6 +531,7 @@ int main(int argc, char* argv[])
 				}
 				else if(result == config.rkeys.music_on_hifi_on)
 				{
+					system(SYSTEM_MOUNT_MPD);
 					relaisP.port |= 4;
 					sendPacket(&relaisP, RELAIS_PACKET);
 					if(relaisP.port & 4)
@@ -560,6 +561,7 @@ int main(int argc, char* argv[])
 						hadState.rgbModuleValues[gpcounter].blue = 0;
 					}
 					setCurrentRgbValues();
+					system(SYSTEM_KILL_MPD);
 				}
 				else if(result == config.rkeys.hifi_on_off)
 				{

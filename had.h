@@ -61,6 +61,8 @@
                 printf(args); \
 	}
 
+#define SYSTEM_MOUNT_MPD "mount /mnt/usbstick; sleep 1; mpd"
+#define SYSTEM_KILL_MPD "mpd --kill;sleep 3; umount /mnt/usbstick; sleep 1; sdparm -q -C stop /dev/discs/disc0/generic"
 extern void updateGlcd();
 
 extern pthread_t threads[5];
