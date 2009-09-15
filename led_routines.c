@@ -441,7 +441,8 @@ void ledMatrixThread(void)
 	{
 		SCREEN_VOID,
 		SCREEN_TIME,
-		SCREEN_MPD
+		SCREEN_MPD,
+		SCREEN_TEMPERATURES
 	}screen_to_draw;
 
 	struct _ledLine ledLineTime;
@@ -491,10 +492,15 @@ void ledMatrixThread(void)
 			{
 				switch(screen_to_draw)
 				{
-					case SCREEN_MPD: screen_to_draw = SCREEN_TIME; break;
-					case SCREEN_TIME: screen_to_draw = SCREEN_VOID; break;
+					case SCREEN_MPD: screen_to_draw = SCREEN_TIME;
+										break;
+					case SCREEN_TIME: screen_to_draw = SCREEN_TEMPERATURES; 
+										break;
+					case SCREEN_TEMPERATURES: screen_to_draw = SCREEN_VOID;
+										break;
 					case SCREEN_VOID: if(mpdGetState() == MPD_PLAYER_PLAY) screen_to_draw = SCREEN_MPD;
-										else screen_to_draw = SCREEN_TIME; break;
+										else screen_to_draw = SCREEN_TIME;
+										break;
 				}
 				toggle = 0;
 			}
@@ -527,6 +533,28 @@ void ledMatrixThread(void)
 				putString(time_string,&ledLineTime);
 				ledLineToDraw = &ledLineTime;
 				shift_speed = 0;
+			}
+			else if(screen_to_draw == SCREEN_TEMPERATURES)
+			{
+				font = Comic_10;
+				sprintf(time_string,"\r%2d.%02d\bC \r%2d.%02d\bC",
+					lastTemperature[3][1][0],
+					lastTemperature[3][1][1]/100,
+					lastTemperature[3][0][0],
+					lastTemperature[3][0][1]/100
+					);
+				clearScreen(&ledLineTime);
+				ledLineTime.x = (64-stringWidth(time_string))/2;
+				ledLineTime.y = 0;
+				putString(time_string,&ledLineTime);
+				
+				font = Comic_8;
+				ledLineTime.x = (64-stringWidth(time_string))/2;
+				ledLineTime.y = 8;
+				putString("\a Out   Wohn",&ledLineTime);
+				ledLineToDraw = &ledLineTime;
+				shift_speed = 0;
+				font = Arial_Bold_14;
 			}
 			else if(screen_to_draw == SCREEN_VOID)
 			{
