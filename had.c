@@ -44,7 +44,6 @@
 #include "config.h"
 #include "led_routines.h"
 #include "sms.h"
-#include "usbtemp.h"
 #include "version.h"
 #include "hr20.h"
 
@@ -325,8 +324,8 @@ int main(int argc, char* argv[])
 		pthread_detach(threads[2]);
 	}
 
-	if(config.usbtemp_activated)
-		pthread_create(&threads[3],NULL,(void*)&usbTempLoop,NULL);
+//	if(config.usbtemp_activated)
+//		pthread_create(&threads[3],NULL,(void*)&usbTempLoop,NULL);
 	if(config.hr20_database_activated)
 		pthread_create(&threads[4],NULL,(void*)&hr20thread,NULL);
 	
@@ -733,6 +732,7 @@ static void hadSignalHandler(int signal)
 		if(config.daemonize)
 			unlink(config.pid_file);
 		pthread_kill(threads[1],SIGQUIT);
+		pthread_join(threads[1], NULL);
 		writeStateFile(config.statefile);
 		verbose_printf(0,"Shutting down\n");
 		exit(EXIT_SUCCESS);
