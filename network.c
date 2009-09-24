@@ -305,6 +305,9 @@ static void networkClientHandler(int client_sock)
 				}
 
 				break;
+			case CMD_NETWORK_OPEN_DOOR:
+				open_door();
+				break;
 		}
 
 		usleep(1000);
@@ -345,11 +348,13 @@ void networkThread(void)
 	if(bind(sock,(struct sockaddr*)&server, sizeof( server)) < 0)
 	{
 		verbose_printf(0, "Konnte TCP Server nicht starten\n");
+		return;
 	}
 
 	if(listen(sock, 5) == -1)
 	{
 		verbose_printf(0, "Error bei listen\n");
+		return;
 	}
 
 	while(1)

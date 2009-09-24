@@ -237,6 +237,15 @@ void setBaseLcdOff()
 		write(fd,&headP,sizeof(headP));
 }
 
+void open_door()
+{
+	relaisP.port |= 16;
+	sendPacket(&relaisP, RELAIS_PACKET);
+	sleep(10);
+	relaisP.port &= ~(16);
+	sendPacket(&relaisP, RELAIS_PACKET);
+}
+
 void sendBaseLcdText(char *text)
 {
 	struct headPacket headP;
