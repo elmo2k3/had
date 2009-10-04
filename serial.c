@@ -241,7 +241,10 @@ void open_door()
 {
 	relaisP.port |= 16;
 	sendPacket(&relaisP, RELAIS_PACKET);
-	sleep(10);
+	setBeepOn();
+	sleep(1);
+	setBeepOff();
+	sleep(9);
 	relaisP.port &= ~(16);
 	sendPacket(&relaisP, RELAIS_PACKET);
 }
