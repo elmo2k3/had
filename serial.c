@@ -239,6 +239,7 @@ void setBaseLcdOff()
 
 void open_door()
 {
+	verbose_printf(0,"Opening Door\n");
 	relaisP.port |= 16;
 	sendPacket(&relaisP, RELAIS_PACKET);
 	setBeepOn();
