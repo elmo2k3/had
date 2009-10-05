@@ -731,7 +731,7 @@ static void hadSignalHandler(int signal)
 	{
 		if(config.daemonize)
 			unlink(config.pid_file);
-		pthread_kill(threads[1],SIGQUIT);
+		networkThreadStop();
 		writeStateFile(config.statefile);
 		verbose_printf(0,"Shutting down\n");
 		exit(EXIT_SUCCESS);

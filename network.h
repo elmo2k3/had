@@ -29,6 +29,7 @@
 #define LISTENER_PORT 4123
 
 extern void networkThread(void);
+extern void networkThreadStop(void);
 
 /* Commands for had */
 #define CMD_NETWORK_QUIT 0

@@ -52,11 +52,11 @@ static void networkClientHandler(int client_sock);
 
 static int8_t numConnectedClients = 0;
 
-static void networkThreadStop(void)
+void networkThreadStop(void)
 {
-	close(sock);
 	leave = 1;
 	verbose_printf(0, "NetworkThread stopped\n");
+	close(sock);
 }
 
 static int networkAuthenticate(int client_sock)
@@ -329,9 +329,6 @@ void networkThread(void)
 	int y=1;
 
 
-	leave = 0;
-
-	signal(SIGQUIT, (void*)networkThreadStop);
 	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if( sock < 0 )
 	{
