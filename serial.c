@@ -242,9 +242,14 @@ void open_door()
 	verbose_printf(0,"Opening Door\n");
 	relaisP.port |= 16;
 	sendPacket(&relaisP, RELAIS_PACKET);
-	setBeepOn();
-	sleep(1);
-	setBeepOff();
+	if(hadState.beep_on_door_opened)
+	{
+		setBeepOn();
+		sleep(1);
+		setBeepOff();
+	}
+	else
+		sleep(1);
 	sleep(9);
 	relaisP.port &= ~(16);
 	sendPacket(&relaisP, RELAIS_PACKET);

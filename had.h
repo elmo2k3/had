@@ -177,6 +177,8 @@ struct _hadState
 	uint16_t last_voltage[3]; /**< last voltage values of rf modules */
 	uint8_t scrobbler_user_activated; /**< scrobbler activated? */
 	uint8_t ledmatrix_user_activated; /**< ledmatrix activated? */
+	uint8_t beep_on_window_left_open; 
+	uint8_t beep_on_door_opened;
 }hadState;
 
 

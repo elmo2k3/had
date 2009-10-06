@@ -295,6 +295,8 @@ int main(int argc, char* argv[])
 		memset(&relaisP, 0, sizeof(relaisP));
 		hadState.scrobbler_user_activated = config.scrobbler_activated;
 		hadState.ledmatrix_user_activated = config.led_matrix_activated;
+		hadState.beep_on_door_opened = 1;
+		hadState.beep_on_window_left_open = 1;
 	}
 
 
@@ -451,10 +453,13 @@ int main(int argc, char* argv[])
 					/* check for opened window */
 					if(hadState.input_state & 8)
 					{
-						//setBeepOn();
 						verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
-						sleep(1);
-						setBeepOff();
+						if(hadState.beep_on_window_left_open)
+						{
+							setBeepOn();
+							sleep(1);
+							setBeepOff();
+						}
 					}
 					if(config.door_sensor_id && config.digital_input_module)
 						databaseInsertTemperature(config.digital_input_module,
@@ -702,10 +707,10 @@ int main(int argc, char* argv[])
 				{
 					ledDisplayToggle();
 				}
-				else if(result == config.rkeys.kill_and_unmount)
-				{
-					system("mpd --kill; sleep 5;umount /mnt/usbstick");
-				}
+//				else if(result == config.rkeys.kill_and_unmount)
+//				{
+//					system("mpd --kill; sleep 5;umount /mnt/usbstick");
+//				}
 				else if(result == 0)
 				{
 					verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
