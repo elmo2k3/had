@@ -49,6 +49,8 @@
 
 /*! thread variable array for network, mpd and ledmatrix */
 pthread_t threads[5];
+pthread_mutex_t mutexLedmatrix;
+pthread_mutex_t mutexLedmatrixToggle;
 
 /*! big array for the last measured temperatures */
 int16_t lastTemperature[9][9][2];
@@ -282,6 +284,10 @@ int main(int argc, char* argv[])
 #else
 	verbose_printf(0, "had started\n");
 #endif
+
+	/* init mutex for ledmatrix thread */
+	pthread_mutex_init(&mutexLedmatrix, NULL);
+	pthread_mutex_init(&mutexLedmatrixToggle, NULL);
 
 	if(loadStateFile(config.statefile))
 	{
@@ -705,7 +711,9 @@ int main(int argc, char* argv[])
 				}
 				else if(result == config.rkeys.ledmatrix_toggle)
 				{
+					pthread_mutex_lock(&mutexLedmatrixToggle);
 					ledDisplayToggle();
+					pthread_mutex_unlock(&mutexLedmatrixToggle);
 				}
 //				else if(result == config.rkeys.kill_and_unmount)
 //				{

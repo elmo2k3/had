@@ -488,6 +488,7 @@ void ledMatrixThread(void)
 		/* Important! else doesn't work here */
 		if(!led_stack_size)
 		{
+			pthread_mutex_lock(&mutexLedmatrixToggle);
 			if(toggle)
 			{
 				switch(screen_to_draw)
@@ -561,7 +562,10 @@ void ledMatrixThread(void)
 				ledLineToDraw = &ledLineVoid;
 				shift_speed = 0;
 			}
+			pthread_mutex_unlock(&mutexLedmatrixToggle);
+			pthread_mutex_lock(&mutexLedmatrix);
 			ledDisplayMain(ledLineToDraw, shift_speed);
+			pthread_mutex_unlock(&mutexLedmatrix);
 		}
 		
 	}

@@ -105,12 +105,14 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 		mpd_Song *song = mpd_playlist_get_current_song(mi);
 		if(song)
 		{
+			pthread_mutex_lock(&mutexLedmatrix);
 			clearScreen(&ledLineMpd);
 			char stringToPrint[100];
 			putString("\r",&ledLineMpd);
 			putString(song->artist,&ledLineMpd);
 			putString("\a - \b",&ledLineMpd);
 			putString(song->title,&ledLineMpd);
+			pthread_mutex_unlock(&mutexLedmatrix);
 
 			/* Auf PIN4 liegt die Stereoanlage
 			 * Nur wenn diese an ist zu last.fm submitten!
