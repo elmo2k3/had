@@ -26,15 +26,14 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/signal.h>
-#include <mysql/mysql.h>
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libmpd/libmpd.h>
-#include <pthread.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sysexits.h>
+#include <glib.h>
+#include <gmodule.h>
 
 #include "had.h"
 #include "version.h"
@@ -122,12 +121,13 @@ static int killDaemon(int signal)
 
 int main(int argc, char* argv[])
 {
-	signal(SIGINT, (void*)hadSignalHandler);
-	signal(SIGTERM, (void*)hadSignalHandler);
-
+    GMainLoop *loop;
+	GModule *mod_base_station;
 	pid_t pid;
 	FILE *pid_file;
 	
+//	signal(SIGINT, (void*)hadSignalHandler);
+//	signal(SIGTERM, (void*)hadSignalHandler);
 	if(!loadConfig(HAD_CONFIG_FILE))
 	{
 		verbose_printf(0,"Could not load config ... aborting\n\n");
@@ -204,11 +204,11 @@ int main(int argc, char* argv[])
 
 	}
 	
-#ifdef VERSION
-	verbose_printf(0, "had %s started\n",VERSION);
-#else
-	verbose_printf(0, "had started\n");
-#endif
+//#ifdef VERSION
+//	verbose_printf(0, "had %s started\n",VERSION);
+//#else
+//	verbose_printf(0, "had started\n");
+//#endif
 
 	if(loadStateFile(config.statefile))
 	{
@@ -224,6 +224,15 @@ int main(int argc, char* argv[])
 		hadState.beep_on_door_opened = 1;
 		hadState.beep_on_window_left_open = 1;
 	}
+
+	mod_base_station = g_module_open("./plugins/base_station/libbase_station.la",G_MODULE_BIND_LAZY);
+	if(!mod_base_station)
+	{
+		g_warning("could not load mod_base_station");
+	}
+	loop = g_main_loop_new(NULL,FALSE);
+//    g_log_set_handler(NULL, G_LOG_LEVEL_DEBUG, logfunc, NULL);
+    g_main_loop_run(loop);
 
 //	if(config.hr20_database_activated || config.serial_activated || config.usbtemp_activated)
 //		database_status = initDatabase();
@@ -641,11 +650,6 @@ int main(int argc, char* argv[])
 //	} // config.serial_activated
 //	else
 //	{
-		verbose_printf(9,"Serial port deactivated\n");
-		while(1)
-		{
-			sleep(1);
-		}
 //	}
 	return 0;
 }

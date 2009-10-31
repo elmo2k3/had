@@ -55,7 +55,7 @@ int loadStateFile(char *filename)
 	}
 	else
 	{
-		verbose_printf(0,"Count not read statefile!\n");
+		//verbose_printf(0,"Count not read statefile!\n");
 		return 0;
 	}
 }

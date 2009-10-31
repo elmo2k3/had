@@ -12,6 +12,16 @@ AC_CONFIG_SRCDIR([src/had.h])
 
 HAD_LIBTOOL_VERSION=1:0:0
 AC_SUBST(had_LIBTOOL_VERSION)
+AC_SUBST(EXTRA_CFLAGS)
+AC_SUBST(EXTRA_LDFLAGS)
+
+#glib
+PKG_CHECK_MODULES([glib], glib-2.0 >= 2.10)
+AC_SUBST(glib_LIBS)
+AC_SUBST(glib_CFLAGS)
+PKG_CHECK_MODULES([gmodule], gmodule-2.0 >= 2.10)
+AC_SUBST(gmodule_LIBS)
+AC_SUBST(gmodule_CFLAGS)
 
 # Checks for programs.
 AC_PROG_CC
@@ -31,5 +41,5 @@ AC_TYPE_UINT8_T
 
 # Checks for library functions.
 AC_CHECK_FUNCS([socket])
-AC_OUTPUT(had.pc Makefile src/Makefile)
+AC_OUTPUT(src/Makefile src/plugins/base_station/Makefile)
 

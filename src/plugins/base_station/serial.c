@@ -29,9 +29,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <glib.h>
+#include <gmodule.h>
 
+#include <had.h>
 #include "serial.h"
-#include "had.h"
 
 static int fd;
 
@@ -271,6 +273,12 @@ void sendBaseLcdText(char *text)
 	lcd_text.text[32] = '\0';
 	if(config.serial_activated)
 		write(fd,&lcd_text,sizeof(lcd_text));
+}
+
+gchar *g_module_check_init(void)
+{
+	g_debug("module base_station loaded");
+	return NULL;
 }
 
 
