@@ -38,10 +38,12 @@
 #include "config.h"
 #include "version.h"
 
+GMainLoop *had_mainloop;
+
 int main(int argc, char* argv[])
 {
-    GMainLoop *loop;
 	GModule *mod_base_station;
+	GModule *mod_rfid_tag_reader;
 	int returnValue;
 	
 //	signal(SIGINT, (void*)hadSignalHandler);
@@ -82,13 +84,14 @@ int main(int argc, char* argv[])
 	}
 
 	mod_base_station = g_module_open("./plugins/base_station/libbase_station.la",G_MODULE_BIND_LAZY);
+	mod_rfid_tag_reader = g_module_open("./plugins/rfid_tag_reader/librfid_tag_reader.la",G_MODULE_BIND_LAZY);
 	if(!mod_base_station)
 	{
 		g_warning("could not load mod_base_station");
 	}
-	loop = g_main_loop_new(NULL,FALSE);
+	had_mainloop = g_main_loop_new(NULL,FALSE);
 //    g_log_set_handler(NULL, G_LOG_LEVEL_DEBUG, logfunc, NULL);
-    g_main_loop_run(loop);
+    g_main_loop_run(had_mainloop);
 
 //	if(config.hr20_database_activated || config.serial_activated || config.usbtemp_activated)
 //		database_status = initDatabase();

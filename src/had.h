@@ -28,6 +28,7 @@
 
 #include <pthread.h>
 #include <inttypes.h>
+#include <glib.h>
 
 #define HAD_CONFIG_FILE "/etc/had.conf"
 
@@ -68,6 +69,7 @@ extern void updateGlcd();
 extern pthread_t threads[5];
 extern pthread_mutex_t mutexLedmatrix;
 extern pthread_mutex_t mutexLedmatrixToggle;
+extern GMainLoop *had_mainloop;
 
 extern char *theTime(void);
 
