@@ -94,7 +94,7 @@ struct _remote_control_keys
 	int blue_single[3];
 	int light_single_off[3];
 	int ledmatrix_toggle;
-	int kill_and_unmount;
+	int open_door;
 };
 
 /** Struct holding all config vars
