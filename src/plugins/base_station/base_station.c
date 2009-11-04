@@ -33,6 +33,7 @@
 #include <gmodule.h>
 
 #include <had.h>
+#include <config.h>
 #include "base_station.h"
 
 static gboolean serialReceive
@@ -332,7 +333,7 @@ gchar *g_module_check_init(void)
 {
 	struct _BaseStation *BaseStation;
 
-	BaseStation = base_station_new("/home/bjoern/fifo");
+	BaseStation = base_station_new(hadConfigGetString("base_station","port","/dev/ttyUSB0"));
 	if(BaseStation)
 		base_station_set_callback(BaseStation, command_received, NULL);
 	else

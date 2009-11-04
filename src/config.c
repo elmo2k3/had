@@ -25,14 +25,13 @@
 
 #include <string.h>
 #include <glib.h>
-#include <gmodule.h>
 #include <stdio.h>
 #include "config.h"
 
 static GKeyFile *had_key_file;
 static gchar *found_path;
 
-G_MODULE_EXPORT gint _hadConfigGetInt(gchar *group, gchar *key, gint default_int)
+gint hadConfigGetInt(gchar *group, gchar *key, gint default_int)
 {
     GError *err = NULL;
     gint int_to_return;
@@ -46,7 +45,8 @@ G_MODULE_EXPORT gint _hadConfigGetInt(gchar *group, gchar *key, gint default_int
     int_to_return = g_key_file_get_integer(had_key_file, group, key, &err);
     if(err)
     {
-        if(err->code == G_KEY_FILE_ERROR_KEY_NOT_FOUND) // key not found so insert default value
+        if(err->code == G_KEY_FILE_ERROR_KEY_NOT_FOUND ||
+            err->code == G_KEY_FILE_ERROR_GROUP_NOT_FOUND) // key not found so insert default value
         {
             g_key_file_set_integer(had_key_file, group, key, default_int);
         }
@@ -61,7 +61,7 @@ G_MODULE_EXPORT gint _hadConfigGetInt(gchar *group, gchar *key, gint default_int
         return int_to_return;
 }
 
-G_MODULE_EXPORT gboolean _hadConfigGetBool(gchar *group, gchar *key, gboolean default_bool)
+gboolean hadConfigGetBool(gchar *group, gchar *key, gboolean default_bool)
 {
     GError *err = NULL;
     gboolean bool_to_return;
@@ -75,7 +75,8 @@ G_MODULE_EXPORT gboolean _hadConfigGetBool(gchar *group, gchar *key, gboolean de
     bool_to_return = g_key_file_get_boolean(had_key_file, group, key, &err);
     if(err)
     {
-        if(err->code == G_KEY_FILE_ERROR_KEY_NOT_FOUND) // key not found so insert default value
+        if(err->code == G_KEY_FILE_ERROR_KEY_NOT_FOUND ||
+            err->code == G_KEY_FILE_ERROR_GROUP_NOT_FOUND) // key not found so insert default value
         {
             g_key_file_set_boolean(had_key_file, group, key, default_bool);
         }
@@ -90,7 +91,7 @@ G_MODULE_EXPORT gboolean _hadConfigGetBool(gchar *group, gchar *key, gboolean de
         return bool_to_return;
 }
 
-G_MODULE_EXPORT gchar *_hadConfigGetString(gchar *group, gchar *key, gchar *default_string)
+gchar *hadConfigGetString(gchar *group, gchar *key, gchar *default_string)
 {
     GError *err = NULL;
     gchar *string_to_return;
@@ -104,7 +105,8 @@ G_MODULE_EXPORT gchar *_hadConfigGetString(gchar *group, gchar *key, gchar *defa
     string_to_return = g_key_file_get_string(had_key_file, group, key, &err);
     if(err)
     {
-        if(err->code == G_KEY_FILE_ERROR_KEY_NOT_FOUND) // key not found so insert default value
+        if(err->code == G_KEY_FILE_ERROR_KEY_NOT_FOUND || 
+            err->code == G_KEY_FILE_ERROR_GROUP_NOT_FOUND) // key not found so insert default value
         {
             g_key_file_set_string(had_key_file, group, key, default_string);
         }
@@ -119,7 +121,7 @@ G_MODULE_EXPORT gchar *_hadConfigGetString(gchar *group, gchar *key, gchar *defa
         return default_string;
 }
 
-G_MODULE_EXPORT void _hadConfigSetInt(gchar *group, gchar *key, int int_to_set)
+void hadConfigSetInt(gchar *group, gchar *key, int int_to_set)
 {
     if(!key || !group || !strlen(key) || !strlen(group) || !had_key_file)
     {
@@ -129,7 +131,7 @@ G_MODULE_EXPORT void _hadConfigSetInt(gchar *group, gchar *key, int int_to_set)
     g_key_file_set_integer(had_key_file, group, key, int_to_set);
 }
 
-G_MODULE_EXPORT void _hadConfigSetBool(gchar *group, gchar *key, int bool_to_set)
+void hadConfigSetBool(gchar *group, gchar *key, int bool_to_set)
 {
     if(!key || !group || !strlen(key) || !strlen(group) || !had_key_file)
     {
@@ -139,7 +141,7 @@ G_MODULE_EXPORT void _hadConfigSetBool(gchar *group, gchar *key, int bool_to_set
     g_key_file_set_boolean(had_key_file, group, key, bool_to_set);
 }
 
-G_MODULE_EXPORT void _hadConfigSetString(gchar *group, gchar *key, gchar *string_to_set)
+void hadConfigSetString(gchar *group, gchar *key, gchar *string_to_set)
 {
     if(!key || !group || !strlen(key) || !strlen(group) || !had_key_file)
     {
@@ -149,11 +151,9 @@ G_MODULE_EXPORT void _hadConfigSetString(gchar *group, gchar *key, gchar *string
     g_key_file_set_string(had_key_file, group, key, string_to_set);
 }
 
-gchar *g_module_check_init(void)
+void hadConfigInit(void)
 {
     GError *err = NULL;
-
-    g_debug("module config loaded");
 
     had_key_file = g_key_file_new();
     if(!g_key_file_load_from_dirs(had_key_file, "had.conf", config_search_dirs,
@@ -166,10 +166,10 @@ gchar *g_module_check_init(void)
     {
         g_debug("config: loaded %s", found_path);
     }
-    return NULL;
+    return;
 }
 
-gchar *g_module_unload(void)
+void hadConfigUnload(void)
 {
     FILE *fp;
     gsize data_length;
@@ -190,7 +190,6 @@ gchar *g_module_unload(void)
         if(found_path)
             g_free(found_path);
     }
-    g_debug("module config unloaded");
-    return NULL;
+    return;
 }
 

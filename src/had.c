@@ -37,17 +37,15 @@
 #include "misc.h"
 #include "version.h"
 
-#include "plugins/config/config.h"
-
 GMainLoop *had_mainloop;
 
 int main(int argc, char* argv[])
 {
 	GModule *mod_base_station;
 	GModule *mod_rfid_tag_reader;
-	GModule *mod_config;
 	int returnValue;
-	
+
+	hadConfigInit();
 //	signal(SIGINT, (void*)hadSignalHandler);
 //	signal(SIGTERM, (void*)hadSignalHandler);
 
@@ -80,15 +78,12 @@ int main(int argc, char* argv[])
 //		hadState.beep_on_window_left_open = 1;
 //	}
 
-	mod_config = g_module_open("./plugins/config/libconfig.la", G_MODULE_BIND_LAZY);
-	g_module_symbol(mod_config, "_hadConfigSetString",(gpointer *)&hadConfigSetString);
 	mod_base_station = g_module_open("./plugins/base_station/libbase_station.la",G_MODULE_BIND_LAZY);
 	mod_rfid_tag_reader = g_module_open("./plugins/rfid_tag_reader/librfid_tag_reader.la",G_MODULE_BIND_LAZY);
 	hadConfigSetString("general","foo","bar");
 	had_mainloop = g_main_loop_new(NULL,FALSE);
+	hadConfigUnload();
 //    g_log_set_handler(NULL, G_LOG_LEVEL_DEBUG, logfunc, NULL);
-	g_module_close(mod_config);
-	mod_config = NULL;
     g_main_loop_run(had_mainloop);
 
 //	if(config.hr20_database_activated || config.serial_activated || config.usbtemp_activated)
