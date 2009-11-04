@@ -35,8 +35,9 @@
 #include "had.h"
 #include "daemon.h"
 #include "misc.h"
-#include "config.h"
 #include "version.h"
+
+#include "plugins/config/config.h"
 
 GMainLoop *had_mainloop;
 
@@ -44,23 +45,19 @@ int main(int argc, char* argv[])
 {
 	GModule *mod_base_station;
 	GModule *mod_rfid_tag_reader;
+	GModule *mod_config;
 	int returnValue;
 	
 //	signal(SIGINT, (void*)hadSignalHandler);
 //	signal(SIGTERM, (void*)hadSignalHandler);
-	if(!loadConfig(HAD_CONFIG_FILE))
-	{
-		verbose_printf(0,"Could not load config ... aborting\n\n");
-		exit(EX_NOINPUT);
-	}
 
-	if((returnValue = parseCmdLine(argc, argv)) != -1)
-		return returnValue;
+//	if((returnValue = parseCmdLine(argc, argv)) != -1)
+//		return returnValue;
 
-	if(config.daemonize)
-	{
-		daemonize();
-	}
+//	if(config.daemonize)
+//	{
+//		daemonize();
+//	}
 	
 //#ifdef VERSION
 //	verbose_printf(0, "had %s started\n",VERSION);
@@ -68,29 +65,30 @@ int main(int argc, char* argv[])
 //	verbose_printf(0, "had started\n");
 //#endif
 
-	if(loadStateFile(config.statefile))
-	{
-		verbose_printf(9, "Statefile successfully read\n");
-		relaisP.port = hadState.relais_state;
-	}
-	else
-	{
-		verbose_printf(9, "Statefile could not be read, using default values\n");
-		memset(&hadState, 0, sizeof(hadState));
-		hadState.scrobbler_user_activated = config.scrobbler_activated;
-		hadState.ledmatrix_user_activated = config.led_matrix_activated;
-		hadState.beep_on_door_opened = 1;
-		hadState.beep_on_window_left_open = 1;
-	}
+//	if(loadStateFile(config.statefile))
+//	{
+//		verbose_printf(9, "Statefile successfully read\n");
+//		relaisP.port = hadState.relais_state;
+//	}
+//	else
+//	{
+//		verbose_printf(9, "Statefile could not be read, using default values\n");
+//		memset(&hadState, 0, sizeof(hadState));
+//		hadState.scrobbler_user_activated = config.scrobbler_activated;
+//		hadState.ledmatrix_user_activated = config.led_matrix_activated;
+//		hadState.beep_on_door_opened = 1;
+//		hadState.beep_on_window_left_open = 1;
+//	}
 
+	mod_config = g_module_open("./plugins/config/libconfig.la", G_MODULE_BIND_LAZY);
+	g_module_symbol(mod_config, "_hadConfigSetString",(gpointer *)&hadConfigSetString);
 	mod_base_station = g_module_open("./plugins/base_station/libbase_station.la",G_MODULE_BIND_LAZY);
 	mod_rfid_tag_reader = g_module_open("./plugins/rfid_tag_reader/librfid_tag_reader.la",G_MODULE_BIND_LAZY);
-	if(!mod_base_station)
-	{
-		g_warning("could not load mod_base_station");
-	}
+	hadConfigSetString("general","foo","bar");
 	had_mainloop = g_main_loop_new(NULL,FALSE);
 //    g_log_set_handler(NULL, G_LOG_LEVEL_DEBUG, logfunc, NULL);
+	g_module_close(mod_config);
+	mod_config = NULL;
     g_main_loop_run(had_mainloop);
 
 //	if(config.hr20_database_activated || config.serial_activated || config.usbtemp_activated)

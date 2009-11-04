@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = base_station rfid_tag_reader
+SUBDIRS = base_station rfid_tag_reader config
 

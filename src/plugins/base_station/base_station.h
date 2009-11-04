@@ -27,6 +27,20 @@
 #define __SERIAL_H__
 
 #define BAUDRATE B19200
+#define MAX_COMMAND_LENGTH 1024
+
+/**
+ *	struct for one base_station
+ */
+struct _BaseStation
+{
+    gchar last_command[MAX_COMMAND_LENGTH];
+    gint cmd_position; 
+	guint serial_port_watcher; /**< glib watcher */
+	gchar error_string[1024]; /**< last error should be stored here (not in use yet) */
+	void (*callback)(void*,void*); /** function to call after a command was received */
+	void *user_data; /** data to pass to the function that is called */
+};
 
 /** Init serial device
  * @return 0 on failure, 1 on success

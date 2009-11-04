@@ -30,8 +30,6 @@
 #include <inttypes.h>
 #include <glib.h>
 
-#define HAD_CONFIG_FILE "/etc/had.conf"
-
 #define ADC_RES 1024
 
 #define MAX_USB_SENSORS 10
@@ -98,65 +96,6 @@ struct _remote_control_keys
 	int ledmatrix_toggle;
 	int kill_and_unmount;
 };
-
-/** Struct holding all config vars
- * 
- */
-struct _config
-{
-	char password[128];
-	int serial_activated; /**< communication to base station activated? */
-	char database_server[50]; /**< mysql server, can be hostname or ip */
-	char database_user[20]; /**< mysql user */
-	char database_password[30]; /**< mysql password */
-	char database_database[20]; /**< database name */
-	int database_port; /**< database port. default 3306 */
-	
-	int mpd_activated; /**< mpd activated */
-	char mpd_server[50]; /**< mpd server, hostname or ip */
-	char mpd_password[30]; /**< mpd password */
-	int mpd_port; /**< mpd port, default 6600 */
-
-	char scrobbler_user[20]; /**< audioscrobbler user */
-	char scrobbler_pass[34]; /**< audioscrobbler password hash, see audioscrobbler docu */
-	char scrobbler_tmpfile[100]; /**< tempfile. ugly. wont be needed in future versions */
-	
-	char pid_file[100]; /**< had pid file */
-	char logfile[100]; /**< had logfile */
-	char tty[255]; /**< serial device */
-	int verbosity; /**< verbosity. currently 0 and 9 supported */
-	int daemonize; /**< detach from tty, 0 or 1 */
-
-	char led_matrix_ip[50]; /**< ip address of led-matrix-display */
-	int led_matrix_port; /**< port of led-matrix-display */
-	int led_matrix_activated; /**< led-matrix-display activated, 0 or 1 */
-	int scrobbler_activated; /**< audioscrobbler activated, 0 or 1 */
-	int led_shift_speed; /**< Shift speed for texts on the led matrix */
-
-	int sms_activated; /**< send sms at several events? */
-	char sipgate_user[100]; /**< sipgate.de user for sending sms*/
-	char sipgate_pass[100]; /**< sipgate.de password */
-	char cellphone[100]; /**< cellphone number for sms (format +4912378877) */
-
-	int hr20_activated; /**< communication with hr20 thermostat activated? */
-	char hr20_port[255]; /**< serial port for hr20 communication */
-	int hr20_database_activated;
-	int hr20_database_number;
-
-	char statefile[100]; /**< had statefile */
-
-	int usbtemp_activated;
-	char usbtemp_device_id[MAX_USB_SENSORS][14];
-	int usbtemp_device_modul[MAX_USB_SENSORS];
-	int usbtemp_device_sensor[MAX_USB_SENSORS];
-	int usbtemp_num_devices;
-
-	int digital_input_module;
-	int door_sensor_id;
-	int window_sensor_id;
-
-	struct _remote_control_keys rkeys;
-}config;
 
 /**
  * struct holding the params of one light module

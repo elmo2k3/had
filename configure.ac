@@ -41,5 +41,10 @@ AC_TYPE_UINT8_T
 
 # Checks for library functions.
 AC_CHECK_FUNCS([socket])
-AC_OUTPUT(Makefile src/Makefile src/plugins/base_station/Makefile src/plugins/Makefile src/plugins/rfid_tag_reader/Makefile)
+AC_OUTPUT(Makefile \
+            src/Makefile \
+            src/plugins/base_station/Makefile \
+            src/plugins/Makefile \
+            src/plugins/rfid_tag_reader/Makefile \
+            src/plugins/config/Makefile)
 
