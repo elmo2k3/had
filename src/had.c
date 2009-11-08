@@ -42,10 +42,9 @@ GMainLoop *had_mainloop;
 
 int main(int argc, char* argv[])
 {
-	GModule *mod_base_station;
-	GModule *mod_rfid_tag_reader;
 	int returnValue;
 
+	g_thread_init(NULL);
 	hadConfigInit();
 	hadModulesInit();
 //	signal(SIGINT, (void*)hadSignalHandler);

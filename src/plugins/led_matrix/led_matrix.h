@@ -59,12 +59,6 @@ struct _ledLine
  */
 extern int ledIsRunning(void);
 
-/** Start main thread for the led-matrix-display
- *
- * May only be started once
- */
-extern void ledMatrixThread(void);
-
 /** Stop the led-matrix-display thread
  */
 extern void stopLedMatrixThread(void);

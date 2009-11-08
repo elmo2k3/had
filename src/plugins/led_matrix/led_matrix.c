@@ -33,15 +33,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <glib.h>
+#include <gmodule.h>
 
-#include "led_routines.h"
+#include <had.h>
+#include <config.h>
+
+#include "led_matrix.h"
 #include "fonts/arial_bold_14.h"
 #include "fonts/arial_8.h"
 #include "fonts/Comic_8.h"
 #include "fonts/Comic_9.h"
 #include "fonts/Comic_10.h"
-#include "had.h"
-#include "mpd.h"
 
 static uint16_t charGetStart(char c);
 static int initNetwork(void);
@@ -64,6 +67,23 @@ static int running;
 static int toggle;
 
 volatile int led_stack_size = 0;
+
+void *ledMatrixThread(gpointer user_data);
+
+gchar *g_module_check_init(void)
+{
+	GError *err = NULL;
+
+	g_debug("module led_matrix loaded");
+	g_thread_create(ledMatrixThread, NULL, FALSE, &err);
+
+	if(err)
+	{
+		g_debug("led_matrix.c: error %s",err->message);
+		g_error_free(err);
+	}
+	return NULL;
+}
 
 
 int ledIsRunning(void)
@@ -321,21 +341,21 @@ static int initNetwork(void)
 
 	client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(client_sock < 0)
-		verbose_printf(0,"Keine Verbindung zum LED-Modul\n");
+		g_debug("Keine Verbindung zum LED-Modul\n");
 	server.sin_family = AF_INET;
-	server.sin_port = htons(config.led_matrix_port);
+	server.sin_port = htons(9328);
 #ifdef _WIN32
         unsigned long addr;
-        addr = inet_addr(config.led_matrix_ip);
+        addr = inet_addr(hadConfigGetString("mod_led_matrix","host","192.168.0.93"));
         memcpy( (char *)&server.sin_addr, &addr, sizeof(addr));
 #else
-	inet_aton(config.led_matrix_ip, &server.sin_addr);
+	inet_aton(hadConfigGetString("mod_led_matrix","host","192.168.0.93"), &server.sin_addr);
 #endif
 	
 
 	if(connect(client_sock, (struct sockaddr*)&server, sizeof(server)) != 0)
 	{
-		verbose_printf(0,"Konnte nicht zum LED-Modul verbinden\n");
+		g_debug("Konnte nicht zum LED-Modul verbinden\n");
 		return -1;
 	}	
 
@@ -344,7 +364,7 @@ static int initNetwork(void)
 
 void stopLedMatrixThread()
 {
-	verbose_printf(9,"LedMatrixThread gestoppt\n");
+	g_debug("LedMatrixThread gestoppt\n");
 	running = 0;
 }
 
@@ -375,14 +395,6 @@ int allocateLedLine(struct _ledLine *ledLine, int line_length)
 
 void freeLedLine(struct _ledLine *ledLine)
 {
-	if(!ledLine->column_red)
-		verbose_printf(0,"ledLine.column_red was not allocated\n");
-	if(!ledLine->column_green)
-		verbose_printf(0,"ledLine.column_green was not allocated\n");
-	if(!ledLine->column_red_output)
-		verbose_printf(0,"ledLine.column_red_output was not allocated\n");
-	if(!ledLine->column_green_output)
-		verbose_printf(0,"ledLine.column_green_output was not allocated\n");
 	free(ledLine->column_red);
 	free(ledLine->column_green);
 	
@@ -399,11 +411,9 @@ void ledPushToStack(char *string, int shift, int lifetime)
 		int x;
 		if(!allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH))
 		{
-			verbose_printf(0,"Could not allocate memory!!\n");
 			return;
 		}
 		
-		verbose_printf(9,"String pushed to stack: %s\n",string);
 		putString(string,&ledLineStack[led_stack_size]);
 		
 		x = ledLineStack[led_stack_size].x;
@@ -419,23 +429,20 @@ void ledPushToStack(char *string, int shift, int lifetime)
 	}
 	else
 	{
-		verbose_printf(0,"LED-Stack is full!!\n");
 	}
 }
 
 static void ledPopFromStack(void)
 {
-	verbose_printf(9,"String popped from stack\n");
 	freeLedLine(&ledLineStack[led_stack_size-1]);
 	led_stack_size--;
 
 }
 
-void ledMatrixThread(void)
+void *ledMatrixThread(gpointer user_data)
 {
 	if(running) // something went terribly wrong
 		return;
-	verbose_printf(9,"LedMatrixThread gestartet\n");
 
 	enum _screenToDraw
 	{
@@ -465,7 +472,6 @@ void ledMatrixThread(void)
 
 	if(initNetwork() < 0)
 	{
-		verbose_printf(0, "Stopping led_matrix thread\n");
 		running = 0;
 	}
 
@@ -488,7 +494,6 @@ void ledMatrixThread(void)
 		/* Important! else doesn't work here */
 		if(!led_stack_size)
 		{
-			pthread_mutex_lock(&mutexLedmatrixToggle);
 			if(toggle)
 			{
 				switch(screen_to_draw)
@@ -499,30 +504,30 @@ void ledMatrixThread(void)
 										break;
 					case SCREEN_TEMPERATURES: screen_to_draw = SCREEN_VOID;
 										break;
-					case SCREEN_VOID: if(mpdGetState() == MPD_PLAYER_PLAY) screen_to_draw = SCREEN_MPD;
-										else screen_to_draw = SCREEN_TIME;
+//					case SCREEN_VOID: if(mpdGetState() == MPD_PLAYER_PLAY) screen_to_draw = SCREEN_MPD;
+//										else screen_to_draw = SCREEN_TIME;
 										break;
 				}
 				toggle = 0;
 			}
-			else if(mpdGetState() == MPD_PLAYER_PLAY && last_mpd_state == 0)
-			{
-				last_mpd_state = 1;
-				screen_to_draw = SCREEN_MPD;
-			}
-			else if(mpdGetState() != MPD_PLAYER_PLAY && last_mpd_state == 1)
-			{
-				last_mpd_state = 0;
-				screen_to_draw = SCREEN_TIME;
-			}
-			else if(screen_to_draw == SCREEN_MPD)
-			{
-				ledLineToDraw = &ledLineMpd;
-				if(ledLineMpd.x >= 63)
-					shift_speed = 2;
-				else
-					shift_speed = 0;
-			}
+//			else if(mpdGetState() == MPD_PLAYER_PLAY && last_mpd_state == 0)
+//			{
+//				last_mpd_state = 1;
+//				screen_to_draw = SCREEN_MPD;
+//			}
+//			else if(mpdGetState() != MPD_PLAYER_PLAY && last_mpd_state == 1)
+//			{
+//				last_mpd_state = 0;
+//				screen_to_draw = SCREEN_TIME;
+//			}
+//			else if(screen_to_draw == SCREEN_MPD)
+//			{
+//				ledLineToDraw = &ledLineMpd;
+//				if(ledLineMpd.x >= 63)
+//					shift_speed = 2;
+//				else
+//					shift_speed = 0;
+//			}
 			else if(screen_to_draw == SCREEN_TIME)
 			{
 				time(&rawtime);
@@ -538,12 +543,12 @@ void ledMatrixThread(void)
 			else if(screen_to_draw == SCREEN_TEMPERATURES)
 			{
 				font = Comic_10;
-				sprintf(time_string,"\r%2d.%02d\bC \r%2d.%02d\bC",
-					lastTemperature[3][1][0],
-					lastTemperature[3][1][1]/100,
-					lastTemperature[3][0][0],
-					lastTemperature[3][0][1]/100
-					);
+//				sprintf(time_string,"\r%2d.%02d\bC \r%2d.%02d\bC",
+//					lastTemperature[3][1][0],
+//					lastTemperature[3][1][1]/100,
+//					lastTemperature[3][0][0],
+//					lastTemperature[3][0][1]/100
+//					);
 				clearScreen(&ledLineTime);
 				ledLineTime.x = (64-stringWidth(time_string))/2;
 				ledLineTime.y = 0;
@@ -562,10 +567,7 @@ void ledMatrixThread(void)
 				ledLineToDraw = &ledLineVoid;
 				shift_speed = 0;
 			}
-			pthread_mutex_unlock(&mutexLedmatrixToggle);
-			pthread_mutex_lock(&mutexLedmatrix);
 			ledDisplayMain(ledLineToDraw, shift_speed);
-			pthread_mutex_unlock(&mutexLedmatrix);
 		}
 		
 	}
@@ -584,7 +586,7 @@ static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
 	{
 		shiftLeft(ledLineToDraw);
 		updateDisplay(*ledLineToDraw);
-		usleep(config.led_shift_speed);
+//		usleep(config.led_shift_speed);
 	}
 	else
 	{
@@ -597,6 +599,5 @@ void ledDisplayToggle(void)
 {
 	toggle = 1;
 }
-
 
 

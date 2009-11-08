@@ -22,6 +22,9 @@ AC_SUBST(glib_CFLAGS)
 PKG_CHECK_MODULES([gmodule], gmodule-2.0 >= 2.10)
 AC_SUBST(gmodule_LIBS)
 AC_SUBST(gmodule_CFLAGS)
+PKG_CHECK_MODULES([gthread], gthread-2.0 >= 2.10)
+AC_SUBST(gthread_LIBS)
+AC_SUBST(gthread_CFLAGS)
 
 # Checks for programs.
 AC_PROG_CC
@@ -46,5 +49,4 @@ AC_OUTPUT(Makefile \
             src/plugins/base_station/Makefile \
             src/plugins/Makefile \
             src/plugins/rfid_tag_reader/Makefile \
-            src/plugins/config/Makefile)
-
+            src/plugins/led_matrix/Makefile)

@@ -115,6 +115,11 @@ void loadModule(gpointer data, gpointer user_data)
     if(module_path)
     {
         module->module = g_module_open(module_path, G_MODULE_BIND_LAZY);
+        if(!module->module)
+        {
+            g_debug("modules.c: failed to load %s",module->name);
+            g_debug("modules.c: error was %s",g_module_error());
+        }
         return;
     }
 }
