@@ -333,7 +333,7 @@ gchar *g_module_check_init(void)
 {
 	struct _BaseStation *BaseStation;
 
-	BaseStation = base_station_new(hadConfigGetString("base_station","port","/dev/ttyUSB0"));
+	BaseStation = base_station_new(hadConfigGetString("mod_base_station","port","/dev/ttyUSB0"));
 	if(BaseStation)
 		base_station_set_callback(BaseStation, command_received, NULL);
 	else

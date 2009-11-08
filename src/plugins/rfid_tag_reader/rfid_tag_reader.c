@@ -98,7 +98,7 @@ struct RfidTagReader *rfid_tag_reader_new(char *serial_device)
 	fd = open(serial_device, O_RDONLY | O_NOCTTY | O_NDELAY );
 	if (fd <0) 
     {
-//		return NULL;
+		return NULL;
 	}
 
 	memset(&newtio, 0, sizeof(newtio)); /* clear struct for new port settings */
@@ -107,7 +107,7 @@ struct RfidTagReader *rfid_tag_reader_new(char *serial_device)
 	tcflush(fd, TCIFLUSH);
 	if(tcsetattr(fd,TCSANOW,&newtio) < 0)
 	{
-//		return NULL;
+		return NULL;
 	}
     
 	struct RfidTagReader *rfid_tag_reader_to_return = g_new0(struct RfidTagReader, 1);
@@ -130,8 +130,15 @@ void tag_read(struct RfidTagReader *tag_reader, void *user_data)
 gchar *g_module_check_init(void)
 {
 	g_debug("module rfid_tag_reader loaded");
-	struct RfidTagReader *tag_reader = rfid_tag_reader_new("/dev/ttyUSB1");
-	rfid_tag_reader_set_callback(tag_reader, tag_read, NULL);
+	gchar *port = hadConfigGetString("mod_rfid_tag_reader","port","/dev/ttyUSB1");
+	struct RfidTagReader *tag_reader = rfid_tag_reader_new(port);
+	//g_free(port);
+	if(!tag_reader)
+	{
+		g_debug("rfid_tag_reader.c: could not init tagreader");
+	}
+	else
+		rfid_tag_reader_set_callback(tag_reader, tag_read, NULL);
 	return NULL;
 }
 

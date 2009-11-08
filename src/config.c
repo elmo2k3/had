@@ -30,6 +30,8 @@
 
 static GKeyFile *had_key_file;
 static gchar *found_path;
+static const gchar *config_search_dirs[] = {".", "/etc/", NULL};
+
 
 gint hadConfigGetInt(gchar *group, gchar *key, gint default_int)
 {
@@ -118,7 +120,7 @@ gchar *hadConfigGetString(gchar *group, gchar *key, gchar *default_string)
         return default_string;
     }
     else
-        return default_string;
+        return string_to_return;
 }
 
 void hadConfigSetInt(gchar *group, gchar *key, int int_to_set)
@@ -192,4 +194,59 @@ void hadConfigUnload(void)
     }
     return;
 }
+
+gchar **hadConfigGetModuleNamesToLoad(void)
+{
+    gchar **all_groups;
+    gchar **module_names;
+    gsize num_groups;
+    gsize num_mods;
+    int i;
+
+    if(!had_key_file)
+        return NULL;
+    
+    num_mods = 0;
+    module_names = NULL;
+
+    all_groups = g_key_file_get_groups(had_key_file, &num_groups);
+    module_names = g_malloc0(sizeof(gchar*)*num_groups+1); // +1 to ensure there is enough 
+                                                           //   space, even if all entries are modules
+    
+    for(i=0;i<num_groups;i++)
+    {
+        if(g_strcmp0(all_groups[i], "mod_") > 0)
+        {
+            if(hadConfigGetBool(all_groups[i], "load", FALSE))
+            {
+                module_names[num_mods++] = g_strdup(all_groups[i]+4); // jump over mod_
+            }
+        }
+    }
+    module_names[num_mods] = NULL;
+    g_strfreev(all_groups);
+    return module_names;
+}
+
+gchar **hadConfigGetStringList(gchar *group, gchar *key)
+{
+    GError *err = NULL;
+    gsize num_strings;
+    gchar **string_list;
+
+    if(!had_key_file)
+        return NULL;
+    string_list =  g_key_file_get_string_list(had_key_file, group, key, &num_strings, &err);
+    if(err)
+    {
+        g_debug("config.c: hadConfigGetStringList error %s",err->message);
+        g_error_free(err);
+        return NULL;
+    }
+    else
+        return string_list;
+}
+
+
+
 

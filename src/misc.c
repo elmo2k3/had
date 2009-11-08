@@ -81,12 +81,12 @@ int parseCmdLine(int argc, char **argv)
 
 		if(!strcmp(argv[1],"-k"))
 		{
-			return(killDaemon(SIGTERM));
+//			return(killDaemon(SIGTERM));
 		}
 
 		/* reload config */
-		if(!strcmp(argv[1],"-r"))
-			return(killDaemon(SIGHUP));
+//		if(!strcmp(argv[1],"-r"))
+//			return(killDaemon(SIGHUP));
 	}
 	return -1;
 }

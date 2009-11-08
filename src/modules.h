@@ -18,30 +18,27 @@
  */
 
 /*!
-* \file	config.c
-* \brief	config file handling
-* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+ * \file	modules.h
+ * \brief	module handling
+ * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
+#ifndef __MODULE_H__
+#define __MODULE_H__
 
-#ifndef __HAD_CONFIG_H__
-#define __HAD_CONFIG_H__
+#include <gmodule.h>
 
-#include <string.h>
-#include <glib.h>
+struct _had_module
+{
+	GModule *module;
+	gchar name[20];
+	gchar full_name[24];
+	gboolean loaded;
+	gchar **depencies;
+};
 
+static GList *had_modules;
 
-gint hadConfigGetInt(gchar *group, gchar *key, gint default_int);
-gboolean hadConfigGetBool(gchar *group, gchar *key, gboolean default_bool);
-gchar *hadConfigGetString(gchar *group, gchar *key, gchar *default_string);
-void hadConfigSetInt(gchar *group, gchar *key, int int_to_set);
-void hadConfigSetBool(gchar *group, gchar *key, int bool_to_set);
-void hadConfigSetString(gchar *group, gchar *key, gchar *string_to_set);
-gchar **hadConfigGetStringList(gchar *group, gchar *key);
-
-gchar **hadConfigGetModuleNamesToLoad(void);
-
-void hadConfigInit(void);
-void hadConfigUnload(void);
+void hadModulesInit(void);
 
 #endif
 
