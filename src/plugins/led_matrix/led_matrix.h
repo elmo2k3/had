@@ -50,6 +50,7 @@ struct _ledLine
 	int x; /**< current x position */
 	int y; /**< current y position */
 	int shift_position; /**< position of the output arrays */
+	int current_color;
 };
 
 /** 

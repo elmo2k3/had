@@ -46,6 +46,9 @@
 #include "fonts/Comic_9.h"
 #include "fonts/Comic_10.h"
 
+static GMutex *led_matrix_mutex = NULL;
+static gboolean led_matrix_exit;
+
 static uint16_t charGetStart(char c);
 static int initNetwork(void);
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
@@ -68,11 +71,15 @@ static int toggle;
 
 volatile int led_stack_size = 0;
 
-void *ledMatrixThread(gpointer user_data);
+gpointer *ledMatrixThread(gpointer user_data);
 
 gchar *g_module_check_init(void)
 {
 	GError *err = NULL;
+	
+	led_matrix_mutex = g_mutex_new();
+
+	led_matrix_exit = FALSE;
 
 	g_debug("module led_matrix loaded");
 	g_thread_create(ledMatrixThread, NULL, FALSE, &err);
@@ -85,6 +92,12 @@ gchar *g_module_check_init(void)
 	return NULL;
 }
 
+void g_module_unload(GModule *module)
+{
+	g_mutex_lock(led_matrix_mutex);
+	led_matrix_exit = TRUE;
+	g_mutex_unlock(led_matrix_mutex);
+}
 
 int ledIsRunning(void)
 {
@@ -95,7 +108,8 @@ void updateDisplay(struct _ledLine ledLine)
 {
 	int bytes_send;
 	int i,p,m;
-
+	
+	g_mutex_lock(led_matrix_mutex);
 	memset(&RED,0,sizeof(RED));
 	memset(&GREEN,0,sizeof(GREEN));
 
@@ -136,6 +150,7 @@ void updateDisplay(struct _ledLine ledLine)
 	}
 	bytes_send = send(client_sock, &RED, sizeof(RED),0);
 	bytes_send = send(client_sock, &GREEN, sizeof(GREEN),0);
+	g_mutex_unlock(led_matrix_mutex);
 
 }
 
@@ -199,8 +214,10 @@ int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 
 	if(c == '\n')
 	{
+		g_mutex_lock(led_matrix_mutex);
 		ledLine->x = 0;
 		ledLine->y = 8;
+		g_mutex_unlock(led_matrix_mutex);
 		return 1;
 	}
 
@@ -222,9 +239,13 @@ int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 
 	if(c == ' ')
 	{
+		g_mutex_lock(led_matrix_mutex);
 		ledLine->x += 4;
+		g_mutex_unlock(led_matrix_mutex);
 		return 1;
 	}
+
+	g_mutex_lock(led_matrix_mutex);
 
 	for(i=0;i<char_width;i++)
 	{
@@ -262,24 +283,36 @@ int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 	}
 
 	ledLine->x += char_width + 1;
+	g_mutex_unlock(led_matrix_mutex);
 
 	return 1;
 }
 
 void putString(char *string, struct _ledLine *ledLine)
 {
-	static int color = COLOR_RED;
-
+	int color = ledLine->current_color;
 	if(!string)
 		string = "null";
 	while(*string)
 	{
 		if(*string == '\b')
-			color = COLOR_GREEN;
+		{
+			g_mutex_lock(led_matrix_mutex);
+			ledLine->current_color = COLOR_GREEN;
+			g_mutex_unlock(led_matrix_mutex);
+		}
 		else if(*string == '\r')
-			color = COLOR_RED;
+		{
+			g_mutex_lock(led_matrix_mutex);
+			ledLine->current_color = COLOR_RED;
+			g_mutex_unlock(led_matrix_mutex);
+		}
 		else if(*string == '\a')
-			color = COLOR_AMBER;
+		{
+			g_mutex_lock(led_matrix_mutex);
+			ledLine->current_color = COLOR_AMBER;
+			g_mutex_unlock(led_matrix_mutex);
+		}
 		else if(!putChar(*string,color,ledLine))
 			return;
 		string++;
@@ -288,6 +321,7 @@ void putString(char *string, struct _ledLine *ledLine)
 
 void clearScreen(struct _ledLine *ledLine)
 {
+	g_mutex_lock(led_matrix_mutex);
 	memset(ledLine->column_red,0,sizeof(uint16_t)*LINE_LENGTH);
 	memset(ledLine->column_green,0,sizeof(uint16_t)*LINE_LENGTH);
 	
@@ -296,6 +330,7 @@ void clearScreen(struct _ledLine *ledLine)
 
 	ledLine->x = 0;
 	ledLine->y = 1;
+	g_mutex_unlock(led_matrix_mutex);
 }
 
 
@@ -305,6 +340,7 @@ int shiftLeft(struct _ledLine *ledLine)
 
 	int scroll_length;
 	
+	g_mutex_lock(led_matrix_mutex);
 	if(ledLine->x + 11 > LINE_LENGTH)
 		scroll_length = LINE_LENGTH;
 	else
@@ -329,10 +365,12 @@ int shiftLeft(struct _ledLine *ledLine)
 	if(ledLine->shift_position > ledLine->x + 11)
 	{
 		ledLine->shift_position = 1;
+		g_mutex_unlock(led_matrix_mutex);
 		return 0;
 	}
-	else
-		return 1;
+	
+	g_mutex_unlock(led_matrix_mutex);
+	return 1;
 }
 
 static int initNetwork(void)
@@ -343,14 +381,8 @@ static int initNetwork(void)
 	if(client_sock < 0)
 		g_debug("Keine Verbindung zum LED-Modul\n");
 	server.sin_family = AF_INET;
-	server.sin_port = htons(9328);
-#ifdef _WIN32
-        unsigned long addr;
-        addr = inet_addr(hadConfigGetString("mod_led_matrix","host","192.168.0.93"));
-        memcpy( (char *)&server.sin_addr, &addr, sizeof(addr));
-#else
+	server.sin_port = htons(hadConfigGetInt("mod_led_matrix","port",9328));
 	inet_aton(hadConfigGetString("mod_led_matrix","host","192.168.0.93"), &server.sin_addr);
-#endif
 	
 
 	if(connect(client_sock, (struct sockaddr*)&server, sizeof(server)) != 0)
@@ -370,6 +402,7 @@ void stopLedMatrixThread()
 
 int allocateLedLine(struct _ledLine *ledLine, int line_length)
 {
+	g_mutex_lock(led_matrix_mutex);
 	ledLine->column_red = calloc(sizeof(uint16_t), line_length);
 	if(!ledLine->column_red)
 		return 0;
@@ -384,33 +417,40 @@ int allocateLedLine(struct _ledLine *ledLine, int line_length)
 	if(!ledLine->column_green_output)
 		return 0;
 	
+	g_mutex_unlock(led_matrix_mutex);
 
 	clearScreen(ledLine);
 
+	g_mutex_lock(led_matrix_mutex);
 	ledLine->x = 0;
 	ledLine->y = 1;
 	ledLine->shift_position = 0;
+	g_mutex_unlock(led_matrix_mutex);
 	return 1;
 }
 
 void freeLedLine(struct _ledLine *ledLine)
 {
+	g_mutex_lock(led_matrix_mutex);
 	free(ledLine->column_red);
 	free(ledLine->column_green);
 	
 	free(ledLine->column_red_output);
 	free(ledLine->column_green_output);
+	g_mutex_unlock(led_matrix_mutex);
 }
 
 void ledPushToStack(char *string, int shift, int lifetime)
 {
 	if(!running)
 		return;
+	g_mutex_lock(led_matrix_mutex);
 	if(led_stack_size + 1 < LED_MAX_STACK)
 	{
 		int x;
 		if(!allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH))
 		{
+			g_mutex_unlock(led_matrix_mutex);
 			return;
 		}
 		
@@ -430,16 +470,19 @@ void ledPushToStack(char *string, int shift, int lifetime)
 	else
 	{
 	}
+	g_mutex_unlock(led_matrix_mutex);
 }
 
 static void ledPopFromStack(void)
 {
 	freeLedLine(&ledLineStack[led_stack_size-1]);
+	g_mutex_lock(led_matrix_mutex);
 	led_stack_size--;
+	g_mutex_unlock(led_matrix_mutex);
 
 }
 
-void *ledMatrixThread(gpointer user_data)
+gpointer *ledMatrixThread(gpointer user_data)
 {
 	if(running) // something went terribly wrong
 		return;
@@ -472,6 +515,7 @@ void *ledMatrixThread(gpointer user_data)
 
 	if(initNetwork() < 0)
 	{
+		g_debug("ledmatrix.c: could not init network");
 		running = 0;
 	}
 
@@ -573,10 +617,9 @@ void *ledMatrixThread(gpointer user_data)
 	}
 
 	freeLedLine(&ledLineTime);
+	freeLedLine(&ledLineVoid);
 	
 	close(client_sock);
-
-	pthread_exit(0);
 }
 
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
@@ -592,6 +635,13 @@ static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
 	{
 		updateDisplay(*ledLineToDraw);
 		usleep(1000);
+	}
+	if(led_matrix_exit)
+	{
+		g_mutex_lock(led_matrix_mutex);
+		led_matrix_exit = FALSE;
+		g_mutex_unlock(led_matrix_mutex);
+		return;
 	}
 }
 
