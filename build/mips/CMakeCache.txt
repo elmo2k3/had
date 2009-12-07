@@ -19,13 +19,13 @@ CMAKE_AR:FILEPATH=/usr/bin/ar
 
 //Choose the type of build, options are: None(CMAKE_CXX_FLAGS or
 // CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.
-CMAKE_BUILD_TYPE:STRING=Release
+CMAKE_BUILD_TYPE:STRING=
 
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
 
 //CXX compiler.
-CMAKE_CXX_COMPILER:FILEPATH=/home/bjoern/Downloads/openwrt/staging_dir/toolchain-mipsel_gcc-3.4.6_uClibc-0.9.30.1/usr/bin/mipsel-openwrt-linux-c++
+CMAKE_CXX_COMPILER:FILEPATH=/usr/src/openwrt/staging_dir/toolchain-mipsel_gcc-3.4.6_uClibc-0.9.30.1/usr/bin/mipsel-openwrt-linux-c++
 
 //Flags used by the compiler during all build types.
 CMAKE_CXX_FLAGS:STRING=
@@ -45,27 +45,27 @@ CMAKE_CXX_FLAGS_RELEASE:STRING=-O3 -DNDEBUG
 CMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=-O2 -g
 
 //C compiler.
-CMAKE_C_COMPILER:FILEPATH=/home/bjoern/Downloads/openwrt/staging_dir/toolchain-mipsel_gcc-3.4.6_uClibc-0.9.30.1/usr/bin/mipsel-openwrt-linux-gcc
+CMAKE_C_COMPILER:FILEPATH=/usr/src/openwrt/staging_dir/toolchain-mipsel_gcc-3.4.6_uClibc-0.9.30.1/usr/bin/mipsel-openwrt-linux-gcc
 
 //Flags used by the compiler during all build types.
-CMAKE_C_FLAGS:STRING=-I /home/bjoern/Downloads/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/mysql/ -I /home/bjoern/Downloads/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/
+CMAKE_C_FLAGS:STRING=-I /usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/mysql/ -I /usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/ -I /usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/libmpd-1.0
 
 //Flags used by the compiler during debug builds.
-CMAKE_C_FLAGS_DEBUG:STRING=
+CMAKE_C_FLAGS_DEBUG:STRING=-g
 
 //Flags used by the compiler during release minsize builds.
-CMAKE_C_FLAGS_MINSIZEREL:STRING=
+CMAKE_C_FLAGS_MINSIZEREL:STRING=-Os -DNDEBUG
 
 //Flags used by the compiler during release builds (/MD /Ob1 /Oi
 // /Ot /Oy /Gs will produce slightly less optimized but smaller
 // files).
-CMAKE_C_FLAGS_RELEASE:STRING=
+CMAKE_C_FLAGS_RELEASE:STRING=-O3 -DNDEBUG
 
 //Flags used by the compiler during Release with Debug Info builds.
-CMAKE_C_FLAGS_RELWITHDEBINFO:STRING=
+CMAKE_C_FLAGS_RELWITHDEBINFO:STRING=-O2 -g
 
 //Flags used by the linker.
-CMAKE_EXE_LINKER_FLAGS:STRING=-L/home/bjoern/Downloads/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/lib/mysql/ -L/home/bjoern/Downloads/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/lib/
+CMAKE_EXE_LINKER_FLAGS:STRING=-L/usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/lib/mysql/ -L/usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/lib/ -L/usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/lib/libiconv/lib -L/usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/lib/libintl/lib
 
 //Flags used by the linker during debug builds.
 CMAKE_EXE_LINKER_FLAGS_DEBUG:STRING=
@@ -143,10 +143,7 @@ CMAKE_USE_RELATIVE_PATHS:BOOL=OFF
 // .SILENT directive, and all commands will be echoed to the console
 // during the make.  This is useful for debugging only. With Visual
 // Studio IDE projects all commands are done without /nologo.
-CMAKE_VERBOSE_MAKEFILE:BOOL=OFF
-
-//pkg-config executable
-PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
+CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
 //Value Computed by CMake
 had_BINARY_DIR:STATIC=/home/bjoern/Projekte/home-automation/had/build/mips
@@ -165,8 +162,6 @@ CMAKE_AR-ADVANCED:INTERNAL=1
 CMAKE_BUILD_TOOL-ADVANCED:INTERNAL=1
 //What is the target build tool cmake is generating for.
 CMAKE_BUILD_TOOL:INTERNAL=/usr/bin/make
-//Modified flag for variable: CMAKE_BUILD_TYPE
-CMAKE_BUILD_TYPE-MODIFIED:INTERNAL=1
 //This is the directory where this CMakeCahe.txt was created
 CMAKE_CACHEFILE_DIR:INTERNAL=/home/bjoern/Projekte/home-automation/had/build/mips
 //Major version of cmake used to create the current loaded cache
@@ -201,8 +196,6 @@ CMAKE_C_COMPILER-ADVANCED:INTERNAL=1
 CMAKE_C_COMPILER_WORKS:INTERNAL=1
 //Advanced flag for variable: CMAKE_C_FLAGS
 CMAKE_C_FLAGS-ADVANCED:INTERNAL=1
-//Modified flag for variable: CMAKE_C_FLAGS
-CMAKE_C_FLAGS-MODIFIED:INTERNAL=1
 //Advanced flag for variable: CMAKE_C_FLAGS_DEBUG
 CMAKE_C_FLAGS_DEBUG-ADVANCED:INTERNAL=1
 //Advanced flag for variable: CMAKE_C_FLAGS_MINSIZEREL
@@ -218,11 +211,9 @@ CMAKE_DETERMINE_C_ABI_COMPILED:INTERNAL=TRUE
 //Path to cache edit program executable.
 CMAKE_EDIT_COMMAND:INTERNAL=/usr/bin/ccmake
 //Executable file format
-CMAKE_EXECUTABLE_FORMAT:INTERNAL=Unknown
+CMAKE_EXECUTABLE_FORMAT:INTERNAL=ELF
 //Advanced flag for variable: CMAKE_EXE_LINKER_FLAGS
 CMAKE_EXE_LINKER_FLAGS-ADVANCED:INTERNAL=1
-//Modified flag for variable: CMAKE_EXE_LINKER_FLAGS
-CMAKE_EXE_LINKER_FLAGS-MODIFIED:INTERNAL=1
 //Advanced flag for variable: CMAKE_EXE_LINKER_FLAGS_DEBUG
 CMAKE_EXE_LINKER_FLAGS_DEBUG-ADVANCED:INTERNAL=1
 //Advanced flag for variable: CMAKE_EXE_LINKER_FLAGS_MINSIZEREL
@@ -284,43 +275,4 @@ CMAKE_UNAME:INTERNAL=/bin/uname
 CMAKE_USE_RELATIVE_PATHS-ADVANCED:INTERNAL=1
 //Advanced flag for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
-//Modified flag for variable: CMAKE_VERBOSE_MAKEFILE
-CMAKE_VERBOSE_MAKEFILE-MODIFIED:INTERNAL=1
-GLIB2_CFLAGS:INTERNAL=-I/usr/include/glib-2.0;-I/usr/lib/glib-2.0/include
-GLIB2_CFLAGS_I:INTERNAL=
-GLIB2_CFLAGS_OTHER:INTERNAL=
-GLIB2_FOUND:INTERNAL=1
-GLIB2_INCLUDEDIR:INTERNAL=/usr/include
-GLIB2_INCLUDE_DIRS:INTERNAL=/usr/include/glib-2.0;/usr/lib/glib-2.0/include
-GLIB2_LDFLAGS:INTERNAL=-lglib-2.0
-GLIB2_LDFLAGS_OTHER:INTERNAL=
-GLIB2_LIBDIR:INTERNAL=/usr/lib
-GLIB2_LIBRARIES:INTERNAL=glib-2.0
-GLIB2_LIBRARY_DIRS:INTERNAL=
-GLIB2_LIBS:INTERNAL=
-GLIB2_LIBS_L:INTERNAL=
-GLIB2_LIBS_OTHER:INTERNAL=
-GLIB2_LIBS_PATHS:INTERNAL=
-GLIB2_PREFIX:INTERNAL=/usr
-GLIB2_STATIC_CFLAGS:INTERNAL=-I/usr/include/glib-2.0;-I/usr/lib/glib-2.0/include
-GLIB2_STATIC_CFLAGS_I:INTERNAL=
-GLIB2_STATIC_CFLAGS_OTHER:INTERNAL=
-GLIB2_STATIC_INCLUDE_DIRS:INTERNAL=/usr/include/glib-2.0;/usr/lib/glib-2.0/include
-GLIB2_STATIC_LDFLAGS:INTERNAL=-lglib-2.0
-GLIB2_STATIC_LDFLAGS_OTHER:INTERNAL=
-GLIB2_STATIC_LIBDIR:INTERNAL=
-GLIB2_STATIC_LIBRARIES:INTERNAL=glib-2.0
-GLIB2_STATIC_LIBRARY_DIRS:INTERNAL=
-GLIB2_STATIC_LIBS:INTERNAL=
-GLIB2_STATIC_LIBS_L:INTERNAL=
-GLIB2_STATIC_LIBS_OTHER:INTERNAL=
-GLIB2_STATIC_LIBS_PATHS:INTERNAL=
-GLIB2_VERSION:INTERNAL=2.22.2
-GLIB2_glib-2.0_INCLUDEDIR:INTERNAL=
-GLIB2_glib-2.0_LIBDIR:INTERNAL=
-GLIB2_glib-2.0_PREFIX:INTERNAL=
-GLIB2_glib-2.0_VERSION:INTERNAL=
-//Advanced flag for variable: PKG_CONFIG_EXECUTABLE
-PKG_CONFIG_EXECUTABLE-ADVANCED:INTERNAL=1
-__pkg_config_checked_GLIB2:INTERNAL=1
 
