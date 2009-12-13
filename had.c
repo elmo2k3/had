@@ -35,6 +35,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <sysexits.h>
+#include <glib.h>
 
 #include "serial.h"
 #include "database.h"
@@ -46,11 +47,10 @@
 #include "sms.h"
 #include "version.h"
 #include "hr20.h"
+#include "rfid_tag_reader.h"
 
 /*! thread variable array for network, mpd and ledmatrix */
 pthread_t threads[5];
-pthread_mutex_t mutexLedmatrix;
-pthread_mutex_t mutexLedmatrixToggle;
 
 /*! big array for the last measured temperatures */
 int16_t lastTemperature[9][9][2];
@@ -62,12 +62,16 @@ int16_t lastVoltage[9];
 static char *monthToName[12] = {"Jan","Feb","Mar","Apr","May",
 	"Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
 
+static int database_status = 0;
+
 static int killDaemon(int signal);
 static int fileExists(const char *filename);
 static void printUsage(void);
 static void hadSignalHandler(int signal);
 static int decodeStream(char *buf,int *modul_id, int *sensor_id, int *celsius, int *decicelsius, int *voltage);
 static void incrementColor(uint8_t *color);
+
+static gboolean serialReceive (gpointer data);
 
 /*!
  *******************************************************************************
@@ -182,24 +186,20 @@ static int killDaemon(int signal)
 	return EXIT_SUCCESS;
 }
 
+void tag_read(struct RfidTagReader *tag_reader)
+{
+	verbose_printf(0,"tag read: %s\n", rfid_tag_reader_last_tag(tag_reader));
+}
 
 int main(int argc, char* argv[])
 {
 	signal(SIGINT, (void*)hadSignalHandler);
 	signal(SIGTERM, (void*)hadSignalHandler);
-	int res;
-	char buf[255];
-
-	int modul_id,sensor_id,celsius,decicelsius,voltage;
-	time_t rawtime;
-	struct tm *ptm;
 	pid_t pid;
 	FILE *pid_file;
-	int database_status = 0;
-	int gpcounter;
-	int belowMinTemp = 0;
-	struct _hr20info hr20info;
-	int result;
+	int modul_id,sensor_id,celsius,decicelsius,voltage;
+	GMainLoop *loop;
+	struct RfidTagReader *tag_reader;
 	
 	if(!loadConfig(HAD_CONFIG_FILE))
 	{
@@ -286,8 +286,6 @@ int main(int argc, char* argv[])
 #endif
 
 	/* init mutex for ledmatrix thread */
-	pthread_mutex_init(&mutexLedmatrix, NULL);
-	pthread_mutex_init(&mutexLedmatrixToggle, NULL);
 
 	if(loadStateFile(config.statefile))
 	{
@@ -357,8 +355,6 @@ int main(int argc, char* argv[])
 
 		glcdP.backlight = 1;
 
-		char buffer[1024];
-
 		if(database_status != -1)
 		{
 			getLastTemperature(3,1,&celsius,&decicelsius);
@@ -371,371 +367,382 @@ int main(int argc, char* argv[])
 		}
 
 		sendBaseLcdText("had wurde gestartet ... ");
+		g_timeout_add(5, serialReceive, NULL);
 
-		/* main loop */
-		while (1)
-		{
-			memset(buf,0,sizeof(buf));
-			res = readSerial(buf); // blocking read
-			if(res>1)
-			{
-				verbose_printf(9,"Res=%d\n",res);
-				time(&rawtime);
-				result = decodeStream(buf,&modul_id,&sensor_id,&celsius,&decicelsius,&voltage);
-				if( result == 1)
-				{
-					verbose_printf(9,"Modul ID: %d\t",modul_id);
-					verbose_printf(9,"Sensor ID: %d\t",sensor_id);
-					verbose_printf(9,"Temperatur: %d,%d\t",celsius,decicelsius);
-					switch(modul_id)
-					{
-						case 1: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_1/voltage); break;
-						case 3: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_3/voltage); break;
-						default: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_DEFAULT/voltage);
-					}		
-				
-					//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
-					lastTemperature[modul_id][sensor_id][0] = (int16_t)celsius;
-					lastTemperature[modul_id][sensor_id][1] = (int16_t)decicelsius;
-					lastVoltage[modul_id] = voltage;
-					if(database_status == -1)
-						database_status = initDatabase();
-					if(database_status != -1)
-						databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,rawtime);
-
-					sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
-							lastTemperature[3][1][0],
-							lastTemperature[3][1][1]/100,
-							lastTemperature[3][0][0],
-							lastTemperature[3][0][1]/100);
-					sendBaseLcdText(buf);
-
-					if(lastTemperature[3][0][0] < 15 && !belowMinTemp &&
-							config.sms_activated)
-					{
-						char stringToSend[100];
-						belowMinTemp = 1;
-						sprintf(stringToSend,"%s had: Temperature is now %2d.%2d",theTime(),
-								lastTemperature[3][0][0],
-							lastTemperature[3][0][1]);
-						sms(stringToSend);
-					}
-					else if(lastTemperature[3][0][0] > 16)
-						belowMinTemp = 0;
-				}
-				else if(result == 2)
-				{
-					updateGlcd();
-					verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
-				}
-				else if(result == 3)
-				{
-					getDailyGraph(celsius,decicelsius, &graphP);
-					//sendPacket(&graphP,GRAPH_PACKET);
-					verbose_printf(9,"Graph gesendet\r\n");
-				}
-				else if(result == 4)
-				{
-					verbose_printf(9,"MPD Packet request\r\n");
-					sendPacket(&mpdP,MPD_PACKET);
-				}
-				else if(result == 10)
-				{
-					verbose_printf(0,"Serial Modul hard-reset\r\n");
-					sendBaseLcdText("Modul neu gestartet ....");
-				}
-				else if(result == 11)
-				{
-					verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
-				}
-				else if(result == 12)
-				{
-					verbose_printf(0,"Serial Modul uart timeout\r\n");
-				}
-				else if(result == 30) // 1 open
-				{
-					verbose_printf(1,"Door opened\n");
-					hadState.input_state |= 1;
-					/* check for opened window */
-					if(hadState.input_state & 8)
-					{
-						verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
-						if(hadState.beep_on_window_left_open)
-						{
-							setBeepOn();
-							sleep(1);
-							setBeepOff();
-						}
-					}
-					if(config.door_sensor_id && config.digital_input_module)
-						databaseInsertTemperature(config.digital_input_module,
-							config.door_sensor_id, 1, 0, rawtime);
-				}
-				else if(result == 31) // 1 closed
-				{
-					verbose_printf(1,"Door closed\n");
-					hadState.input_state &= ~1;
-					setBeepOff();
-					if(config.door_sensor_id && config.digital_input_module)
-						databaseInsertTemperature(config.digital_input_module,
-							config.door_sensor_id, 0, 0, rawtime);
-				}
-				else if(result == 32) // 2 open
-				{
-				}
-				else if(result == 33) // 2 closed
-				{
-				}
-				else if(result == 34) // 2 open
-				{
-				}
-				else if(result == 35) // 2 closed
-				{
-				}
-				else if(result == 36)
-				{
-						verbose_printf(1,"Window closed\n");
-						hadState.input_state &= ~8;
-						setBeepOff();
-						if(config.window_sensor_id && config.digital_input_module)
-							databaseInsertTemperature(config.digital_input_module,
-								config.window_sensor_id, 0, 0, rawtime);
-						if(config.hr20_activated && hr20info.tempset >= 50
-							&& hr20info.tempset <= 300)
-						{
-							hr20SetTemperature(hr20info.tempset);
-						}
-				}
-				else if(result == 37)
-				{
-					verbose_printf(1,"Window opened\n");
-					hadState.input_state |= 8;
-					if(config.window_sensor_id && config.digital_input_module)
-						databaseInsertTemperature(config.digital_input_module,
-							config.window_sensor_id, 1, 0, rawtime);
-					if(config.hr20_activated)
-					{
-						hr20GetStatus(&hr20info);
-						hr20SetTemperature(50);
-					}
-				}
-				else if(result == config.rkeys.mpd_random)
-				{
-
-					/* 50 - 82 reserved for remote control */
-					mpdToggleRandom();
-				}
-				else if(result == config.rkeys.mpd_prev)
-				{
-						verbose_printf(9,"MPD prev\r\n");
-						mpdPrev();
-				}
-				else if(result == config.rkeys.mpd_next)
-				{
-					verbose_printf(9,"MPD next song\r\n");
-					mpdNext();
-				}
-				else if(result == config.rkeys.mpd_play_pause)
-				{
-					mpdTogglePlayPause();
-				}
-				else if(result == config.rkeys.music_on_hifi_on)
-				{
-					system(SYSTEM_MOUNT_MPD);
-					relaisP.port |= 4;
-					sendPacket(&relaisP, RELAIS_PACKET);
-					if(relaisP.port & 4)
-					{
-						if(config.led_matrix_activated && !ledIsRunning())
-						{
-							pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
-							pthread_detach(threads[2]);
-							hadState.ledmatrix_user_activated = 1;
-						}
-					}
-					hadState.relais_state = relaisP.port;
-					mpdPlay();
-				}
-				else if(result == config.rkeys.everything_off)
-				{
-					relaisP.port = 0;
-					sendPacket(&relaisP, RELAIS_PACKET);
-					if(ledIsRunning())
-						stopLedMatrixThread();
-					hadState.relais_state = relaisP.port;
-					mpdPause();
-					for(gpcounter = 0; gpcounter < 3; gpcounter++)
-					{
-						hadState.rgbModuleValues[gpcounter].red = 0;
-						hadState.rgbModuleValues[gpcounter].green = 0;
-						hadState.rgbModuleValues[gpcounter].blue = 0;
-					}
-					setCurrentRgbValues();
-					system(SYSTEM_KILL_MPD);
-				}
-				else if(result == config.rkeys.hifi_on_off)
-				{
-					relaisP.port ^= 4;
-					sendPacket(&relaisP, RELAIS_PACKET);
-					if(relaisP.port & 4)
-					{
-						if(config.led_matrix_activated && !ledIsRunning())
-						{
-							pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
-							pthread_detach(threads[2]);
-							hadState.ledmatrix_user_activated = 1;
-						}
-					}
-					else
-					{
-						if(ledIsRunning())
-							stopLedMatrixThread();
-					}
-					hadState.relais_state = relaisP.port;
-				}
-				else if(result == config.rkeys.brightlight)
-				{
-					relaisP.port ^= 32;
-					sendPacket(&relaisP, RELAIS_PACKET);	
-					hadState.relais_state = relaisP.port;
-				}
-				else if(result == config.rkeys.light_off[0] || result == config.rkeys.light_off[1])
-				{
-					for(gpcounter = 0; gpcounter < 3; gpcounter++)
-					{
-						hadState.rgbModuleValues[gpcounter].red = 0;
-						hadState.rgbModuleValues[gpcounter].green = 0;
-						hadState.rgbModuleValues[gpcounter].blue = 0;
-					}
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.light_single_off[0])
-				{
-					hadState.rgbModuleValues[0].red = 0;
-					hadState.rgbModuleValues[0].green = 0;
-					hadState.rgbModuleValues[0].blue = 0;
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.light_single_off[1])
-				{
-					hadState.rgbModuleValues[1].red = 0;
-					hadState.rgbModuleValues[1].green = 0;
-					hadState.rgbModuleValues[1].blue = 0;
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.light_single_off[2])
-				{
-					hadState.rgbModuleValues[2].red = 0;
-					hadState.rgbModuleValues[2].green = 0;
-					hadState.rgbModuleValues[2].blue = 0;
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.light_on)
-				{
-					for(gpcounter = 0; gpcounter < 3; gpcounter++)
-					{
-						hadState.rgbModuleValues[gpcounter].red = 255;
-						hadState.rgbModuleValues[gpcounter].green = 255 ;
-						hadState.rgbModuleValues[gpcounter].blue = 0;
-					}
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.red)
-				{
-					for(gpcounter = 0; gpcounter < 3; gpcounter++)
-					{
-						incrementColor(&hadState.rgbModuleValues[gpcounter].red);
-					}
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.green)
-				{
-					for(gpcounter = 0; gpcounter < 3; gpcounter++)
-					{
-						incrementColor(&hadState.rgbModuleValues[gpcounter].green);
-					}
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.blue)
-				{
-					for(gpcounter = 0; gpcounter < 3; gpcounter++)
-					{
-						incrementColor(&hadState.rgbModuleValues[gpcounter].blue);
-					}
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.red_single[0])
-				{
-					incrementColor(&hadState.rgbModuleValues[0].red);
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.red_single[1])
-				{
-					incrementColor(&hadState.rgbModuleValues[1].red);
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.red_single[2])
-				{
-					incrementColor(&hadState.rgbModuleValues[2].red);
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.green_single[0])
-				{
-					incrementColor(&hadState.rgbModuleValues[0].green);
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.green_single[1])
-				{
-					incrementColor(&hadState.rgbModuleValues[1].green);
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.green_single[2])
-				{
-					incrementColor(&hadState.rgbModuleValues[2].green);
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.blue_single[0])
-				{
-					incrementColor(&hadState.rgbModuleValues[0].blue);
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.blue_single[1])
-				{
-					incrementColor(&hadState.rgbModuleValues[1].blue);
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.blue_single[2])
-				{
-					incrementColor(&hadState.rgbModuleValues[2].blue);
-					setCurrentRgbValues();
-				}
-				else if(result == config.rkeys.ledmatrix_toggle)
-				{
-					pthread_mutex_lock(&mutexLedmatrixToggle);
-					ledDisplayToggle();
-					pthread_mutex_unlock(&mutexLedmatrixToggle);
-				}
-				else if(result == config.rkeys.open_door)
-				{
-					open_door();
-				}
-				else if(result == 0)
-				{
-					verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
-				}
-			} // endif res>1
-					
-		}
 	} // config.serial_activated
 	else
 	{
 		verbose_printf(9,"Serial port deactivated\n");
-		while(1)
-		{
-			sleep(1);
-		}
 	}
+
+	tag_reader = rfid_tag_reader_new("/dev/usb/tts/0");
+	rfid_tag_reader_set_callback(tag_reader, tag_read);
+	loop = g_main_loop_new(NULL,FALSE);
+	g_main_loop_run(loop);
 	return 0;
+}
+
+static gboolean serialReceive (gpointer data)
+{
+	int res;
+	char buf[255];
+
+	int modul_id,sensor_id,celsius,decicelsius,voltage;
+	time_t rawtime;
+	struct tm *ptm;
+	int result;
+	int belowMinTemp = 0;
+	struct _hr20info hr20info;
+	int gpcounter;
+
+	memset(buf,0,sizeof(buf));
+	res = readSerial(buf); // blocking read
+	if(res>1)
+	{
+		verbose_printf(9,"Res=%d\n",res);
+		time(&rawtime);
+		result = decodeStream(buf,&modul_id,&sensor_id,&celsius,&decicelsius,&voltage);
+		if( result == 1)
+		{
+			verbose_printf(9,"Modul ID: %d\t",modul_id);
+			verbose_printf(9,"Sensor ID: %d\t",sensor_id);
+			verbose_printf(9,"Temperatur: %d,%d\t",celsius,decicelsius);
+			switch(modul_id)
+			{
+				case 1: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_1/voltage); break;
+				case 3: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_3/voltage); break;
+				default: verbose_printf(9,"Spannung: %2.2f\r\n",ADC_MODUL_DEFAULT/voltage);
+			}		
+		
+			//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
+			lastTemperature[modul_id][sensor_id][0] = (int16_t)celsius;
+			lastTemperature[modul_id][sensor_id][1] = (int16_t)decicelsius;
+			lastVoltage[modul_id] = voltage;
+			if(database_status == -1)
+				database_status = initDatabase();
+			if(database_status != -1)
+				databaseInsertTemperature(modul_id,sensor_id,celsius,decicelsius,rawtime);
+
+			sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
+					lastTemperature[3][1][0],
+					lastTemperature[3][1][1]/100,
+					lastTemperature[3][0][0],
+					lastTemperature[3][0][1]/100);
+			sendBaseLcdText(buf);
+
+			if(lastTemperature[3][0][0] < 15 && !belowMinTemp &&
+					config.sms_activated)
+			{
+				char stringToSend[100];
+				belowMinTemp = 1;
+				sprintf(stringToSend,"%s had: Temperature is now %2d.%2d",theTime(),
+						lastTemperature[3][0][0],
+					lastTemperature[3][0][1]);
+				sms(stringToSend);
+			}
+			else if(lastTemperature[3][0][0] > 16)
+				belowMinTemp = 0;
+		}
+		else if(result == 2)
+		{
+			updateGlcd();
+			verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
+		}
+		else if(result == 3)
+		{
+			getDailyGraph(celsius,decicelsius, &graphP);
+			//sendPacket(&graphP,GRAPH_PACKET);
+			verbose_printf(9,"Graph gesendet\r\n");
+		}
+		else if(result == 4)
+		{
+			verbose_printf(9,"MPD Packet request\r\n");
+			sendPacket(&mpdP,MPD_PACKET);
+		}
+		else if(result == 10)
+		{
+			verbose_printf(0,"Serial Modul hard-reset\r\n");
+			sendBaseLcdText("Modul neu gestartet ....");
+		}
+		else if(result == 11)
+		{
+			verbose_printf(0,"Serial Modul Watchdog-reset\r\n");
+		}
+		else if(result == 12)
+		{
+			verbose_printf(0,"Serial Modul uart timeout\r\n");
+		}
+		else if(result == 30) // 1 open
+		{
+			verbose_printf(1,"Door opened\n");
+			hadState.input_state |= 1;
+			/* check for opened window */
+			if(hadState.input_state & 8)
+			{
+				verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
+				if(hadState.beep_on_window_left_open)
+				{
+					setBeepOn();
+					sleep(1);
+					setBeepOff();
+				}
+			}
+			if(config.door_sensor_id && config.digital_input_module)
+				databaseInsertTemperature(config.digital_input_module,
+					config.door_sensor_id, 1, 0, rawtime);
+		}
+		else if(result == 31) // 1 closed
+		{
+			verbose_printf(1,"Door closed\n");
+			hadState.input_state &= ~1;
+			setBeepOff();
+			if(config.door_sensor_id && config.digital_input_module)
+				databaseInsertTemperature(config.digital_input_module,
+					config.door_sensor_id, 0, 0, rawtime);
+		}
+		else if(result == 32) // 2 open
+		{
+		}
+		else if(result == 33) // 2 closed
+		{
+		}
+		else if(result == 34) // 2 open
+		{
+		}
+		else if(result == 35) // 2 closed
+		{
+		}
+		else if(result == 36)
+		{
+				verbose_printf(1,"Window closed\n");
+				hadState.input_state &= ~8;
+				setBeepOff();
+				if(config.window_sensor_id && config.digital_input_module)
+					databaseInsertTemperature(config.digital_input_module,
+						config.window_sensor_id, 0, 0, rawtime);
+				if(config.hr20_activated && hr20info.tempset >= 50
+					&& hr20info.tempset <= 300)
+				{
+					hr20SetTemperature(hr20info.tempset);
+				}
+		}
+		else if(result == 37)
+		{
+			verbose_printf(1,"Window opened\n");
+			hadState.input_state |= 8;
+			if(config.window_sensor_id && config.digital_input_module)
+				databaseInsertTemperature(config.digital_input_module,
+					config.window_sensor_id, 1, 0, rawtime);
+			if(config.hr20_activated)
+			{
+				hr20GetStatus(&hr20info);
+				hr20SetTemperature(50);
+			}
+		}
+		else if(result == config.rkeys.mpd_random)
+		{
+
+			/* 50 - 82 reserved for remote control */
+			mpdToggleRandom();
+		}
+		else if(result == config.rkeys.mpd_prev)
+		{
+				verbose_printf(9,"MPD prev\r\n");
+				mpdPrev();
+		}
+		else if(result == config.rkeys.mpd_next)
+		{
+			verbose_printf(9,"MPD next song\r\n");
+			mpdNext();
+		}
+		else if(result == config.rkeys.mpd_play_pause)
+		{
+			mpdTogglePlayPause();
+		}
+		else if(result == config.rkeys.music_on_hifi_on)
+		{
+			system(SYSTEM_MOUNT_MPD);
+			relaisP.port |= 4;
+			sendPacket(&relaisP, RELAIS_PACKET);
+			if(relaisP.port & 4)
+			{
+				if(config.led_matrix_activated && !ledIsRunning())
+				{
+					pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+					pthread_detach(threads[2]);
+					hadState.ledmatrix_user_activated = 1;
+				}
+			}
+			hadState.relais_state = relaisP.port;
+			mpdPlay();
+		}
+		else if(result == config.rkeys.everything_off)
+		{
+			relaisP.port = 0;
+			sendPacket(&relaisP, RELAIS_PACKET);
+			if(ledIsRunning())
+				stopLedMatrixThread();
+			hadState.relais_state = relaisP.port;
+			mpdPause();
+			for(gpcounter = 0; gpcounter < 3; gpcounter++)
+			{
+				hadState.rgbModuleValues[gpcounter].red = 0;
+				hadState.rgbModuleValues[gpcounter].green = 0;
+				hadState.rgbModuleValues[gpcounter].blue = 0;
+			}
+			setCurrentRgbValues();
+			system(SYSTEM_KILL_MPD);
+		}
+		else if(result == config.rkeys.hifi_on_off)
+		{
+			relaisP.port ^= 4;
+			sendPacket(&relaisP, RELAIS_PACKET);
+			if(relaisP.port & 4)
+			{
+				if(config.led_matrix_activated && !ledIsRunning())
+				{
+					pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
+					pthread_detach(threads[2]);
+					hadState.ledmatrix_user_activated = 1;
+				}
+			}
+			else
+			{
+				if(ledIsRunning())
+					stopLedMatrixThread();
+			}
+			hadState.relais_state = relaisP.port;
+		}
+		else if(result == config.rkeys.brightlight)
+		{
+			relaisP.port ^= 32;
+			sendPacket(&relaisP, RELAIS_PACKET);	
+			hadState.relais_state = relaisP.port;
+		}
+		else if(result == config.rkeys.light_off[0] || result == config.rkeys.light_off[1])
+		{
+			for(gpcounter = 0; gpcounter < 3; gpcounter++)
+			{
+				hadState.rgbModuleValues[gpcounter].red = 0;
+				hadState.rgbModuleValues[gpcounter].green = 0;
+				hadState.rgbModuleValues[gpcounter].blue = 0;
+			}
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.light_single_off[0])
+		{
+			hadState.rgbModuleValues[0].red = 0;
+			hadState.rgbModuleValues[0].green = 0;
+			hadState.rgbModuleValues[0].blue = 0;
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.light_single_off[1])
+		{
+			hadState.rgbModuleValues[1].red = 0;
+			hadState.rgbModuleValues[1].green = 0;
+			hadState.rgbModuleValues[1].blue = 0;
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.light_single_off[2])
+		{
+			hadState.rgbModuleValues[2].red = 0;
+			hadState.rgbModuleValues[2].green = 0;
+			hadState.rgbModuleValues[2].blue = 0;
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.light_on)
+		{
+			for(gpcounter = 0; gpcounter < 3; gpcounter++)
+			{
+				hadState.rgbModuleValues[gpcounter].red = 255;
+				hadState.rgbModuleValues[gpcounter].green = 255 ;
+				hadState.rgbModuleValues[gpcounter].blue = 0;
+			}
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.red)
+		{
+			for(gpcounter = 0; gpcounter < 3; gpcounter++)
+			{
+				incrementColor(&hadState.rgbModuleValues[gpcounter].red);
+			}
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.green)
+		{
+			for(gpcounter = 0; gpcounter < 3; gpcounter++)
+			{
+				incrementColor(&hadState.rgbModuleValues[gpcounter].green);
+			}
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.blue)
+		{
+			for(gpcounter = 0; gpcounter < 3; gpcounter++)
+			{
+				incrementColor(&hadState.rgbModuleValues[gpcounter].blue);
+			}
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.red_single[0])
+		{
+			incrementColor(&hadState.rgbModuleValues[0].red);
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.red_single[1])
+		{
+			incrementColor(&hadState.rgbModuleValues[1].red);
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.red_single[2])
+		{
+			incrementColor(&hadState.rgbModuleValues[2].red);
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.green_single[0])
+		{
+			incrementColor(&hadState.rgbModuleValues[0].green);
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.green_single[1])
+		{
+			incrementColor(&hadState.rgbModuleValues[1].green);
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.green_single[2])
+		{
+			incrementColor(&hadState.rgbModuleValues[2].green);
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.blue_single[0])
+		{
+			incrementColor(&hadState.rgbModuleValues[0].blue);
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.blue_single[1])
+		{
+			incrementColor(&hadState.rgbModuleValues[1].blue);
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.blue_single[2])
+		{
+			incrementColor(&hadState.rgbModuleValues[2].blue);
+			setCurrentRgbValues();
+		}
+		else if(result == config.rkeys.ledmatrix_toggle)
+		{
+			ledDisplayToggle();
+		}
+		else if(result == config.rkeys.open_door)
+		{
+			open_door();
+		}
+		else if(result == 0)
+		{
+			verbose_printf(0,"decodeStream failed! Read line was: %s\r\n",buf);
+		}
+	} // endif res>1
+	return TRUE;
 }
 
 static void hadSignalHandler(int signal)

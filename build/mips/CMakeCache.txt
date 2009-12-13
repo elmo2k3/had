@@ -48,7 +48,7 @@ CMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=-O2 -g
 CMAKE_C_COMPILER:FILEPATH=/usr/src/openwrt/staging_dir/toolchain-mipsel_gcc-3.4.6_uClibc-0.9.30.1/usr/bin/mipsel-openwrt-linux-gcc
 
 //Flags used by the compiler during all build types.
-CMAKE_C_FLAGS:STRING=-I /usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/mysql/ -I /usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/ -I /usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/libmpd-1.0
+CMAKE_C_FLAGS:STRING=-I /usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/mysql/ -I /usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/ -I /usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/libmpd-1.0 -I/usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/glib-2.0/ -I/usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/include/glib-2.0/glib -I/usr/src/openwrt/staging_dir/target-mipsel_uClibc-0.9.30.1/usr/lib/glib-2.0/include/
 
 //Flags used by the compiler during debug builds.
 CMAKE_C_FLAGS_DEBUG:STRING=-g
@@ -196,6 +196,8 @@ CMAKE_C_COMPILER-ADVANCED:INTERNAL=1
 CMAKE_C_COMPILER_WORKS:INTERNAL=1
 //Advanced flag for variable: CMAKE_C_FLAGS
 CMAKE_C_FLAGS-ADVANCED:INTERNAL=1
+//Modified flag for variable: CMAKE_C_FLAGS
+CMAKE_C_FLAGS-MODIFIED:INTERNAL=1
 //Advanced flag for variable: CMAKE_C_FLAGS_DEBUG
 CMAKE_C_FLAGS_DEBUG-ADVANCED:INTERNAL=1
 //Advanced flag for variable: CMAKE_C_FLAGS_MINSIZEREL

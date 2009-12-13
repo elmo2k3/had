@@ -66,8 +66,6 @@
 extern void updateGlcd();
 
 extern pthread_t threads[5];
-extern pthread_mutex_t mutexLedmatrix;
-extern pthread_mutex_t mutexLedmatrixToggle;
 
 extern char *theTime(void);
 
