@@ -29,24 +29,70 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <glib.h>
 
 #include "serial.h"
 #include "had.h"
 
-static int fd;
+static GIOChannel *channel = NULL;
+static char serial_buf[2048];
+static int buf_position;
 
-int initSerial(char *device) 
+static gboolean serialReceive
+(GIOChannel *channel, GIOCondition *condition, gpointer data)
 {
-	struct termios newtio;
-	
+    char buf[2048];
+    gsize bytes_read;
+    gint i;
+    while(g_io_channel_read_chars(channel, buf, sizeof(buf), &bytes_read, NULL)
+		== G_IO_STATUS_AGAIN);
+    buf[bytes_read] = '\0';
+	g_debug("volume reader read %s",buf);
 
+    for(i=0; i < bytes_read; i++)
+    {
+		if(buf[i] == '\n')
+		{
+			buf[buf_position+1] = '\0';
+                        g_debug("buf_position = %d", buf_position);
+			g_debug("string to work on: %s",serial_buf);
+			char *divider;
+			divider = strtok(serial_buf, ";");
+			if(divider)
+			{
+				g_debug("part 1 %s", divider);
+//				last_overall = atoi (divider);
+			}
+			divider = strtok(NULL, ";");
+			if(divider)
+			{
+				g_debug("part 2 %s", divider);
+//				beer_volume_reader->last_barrel = atoi (divider);
+			}
+		}
+		else if(buf[i] == 10)
+		{
+		}
+		else
+		{
+			serial_buf[buf_position++] = buf[i];
+		}
+    }
+    return TRUE;
+}
+
+int initSerial(char *serial_device)
+{
+    int fd;
+	struct termios newtio;
 	/* open the device */
-	fd = open(device, O_RDWR | O_NOCTTY );
+	//fd = open(serial_device, O_RDONLY | O_NOCTTY | O_NDELAY );
+	//fd = open(serial_device, O_RDWR |O_NOCTTY | O_NDELAY );
+	fd = open(serial_device, O_RDWR |O_NOCTTY | O_NDELAY | O_NONBLOCK);
 	if (fd <0) 
-	{
+    {
 		return 0;
 	}
-
 	memset(&newtio, 0, sizeof(newtio)); /* clear struct for new port settings */
 	/* 
 	BAUDRATE: Set bps rate. You could also use cfsetispeed and cfsetospeed.
@@ -101,6 +147,15 @@ int initSerial(char *device)
 	*/
 	tcflush(fd, TCIFLUSH);
 	tcsetattr(fd,TCSANOW,&newtio);
+
+	buf_position = 0;
+    channel = g_io_channel_unix_new(fd);
+   	g_io_channel_set_buffered(channel, FALSE);
+    g_io_add_watch(channel, G_IO_IN, 
+		(GIOFunc)serialReceive, NULL);
+	g_io_add_watch(channel, G_IO_ERR, (GIOFunc)exit, NULL);
+    g_io_channel_unref(channel);
+
 	return 1;
 }
 
@@ -113,52 +168,52 @@ int initSerial(char *device)
  *******************************************************************************/
 void sendPacket(void *packet, int type)
 {
-	struct headPacket *headP = (struct headPacket*)packet;
-	
-	if(config.serial_activated)
-	{
-		if(type == GP_PACKET)
-		{
-			headP->address = GLCD_ADDRESS;
-			headP->command = GP_PACKET;
-			headP->count = 18;
-			write(fd,packet,sizeof(glcdP));
-		}
-		else if(type == MPD_PACKET)
-		{
-			headP->address = GLCD_ADDRESS;
-			headP->command = MPD_PACKET;
-			headP->count = 32;
-			write(fd,packet,sizeof(mpdP));
-		}
-		else if(type == GRAPH_PACKET)
-		{
-			/* Very dirty! Zweistufiges Senden wegen Pufferueberlauf */
-			headP->address = GLCD_ADDRESS;
-			headP->count = 61;
-			headP->command = GRAPH_PACKET;
-			write(fd,packet,63);
-			usleep(1000000);
-
-			headP->command = GRAPH_PACKET2;
-			char *ptr = (char*)packet;
-			write(fd,ptr,3);
-			write(fd,ptr+62,60);
-		}
-		else if(type == RGB_PACKET)
-		{
-			struct _rgbPacket rgbP;
-			headP->count = 5;
-			write(fd,packet,sizeof(rgbP));
-		}		
-		else if(type == RELAIS_PACKET)
-		{
-			headP->address = 0x02;
-			headP->count = 2;
-			headP->command = 0;
-			write(fd,packet,sizeof(relaisP));
-		}
-	}
+//	struct headPacket *headP = (struct headPacket*)packet;
+//	
+//	if(config.serial_activated)
+//	{
+//		if(type == GP_PACKET)
+//		{
+//			headP->address = GLCD_ADDRESS;
+//			headP->command = GP_PACKET;
+//			headP->count = 18;
+//			write(fd,packet,sizeof(glcdP));
+//		}
+//		else if(type == MPD_PACKET)
+//		{
+//			headP->address = GLCD_ADDRESS;
+//			headP->command = MPD_PACKET;
+//			headP->count = 32;
+//			write(fd,packet,sizeof(mpdP));
+//		}
+//		else if(type == GRAPH_PACKET)
+//		{
+//			/* Very dirty! Zweistufiges Senden wegen Pufferueberlauf */
+//			headP->address = GLCD_ADDRESS;
+//			headP->count = 61;
+//			headP->command = GRAPH_PACKET;
+//			write(fd,packet,63);
+//			usleep(1000000);
+//
+//			headP->command = GRAPH_PACKET2;
+//			char *ptr = (char*)packet;
+//			write(fd,ptr,3);
+//			write(fd,ptr+62,60);
+//		}
+//		else if(type == RGB_PACKET)
+//		{
+//			struct _rgbPacket rgbP;
+//			headP->count = 5;
+//			write(fd,packet,sizeof(rgbP));
+//		}		
+//		else if(type == RELAIS_PACKET)
+//		{
+//			headP->address = 0x02;
+//			headP->count = 2;
+//			headP->command = 0;
+//			write(fd,packet,sizeof(relaisP));
+//		}
+//	}
 //	usleep(50000); // warten bis Packet wirklich abgeschickt wurde
 //	usleep(30000); // warten bis Packet wirklich abgeschickt wurde
 }
@@ -192,7 +247,7 @@ void setCurrentRgbValues()
 int readSerial(char *buf)
 {
 	int res;
-	res = read(fd,buf,255);
+//	res = read(fd,buf,255);
 	buf[res] = 0;
 	return res;
 }
@@ -203,8 +258,8 @@ void setBeepOn()
 	headP.address = 0x02;
 	headP.count = 1;
 	headP.command = 3;
-	if(config.serial_activated)
-		write(fd,&headP,sizeof(headP));
+//	if(config.serial_activated)
+//		write(fd,&headP,sizeof(headP));
 }
 
 void setBeepOff()
@@ -213,8 +268,8 @@ void setBeepOff()
 	headP.address = 0x02;
 	headP.count = 1;
 	headP.command = 4;
-	if(config.serial_activated)
-		write(fd,&headP,sizeof(headP));
+//	if(config.serial_activated)
+//		write(fd,&headP,sizeof(headP));
 }
 
 void setBaseLcdOn()
@@ -223,8 +278,8 @@ void setBaseLcdOn()
 	headP.address = 0x02;
 	headP.count = 1;
 	headP.command = 1;
-	if(config.serial_activated)
-		write(fd,&headP,sizeof(headP));
+//	if(config.serial_activated)
+//		write(fd,&headP,sizeof(headP));
 }
 
 void setBaseLcdOff()
@@ -233,8 +288,8 @@ void setBaseLcdOff()
 	headP.address = 0x02;
 	headP.count = 1;
 	headP.command = 2;
-	if(config.serial_activated)
-		write(fd,&headP,sizeof(headP));
+//	if(config.serial_activated)
+//		write(fd,&headP,sizeof(headP));
 }
 
 void open_door()
@@ -269,8 +324,8 @@ void sendBaseLcdText(char *text)
 	lcd_text.headP.command = 5;
 	strncpy(lcd_text.text,text,32);
 	lcd_text.text[32] = '\0';
-	if(config.serial_activated)
-		write(fd,&lcd_text,sizeof(lcd_text));
+//	if(config.serial_activated)
+//		write(fd,&lcd_text,sizeof(lcd_text));
 }
 
 
