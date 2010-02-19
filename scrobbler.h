@@ -31,29 +31,11 @@
 #define SCROBBLER_NOW_PLAYING_EXECUTE "wget -O %s %s --post-data \"s=%s&a=%s&t=%s&b=%s&l=%d&n=%s\" >> /dev/null 2>&1" 
 #define SCROBBLER_SUBMISSION_EXECUTE "wget -O %s %s --post-data \"s=%s&a[0]=%s&t[0]=%s&b[0]=%s&l[0]=%d&n[0]=%s&i[0]=%qd&o[0]=P&r[0]=L&m[0]=\" >> /dev/null 2>&1" 
 
-/** Initiate audioscrobbler connection
- *
- * Has to be called first
- *
- * @param *session_id session_id, which has to be used for all actions, will be put here
- * @param *now_playing URL for now-playing will be put here
- * @param *submission URL for submissions will be put here
- * 
- * @return 0 on failure, 1 on success
- */
-extern int scrobblerHandshake(char *session_id, char *now_playing, char *submission);
+#define SCROBBLER_FIFO_SIZE 10
 
-/** Submit now-playing track
- *
- * Will be shown as now-playing. No database insert
- */
-extern int scrobblerNowPlaying(char *url, char *session_id, char *artist, char *title, char *album, int length, char *track);
-
-/** Submit tack
- *
- * Track will be inserted into database
- */
-extern int scrobblerSubmitTrack(char *url, char *session_id, char *artist, char *title, char *album, int length, char *track, time_t started_playing);
+extern void scrobblerSubmitTrack
+(char *artist, char *title, char *album,
+int length, char *track, time_t started_playing, int isNowPlaying);
 
 #endif
 

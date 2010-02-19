@@ -29,14 +29,21 @@
 #include <unistd.h>
 #include <string.h>
 #include <openssl/md5.h>
-#include <curl/curl.h>
 
 #include "had.h"
 #include "scrobbler.h"
 
 static char *scrobblerGetAuthHash(time_t timestamp);
+static gboolean handshake_successfull = FALSE;
 
-int scrobblerHandshake(char *session_id, char *now_playing, char *submission)
+struct _scrobbler_data
+{
+	char session_id[50];
+	char now_playing_url[70];
+	char submission_url[70];
+}scrobbler_data;
+
+static int scrobblerHandshake(void)
 {
 	time_t rawtime;
 	/* String nur genau passend fuer Benutzer mit maximal 7 Zeichen! */
@@ -60,7 +67,9 @@ int scrobblerHandshake(char *session_id, char *now_playing, char *submission)
 	tmpFile = fopen(config.scrobbler_tmpfile,"r");
 	if(tmpFile)
 	{
-		fscanf(tmpFile,"%s\n%s\n%s\n%s",(char*)&status, session_id, now_playing, submission);
+		fscanf(tmpFile,"%s\n%s\n%s\n%s",(char*)&status, 
+			scrobbler_data.session_id, scrobbler_data.now_playing_url,
+			scrobbler_data.submission_url);
 		fclose(tmpFile);
 
 //		unlink(config.scrobbler_tmpfile);
@@ -103,63 +112,63 @@ static char *scrobblerGetAuthHash(time_t timestamp)
 	return authHash;
 }
 
-int scrobblerNowPlaying(char *url, char *session_id, char *artist, char *title, char *album, int length, char *track)
+void scrobblerSubmitTrack
+(char *artist, char *title, char *album,
+int length, char *track, time_t started_playing, int isNowPlaying)
 {
-	char executeString[1024];
+	static int fifo_low = 0, fifo_high = 0;
+	char executeString[10][1024];
 	char status[15];
 	FILE *tmpFile;
+	int chars;
 
-	sprintf(executeString, SCROBBLER_NOW_PLAYING_EXECUTE,
-			config.scrobbler_tmpfile, url, session_id, artist, title, album, length, track);
-	system(executeString);
+	if(!handshake_successfull)
+	{
+		handshake_successfull = scrobblerHandshake();
+	}
 	
-	tmpFile = fopen(config.scrobbler_tmpfile, "r");
-
-	if(tmpFile)
+	if(isNowPlaying)
 	{
-		fscanf(tmpFile,"%s",(char*)&status);
-		fclose(tmpFile);
-		unlink(config.scrobbler_tmpfile);
+		chars = snprintf(executeString[fifo_high],1023, SCROBBLER_NOW_PLAYING_EXECUTE,
+			config.scrobbler_tmpfile, scrobbler_data.now_playing_url, scrobbler_data.session_id,
+			artist, title, album, length, track);
 	}
 	else
-		return 0;
-
-	if(!strcmp(status,"OK"))
-		return 1;
-	else
 	{
-		verbose_printf(0, "Fehler: %s\n",status);
-		return 0;
+		chars = snprintf(executeString[fifo_high],1023,SCROBBLER_SUBMISSION_EXECUTE,
+			config.scrobbler_tmpfile, scrobbler_data.submission_url, scrobbler_data.session_id,
+			artist, title, album, length, track, (long long int)started_playing);
 	}
-}
-
-int scrobblerSubmitTrack(char *url, char *session_id, char *artist, char *title, char *album, int length, char *track, time_t started_playing)
-{
-	char executeString[1024];
-	char status[15];
-	FILE *tmpFile;
-
-	sprintf(executeString, SCROBBLER_SUBMISSION_EXECUTE,
-			config.scrobbler_tmpfile, url, session_id, artist, title, album, length, track, (long long int)started_playing);
-	system(executeString);
+	executeString[fifo_high][chars] = '\0';
 	
-	tmpFile = fopen(config.scrobbler_tmpfile, "r");
+	if(++fifo_high > (SCROBBLER_FIFO_SIZE -1)) fifo_high = 0;
 
-	if(tmpFile)
+	while( fifo_low != fifo_high )
 	{
-		fscanf(tmpFile,"%s",(char*)&status);
-		fclose(tmpFile);
-		unlink(config.scrobbler_tmpfile);
-	}
-	else
-		return 0;
+		system(executeString[fifo_low]);
+		tmpFile = fopen(config.scrobbler_tmpfile, "r");
+		if(tmpFile)
+		{
+			fscanf(tmpFile,"%s",(char*)&status);
+			fclose(tmpFile);
+			unlink(config.scrobbler_tmpfile);
+		}
+		else
+		{
+			handshake_successfull = 0;
+			break;
+		}
 
-	if(!strcmp(status,"OK"))
-		return 1;
-	else
-	{
-		verbose_printf(0, "Fehler: %s\n",status);
-		return 0;
+		if(!strcmp(status,"OK"))
+		{
+			if(++fifo_low > (SCROBBLER_FIFO_SIZE - 1)) fifo_low = 0;
+		}
+		else
+		{
+			handshake_successfull = 0;
+			verbose_printf(0, "Fehler: %s\n",status);
+			break; // dont try further
+		}
 	}
 }
 

@@ -384,8 +384,7 @@ static int16_t hexCharToInt(char c)
 	return c - 87;
 }
 
-
-void hr20thread()
+gboolean hr20update()
 {
 	struct tm *ptm;
 	struct tm time_copy;
@@ -393,31 +392,27 @@ void hr20thread()
 	struct _hr20info hr20info;
 	int decicelsius;
 	int celsius;
-
-	while(1)
+	
+	hr20GetStatus(&hr20info);
+	if(hr20checkPlausibility(&hr20info) && config.hr20_database_number != 0)
 	{
-		hr20GetStatus(&hr20info);
-		if(hr20checkPlausibility(&hr20info) && config.hr20_database_number != 0)
-		{
-			time(&rawtime);
-			celsius = hr20info.tempis / 100;
-			decicelsius = (hr20info.tempis - (celsius*100))*100;
-			databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, rawtime);
-			celsius = hr20info.tempset / 100;
-			decicelsius = (hr20info.tempset - (celsius*100))*100;
-			databaseInsertTemperature(config.hr20_database_number,1, celsius, decicelsius, rawtime);
-			databaseInsertTemperature(config.hr20_database_number,2, hr20info.valve, 0, rawtime);
-			celsius = hr20info.voltage / 1000;
-			decicelsius = (hr20info.voltage - (celsius*1000))*10;
-			databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, rawtime);
-			verbose_printf(10,"hr20 read successfull\n");
-			sleep(300);
-		}
-		else
-		{
-			verbose_printf(10,"hr20 read unsuccessfull\n");
-			sleep(1);
-		}
+		time(&rawtime);
+		celsius = hr20info.tempis / 100;
+		decicelsius = (hr20info.tempis - (celsius*100))*100;
+		databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, rawtime);
+		celsius = hr20info.tempset / 100;
+		decicelsius = (hr20info.tempset - (celsius*100))*100;
+		databaseInsertTemperature(config.hr20_database_number,1, celsius, decicelsius, rawtime);
+		databaseInsertTemperature(config.hr20_database_number,2, hr20info.valve, 0, rawtime);
+		celsius = hr20info.voltage / 1000;
+		decicelsius = (hr20info.voltage - (celsius*1000))*10;
+		databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, rawtime);
+		verbose_printf(10,"hr20 read successfull\n");
 	}
+	else
+	{
+		verbose_printf(10,"hr20 read unsuccessfull\n");
+	}
+	return TRUE;
 }
 

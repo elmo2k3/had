@@ -17,54 +17,14 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/*!
- * \file	mpd.h
- * \brief	header for mpd communication
- * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
-*/
+#ifndef __MISC_H__
+#define __MISC_H__
 
 
-#ifndef __MPD_H__
-#define __MPD_H__
-
-#include <libmpd/libmpd.h>
-
-
-extern struct _ledLine ledLineMpd;
-
-/** 
- * MPD main thread
- * */
-extern void mpdThread(void);
-int mpdInit(void);
-
-/** 
- * @return current mpd state. See libmpd for details
- */
-extern int mpdGetState(void);
-
-/** Toggle play/pause
- */
-extern void mpdTogglePlayPause(void);
-
-/** Next song
- */
-extern void mpdNext(void);
-
-/** Previous song */
-extern void mpdPrev(void);
-
-/** toggle random */
-extern void mpdToggleRandom(void);
-
-/** play specified song
- * \param number number of song in current playlist
- */
-extern void mpdPlayNumber(int number);
-
-extern void mpdPlay();
-extern void mpdPause();
-
+extern int fileExists(const char *filename);
+extern char *theTime(void);
+extern void printUsage(void);
+extern int buffer2array(char *buffer, char *array[], const int max);
 
 #endif
 

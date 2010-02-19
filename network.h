@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
+ * Copyright (C) 2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -16,50 +16,76 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
-/*!
-* \file	network.h
-* \brief	header for network server
-* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
-*/
-
 #ifndef __NETWORK_H__
 #define __NETWORK_H__
 
-#define LISTENER_PORT 4123
+/** @file network.h
+ * Implementation of the network server
+ */
 
-extern void networkThread(void);
-extern void networkThreadStop(void);
+#include <netdb.h>
+#include <glib.h>
 
-/* Commands for had */
-#define CMD_NETWORK_QUIT 0
-#define CMD_NETWORK_RGB 1
-#define CMD_NETWORK_GET_RGB 2
-#define CMD_NETWORK_BLINK 3
-#define CMD_NETWORK_GET_TEMPERATURE 4
-#define CMD_NETWORK_GET_VOLTAGE 5
-#define CMD_NETWORK_RELAIS 6
-#define CMD_NETWORK_GET_RELAIS 7
-#define CMD_NETWORK_LED_DISPLAY_TEXT 8
-#define CMD_NETWORK_BASE_LCD_ON 9
-#define CMD_NETWORK_BASE_LCD_OFF 10
-#define CMD_NETWORK_BASE_LCD_TEXT 11
-#define CMD_NETWORK_GET_HAD_STATE 12
-#define CMD_NETWORK_SET_HAD_STATE 13
-#define CMD_NETWORK_GET_HR20 14
-#define CMD_NETWORK_SET_HR20_TEMPERATURE 15
-#define CMD_NETWORK_SET_HR20_MODE 16
-#define CMD_NETWORK_SET_HR20_AUTO_TEMPERATURE 17
-#define CMD_NETWORK_OPEN_DOOR 18
+#define GREETING "Welcome to had %s\r\nType commands to get a list of commands\r\n\r\n"
+#define CMD_SUCCESSFULL "OK\r\n"
+#define CMD_FAIL "FAIL\r\n"
+#define CMD_DENIED "DENIED\r\n"
 
-#define CMD_NETWORK_AUTH_FAILURE 0
-#define CMD_NETWORK_AUTH_SUCCESS 1
+enum NetworkClientPermission
+{
+	NETWORK_CLIENT_PERMISSION_NONE,
+	NETWORK_CLIENT_PERMISSION_READ,
+	NETWORK_CLIENT_PERMISSION_ADMIN
+};
 
-#define HR20_MODE_MANU 1
-#define HR20_MODE_AUTO 2
+/*!
+ * a tcp server
+ */
+struct NetworkServer
+{
+	int fd;	/**< socket descriptor */
+	guint listen_watch;	/**< glib channel watcher */
+};
 
-#define BUF_SIZE 1024
-#define MAX_CLIENTS 10
+/*!
+ * a network client
+ */
+struct client
+{
+	int fd;					/**< socket descriptor */
+	guint num;				/**< number of the client, beginning with zero */
+	GIOChannel *channel; 	/**< glib io channel */
+	guint source_id; 		/**< glib source */
+	gint permission;		/** permission level of the client (NONE,READ,ADMIN) */
+	gchar random_number[11]; /** random string used for authentification */
+	gchar addr_string[NI_MAXHOST];
+	gchar command_buf[2048];
+	gchar *line_new_pos;
+};
+
+/**
+ * Create a new TCP Server
+ *
+ * \param database is a #TagDatabase
+ * \returns dynamically allocated data of the server. use g_free later
+ */
+extern struct NetworkServer *network_server_new(void);
+
+/**
+ * send a string to a client. printf style
+ *
+ * \param client is a #client
+ * \param format like in printf
+ * \returns 0 on failure, 1 on success
+ */
+extern gboolean network_client_printf(struct client *client, char *format, ...);
+
+/**
+ * disconnect a client
+ *
+ * \param client is a #client
+ */
+extern void network_client_disconnect(struct client *client);
 
 #endif
 

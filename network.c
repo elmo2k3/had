@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
+ * Copyright (C) 2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -17,360 +17,309 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/*!
-* \file	network.c
-* \brief	had network server
-* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
-*/
-
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
 #include <string.h>
-#include <pthread.h>
-#include <signal.h>
-#include <openssl/md5.h>
+#include <stdarg.h>
+#include <poll.h>
+
+#include <glib.h>
+#include <glib/gprintf.h>
 
 #include "network.h"
 #include "had.h"
-#include "serial.h"
-#include "led_routines.h"
-#include "hr20.h"
+#include "commands.h"
+#include "version.h"
 
-static int sock, leave;
+static GList *clients = NULL;
+static guint num_clients;
 
-static int net_blocked = 0;
+static gboolean listen_in_event
+(GIOChannel *source, GIOCondition condition, gpointer server);
 
-pthread_t network_client_thread[MAX_CLIENTS];
+static gboolean client_in_event
+(GIOChannel *source, GIOCondition condition, gpointer server);
 
-static void networkClientHandler(int client_sock);
+static void client_process(struct client *client);
 
-static int8_t numConnectedClients = 0;
 
-void networkThreadStop(void)
+static gboolean client_in_event
+(GIOChannel *source, GIOCondition condition, gpointer user_data)
 {
-	leave = 1;
-	verbose_printf(0, "NetworkThread stopped\n");
-	close(sock);
+    struct client *client = user_data;
+    GIOStatus status;
+    gint ret;
+    gchar *line;
+    gchar *str_return;
+    gsize terminator_pos;
+    gsize bytes_read;
+    gchar **lines;
+    
+    if(condition != G_IO_IN)
+    {
+        network_client_disconnect(client);
+        return FALSE;
+    }
+    g_debug("working on client input");
+    //status = g_io_channel_read_line(source, &line, &bytes_read, &terminator_pos, NULL);
+    status = g_io_channel_read_chars(source, client->command_buf, 
+        sizeof(client->command_buf), &bytes_read, NULL);
+
+    switch(status)
+    {
+        case G_IO_STATUS_NORMAL:
+            client_process(client);
+        case G_IO_STATUS_AGAIN:
+            g_debug("status again received");
+            break;
+        case G_IO_STATUS_ERROR:
+            g_debug("status error received");
+        case G_IO_STATUS_EOF:
+            g_debug("eof received");
+            network_client_disconnect(client);
+            return FALSE;
+            break;
+    }
+    return TRUE;
+/*    struct pollfd pollfd = { client->fd, POLLHUP, POLLHUP };
+    if(!poll(&pollfd, 1, 1))
+        g_io_channel_flush(client->channel, NULL);
+    else
+    {
+        g_io_channel_shutdown(client->channel, FALSE, NULL);
+        verbose_printf(0,"poll error\n");
+    }*/
+    return TRUE;
 }
 
-static int networkAuthenticate(int client_sock)
+static gchar *split_buf_into_lines(struct client *client)
 {
-	long int i;
-	char buf[255];
-	char pass_salted[200];
-	uint32_t rawtime = (uint32_t)time(NULL);
-	unsigned char digest[MD5_DIGEST_LENGTH];
-	send(client_sock, &rawtime, sizeof(rawtime), 0);
-	recv(client_sock, buf, MD5_DIGEST_LENGTH, 0);
-	buf[MD5_DIGEST_LENGTH] = '\0';
-	
-	sprintf(pass_salted,"%s%ld",config.password, rawtime);
-	MD5(pass_salted, strlen(pass_salted), digest);
-	digest[MD5_DIGEST_LENGTH] = '\0';
-	if(!strcmp(digest,buf))
-	{
-		return 1;
-	}
-	return 0;
+    gchar *temp, *temp2;
+    gchar *pos_to_return;
+
+    if(client->line_new_pos == -1) // first run
+    {
+        client->line_new_pos = client->command_buf;
+    }
+    if(client->line_new_pos == NULL)
+        return NULL;
+    if(client->line_new_pos == '\0')
+        return NULL;
+    
+    pos_to_return = client->line_new_pos;
+
+    temp = strchr(client->line_new_pos, '\r');
+    temp2 = strchr(client->line_new_pos, '\n');
+
+    if(!temp2) // no \n found
+        return NULL;
+    else
+    {
+        *temp2 = '\0';
+        client->line_new_pos = temp+1;
+    }
+    if(temp)
+        *temp = '\0';
+    return pos_to_return;
 }
 
-static void networkClientHandler(int client_sock)
+static void client_process(struct client *client)
 {
-	/* very important:
-	 * what we need here is a kind of "garbage collector" for unnormally
-	 * exited client connections. every one of these leaves back a thread
-	 * that will never be closed
-	 */
+    int ret;
+    gchar *line;
 
-	unsigned char buf[BUF_SIZE];
-	int recv_size;
-
-	int i, gpcounter;
-	uint8_t modul,sensor;
-
-	uint8_t relais;
-
-	struct _rgbPacket rgbTemp;
-
-	struct _hadState hadStateTemp;
-	
-	/* led-display stuff */
-	uint16_t line_size;
-	uint16_t led_count;
-
-	char led_line[1024];
-
-	struct _hr20info hr20info;
-	int16_t temperature;
-	int8_t slot;
-	int8_t mode;
-
-	if(!networkAuthenticate(client_sock) && config.password[0])
-	{
-		verbose_printf(0,"wrong password!\n");
-		buf[0] = CMD_NETWORK_AUTH_FAILURE;
-		send(client_sock, buf, 1, 0);
-		close(client_sock);
-		numConnectedClients--;
-		return;
-	}
-	else
-	{
-		buf[0] = CMD_NETWORK_AUTH_SUCCESS;
-		send(client_sock, buf, 1, 0);
-	}
-	do
-	{
-		buf[0] = 255;
-		/* Erstes Byte = Kommando */
-		recv_size = recv(client_sock, buf, 1, 0);
-		switch(buf[0])
-		{
-			case CMD_NETWORK_RGB: 
-				recv_size = recv(client_sock,&rgbTemp, sizeof(rgbTemp),0);
-				sendPacket(&rgbTemp,RGB_PACKET);
-				if(rgbTemp.headP.address >= 16 && rgbTemp.headP.address < 19)
-				{
-					hadState.rgbModuleValues[rgbTemp.headP.address-0x10].red = rgbTemp.red;
-					hadState.rgbModuleValues[rgbTemp.headP.address-0x10].green = rgbTemp.green;
-					hadState.rgbModuleValues[rgbTemp.headP.address-0x10].blue = rgbTemp.blue;
-					hadState.rgbModuleValues[rgbTemp.headP.address-0x10].smoothness = rgbTemp.smoothness;
-				}
-				else
-					verbose_printf(0,"RGB-Module address %d out of range!\n",rgbTemp.headP.address);
-				break;
-			case CMD_NETWORK_BLINK:
-				if(!net_blocked)
-				{
-					net_blocked = 1;
-					for(i=0;i<2;i++)
-					{
-						/* alle Module rot */
-						sendRgbPacket(0x10,255,0,0,0);
-						sendRgbPacket(0x11,255,0,0,0);
-						sendRgbPacket(0x12,255,0,0,0);
-						
-						usleep(100000);
-						
-						/* vorherige Farben zurueckschreiben */
-						for(gpcounter = 0; gpcounter < 3; gpcounter++)
-						{
-							sendRgbPacket(gpcounter+0x10, hadState.rgbModuleValues[gpcounter].red, 
-								hadState.rgbModuleValues[gpcounter].green,
-								hadState.rgbModuleValues[gpcounter].blue,
-								0);
-						}
-						usleep(100000);
-					}
-					net_blocked = 0;
-				}
-				break;
-
-			case CMD_NETWORK_GET_TEMPERATURE:
-				recv(client_sock,&modul, sizeof(modul), 0);
-				recv(client_sock,&sensor, sizeof(sensor), 0);
-
-				send(client_sock, &lastTemperature[modul][sensor][0], sizeof(int16_t), 0);
-				send(client_sock, &lastTemperature[modul][sensor][1], sizeof(int16_t), 0);
-				break;
-		
-			case CMD_NETWORK_GET_VOLTAGE:
-				recv(client_sock,&modul,sizeof(modul), 0);
-				send(client_sock, &lastVoltage[modul], sizeof(int16_t), 0);
-				break;
-
-			case CMD_NETWORK_GET_RELAIS:
-				send(client_sock,&relaisP, sizeof(relaisP),0);
-				break;
-			
-			case CMD_NETWORK_LED_DISPLAY_TEXT:
-				recv(client_sock,&line_size, 2, 0);
-				verbose_printf(9,"LED line_size: %d\n",line_size);
-				recv(client_sock,&led_count, 2, 0);
-				recv(client_sock,led_line,line_size,0);
-				led_line[line_size] = '\0';
-
-				ledPushToStack(led_line, 2, led_count);
-				break;
-			
-			case CMD_NETWORK_BASE_LCD_ON:
-				setBaseLcdOn();
-				glcdP.backlight = 1;
-				updateGlcd();
-				break;
-
-			case CMD_NETWORK_BASE_LCD_OFF:
-				setBaseLcdOff();
-				glcdP.backlight = 0;
-				updateGlcd();
-				break;
-
-			case CMD_NETWORK_BASE_LCD_TEXT:
-				recv(client_sock, &line_size, 2, 0);
-				verbose_printf(9,"LCD line_size: %d\n",line_size);
-				recv(client_sock, led_line, line_size, 0);
-				sendBaseLcdText(led_line);
-				break;
-
-			case CMD_NETWORK_GET_HAD_STATE:
-				send(client_sock, &hadState, sizeof(hadState),0);
-				break;
-
-			case CMD_NETWORK_SET_HAD_STATE:
-				recv(client_sock, &hadStateTemp, sizeof(hadState),0);
-
-				// check if user switched off ledmatrix
-				if(hadStateTemp.ledmatrix_user_activated != 
-						hadState.ledmatrix_user_activated)
-				{
-					if(hadStateTemp.ledmatrix_user_activated &&
-							config.led_matrix_activated &&
-							!ledIsRunning() &&
-							(hadState.relais_state & 4))
-					{
-						pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
-						pthread_detach(threads[2]);
-					}
-					else if(!hadStateTemp.ledmatrix_user_activated &&
-							ledIsRunning())
-					{
-						stopLedMatrixThread();
-					}
-					else
-						hadStateTemp.ledmatrix_user_activated = 0;
-				}
-
-				// check if state of hifi rack changed
-				if(hadStateTemp.relais_state != hadState.relais_state)
-				{
-					if(hadStateTemp.relais_state & 4)
-					{
-						if(config.led_matrix_activated && !ledIsRunning() &&
-								hadStateTemp.ledmatrix_user_activated)
-						{
-							pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
-							pthread_detach(threads[2]);
-						}
-					}
-					else
-					{
-						if(ledIsRunning())
-							stopLedMatrixThread();
-					}
-					relaisP.port = hadStateTemp.relais_state;
-					sendPacket(&relaisP,RELAIS_PACKET);
-				}
-
-
-				memcpy(&hadState, &hadStateTemp, sizeof(hadState));
-				break;
-
-			case CMD_NETWORK_GET_HR20:
-				memset(&hr20info, 0, sizeof(hr20info));
-				if(config.hr20_activated)
-					hr20GetStatus(&hr20info);
-				send(client_sock, &hr20info, sizeof(hr20info), 0);
-				break;
-
-			case CMD_NETWORK_SET_HR20_TEMPERATURE:
-				recv(client_sock, &temperature, sizeof(temperature),0);
-				if(config.hr20_activated)
-					hr20SetTemperature((int)temperature);
-				break;
-
-			case CMD_NETWORK_SET_HR20_AUTO_TEMPERATURE:
-				recv(client_sock, &slot, sizeof(slot),0);
-				recv(client_sock, &temperature, sizeof(temperature),0);
-				if(config.hr20_activated)
-					hr20SetAutoTemperature((int)slot, (int)temperature);
-				break;
-			
-			case CMD_NETWORK_SET_HR20_MODE:
-				recv(client_sock, &mode, sizeof(mode),0);
-				if(mode == HR20_MODE_MANU)
-				{
-					if(config.hr20_activated)
-						hr20SetModeManu();
-				}
-				else if(mode == HR20_MODE_AUTO)
-				{
-					if(config.hr20_activated)
-						hr20SetModeAuto();
-				}
-
-				break;
-			case CMD_NETWORK_OPEN_DOOR:
-				open_door();
-				break;
-		}
-
-		usleep(1000);
-	// recv is blocking ... if we get a zero from it, we assume the connection
-	// has been terminated
-	if(!recv_size)
-		verbose_printf(1,"Connection ungracefully terminated ... \n");
-	}while(buf[0] != CMD_NETWORK_QUIT && recv_size);
-
-	close(client_sock);
-	numConnectedClients--;
+    client->line_new_pos = -1;
+    g_debug("client->command_buf = %s",client->command_buf);
+    while(line = split_buf_into_lines(client))
+    {
+        g_debug("working on line %s",line);
+        if((ret = commands_process(client,line)) == COMMANDS_OK)
+        {
+            if(g_io_channel_write_chars(client->channel, CMD_SUCCESSFULL,
+                sizeof(CMD_SUCCESSFULL), NULL, NULL) != G_IO_STATUS_NORMAL)
+            {
+                network_client_disconnect(client);
+                return;
+            }
+            
+        }
+        else if (ret == COMMANDS_FAIL)
+        {
+            if(g_io_channel_write_chars(client->channel, CMD_FAIL,
+                sizeof(CMD_FAIL), NULL, NULL) != G_IO_STATUS_NORMAL)
+            {
+                network_client_disconnect(client);
+                return;
+            }
+        }
+        else if (ret == COMMANDS_DENIED)
+        {
+            if(g_io_channel_write_chars(client->channel, CMD_DENIED,
+                sizeof(CMD_DENIED), NULL, NULL) != G_IO_STATUS_NORMAL)
+            {
+                network_client_disconnect(client);
+                return;
+            }
+        }
+        else if (ret == COMMANDS_DISCONNECT)
+        {
+            network_client_disconnect(client);
+            return;
+        }
+    }
+    struct pollfd pollfd = { client->fd, POLLHUP, POLLHUP };
+    if(!poll(&pollfd, 1, 1))
+        g_io_channel_flush(client->channel, NULL);
+    else
+    {
+        g_io_channel_shutdown(client->channel, FALSE, NULL);
+        g_debug("poll error");
+    }
 }
 
-void networkThread(void)
+void network_client_disconnect(struct client *client)
 {
-	struct sockaddr_in server,client;
-	int client_sock;
-	unsigned int len;
-	int y=1;
-
-
-	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if( sock < 0 )
-	{
-		verbose_printf(0, "Listener Socket konnte nicht erstellt werden!\n");
-	}
-	
-	memset(&server, 0, sizeof(server));
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = htonl(INADDR_ANY);
-	server.sin_port = htons(LISTENER_PORT);
-
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &y, sizeof(int));
-
-	if(bind(sock,(struct sockaddr*)&server, sizeof( server)) < 0)
-	{
-		verbose_printf(0, "Konnte TCP Server nicht starten\n");
-		return;
-	}
-
-	if(listen(sock, 5) == -1)
-	{
-		verbose_printf(0, "Error bei listen\n");
-		return;
-	}
-
-	while(1)
-	{
-		len = sizeof(client);
-		client_sock = accept(sock, (struct sockaddr*)&client, &len);
-		verbose_printf(9, "Client %d connected\n",numConnectedClients+1);
-
-		if(numConnectedClients < MAX_CLIENTS)
-		{
-			pthread_create(&network_client_thread[numConnectedClients++], NULL, (void*)networkClientHandler, (int*)client_sock);
-			pthread_detach(network_client_thread[numConnectedClients-1]);
-		}
-		else
-			verbose_printf(0, "Maximale Anzahl Clients erreicht (%d)\n",numConnectedClients);
-	}
-		
+    clients = g_list_remove(clients, client);
+    num_clients--;
+    if(client->source_id)
+    {
+        g_source_remove(client->source_id);
+        client->source_id = 0;
+    }
+    if(client->channel)
+    {
+        g_io_channel_unref(client->channel);
+        client->channel = NULL;
+        verbose_printf(0,"client %d disconnected\n",client->num);
+        g_free(client);
+    }
 }
 
 
+static gboolean listen_in_event
+(GIOChannel *source, GIOCondition condition, gpointer data)
+{
+    struct NetworkServer *server = (struct NetworkServer*)data;
+    int fd;
+    struct sockaddr_storage sa;
+    socklen_t sa_length = sizeof(sa);
+    int flags;
+    struct client *client;
 
+    fd = accept(server->fd, (struct sockaddr*)&sa, &sa_length);
+    if(fd >= 0)
+    {
+        char servername[NI_MAXSERV];
+        /* set nonblocking. copy&paste from mpd */
+        while ((flags = fcntl(fd, F_GETFL)) < 0 && errno == EINTR);
+        flags |= O_NONBLOCK;
+        while ((fcntl(fd, F_SETFL, flags)) < 0 && errno == EINTR);
+        
+        if(num_clients >= 10)
+        {
+            close(fd);
+            return TRUE;
+        }
+        client = g_new0(struct client, 1);
+        clients = g_list_prepend(clients, client);
+        client->num = num_clients;
+        client->fd = fd;
+        client->permission = 0;
+        client->channel = g_io_channel_unix_new(fd);
+        getnameinfo((struct sockaddr*)&sa, sa_length, client->addr_string, NI_MAXHOST,
+            servername,sizeof(servername), NI_NUMERICHOST|NI_NUMERICSERV);
+        client->addr_string[30] = '\0';
+        verbose_printf(0,"client %d %s connected\n",num_clients, client->addr_string);    
+        num_clients++;
+        g_sprintf(client->random_number,"%d",g_random_int());
+        g_io_channel_set_close_on_unref(client->channel, TRUE);
+        g_io_channel_set_encoding(client->channel, NULL, NULL);
+//        g_io_channel_set_buffered(client->channel, FALSE);
+        client->source_id = g_io_add_watch(client->channel, G_IO_IN|G_IO_ERR|G_IO_HUP,
+                            client_in_event, client);
+//        network_client_printf(client, GREETING, VERSION);
+//        g_io_channel_flush(client->channel, NULL);
+    }
+    return TRUE;
+}
 
+        
+struct NetworkServer *network_server_new(void)
+{
+    struct sockaddr_in serveraddr;
+    int y = 1;
+    struct NetworkServer *server;
+    GIOChannel *channel;
+
+    server = g_new0(struct NetworkServer, 1);
+
+    server->fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if( server->fd < 0 )
+    {
+        g_fprintf(stderr,"Could not create socket\n");
+        g_free(server);
+        return NULL;
+    }
+    
+    memset(&serveraddr, 0, sizeof(serveraddr));
+    serveraddr.sin_family = AF_INET;
+    serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serveraddr.sin_port = htons(4123);
+
+    setsockopt(server->fd, SOL_SOCKET, SO_REUSEADDR, &y, sizeof(int));
+
+    if(bind(server->fd,(struct sockaddr*)&serveraddr, sizeof( serveraddr)) < 0)
+    {
+        g_fprintf(stderr,"Could not start tcp server\n");
+        g_free(server);
+        return NULL;
+    }
+
+    if(listen(server->fd, 5) == -1)
+    {
+        g_fprintf(stderr,"Could not create listener\n");
+        g_free(server);
+        return NULL;
+    }
+    
+    channel = g_io_channel_unix_new(server->fd);
+    server->listen_watch = g_io_add_watch(channel, G_IO_IN, listen_in_event, server);
+    g_io_channel_unref(channel);
+
+    return server;
+}
+
+gboolean network_client_printf(struct client *client, char *format, ...)
+{
+    va_list args, tmp;
+    int length;
+    gchar *buffer;
+
+    va_start(args, format);
+    va_copy(tmp, args);
+    length = vsnprintf(NULL, 0, format, tmp);
+    va_end(tmp);
+
+    if(length <= 0)
+        return FALSE;
+
+    buffer = g_malloc(length + 1);
+    vsnprintf(buffer, length + 1, format, args);
+    if(g_io_channel_write_chars(client->channel, buffer, length, NULL, NULL) != G_IO_STATUS_NORMAL)
+    {
+        network_client_disconnect(client);
+        g_free(buffer);
+        va_end(args);
+        return FALSE;
+    }
+    g_free(buffer);
+    va_end(args);
+    return TRUE;
+}

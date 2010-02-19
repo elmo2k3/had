@@ -26,6 +26,8 @@
 #ifndef __HR20_H__
 #define __HR20_H__
 
+#include <glib.h>
+
 /** struct holding complete status information from the hr20 device */
 struct _hr20info
 {
@@ -56,7 +58,7 @@ extern void hr20SetModeManu();
 /** set mode to automatic control */
 extern void hr20SetModeAuto();
 
-extern void hr20thread(void);
+gboolean hr20update();
 
 #endif
 

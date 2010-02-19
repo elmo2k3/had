@@ -52,31 +52,15 @@ struct _ledLine
 	int shift_position; /**< position of the output arrays */
 };
 
-/** 
- * Checks if the thread for the led-matrix is running
- *
- * @returns returns 0 on stopped, 1 on running
- */
-extern int ledIsRunning(void);
-
 /** Start main thread for the led-matrix-display
  *
  * May only be started once
  */
-extern void ledMatrixThread(void);
+extern void ledMatrixStart(void);
 
 /** Stop the led-matrix-display thread
  */
-extern void stopLedMatrixThread(void);
-
-/** Transmit to display
- *
- * Takes the _output arrays of _ledLine, converts them to the right format
- * and sends the data to the display
- *
- * @param ledLine the line to output
- */
-extern void updateDisplay(struct _ledLine ledLine);
+extern void ledMatrixStop(void);
 
 /** Allocate memory for a line
  *
@@ -95,16 +79,6 @@ extern int allocateLedLine(struct _ledLine *ledLine, int line_length);
  */
 extern void freeLedLine(struct _ledLine *ledLine);
 
-/** Append a character to line
- *
- * @param c character to draw
- * @param color can be COLOR_RED, COLOR_GREEN or COLOR_AMBER
- * @param *ledLine pointer to the struct where the character should be drawn
- * 
- * @return 0 on failure (LINE_LENGTH reached), 1 on success
- */
-extern int putChar(char c, uint8_t color, struct _ledLine *ledLine);
-
 /** Append a string to line
  *
  * @param *string null-terminated string
@@ -117,16 +91,6 @@ extern void putString(char *string, struct _ledLine *ledLine);
  * Clears everything in the line and set back all positions
  */
 extern void clearScreen(struct _ledLine *ledLine);
-
-/** Shift a line left
- *
- * The line gets shifted left by one column. An extra space of 10 columns is
- * added at the end of the line to gurantee spacing between the end and the 
- * beginng of the string.
- *
- * @return 0 when the beginning of line is at the beginng of the display, 1 otherwise
- */
-extern int shiftLeft(struct _ledLine *ledLine);
 
 /** 
  * Push a string onto the display stack
@@ -141,14 +105,9 @@ extern int shiftLeft(struct _ledLine *ledLine);
  */
 extern void ledPushToStack(char *string, int shift, int lifetime);
 
-/** get the width of a string in columns */
-extern int stringWidth(char *string);
+extern void ledMatrixToggle(void);
 
-/** get the width of a char in columns */
-extern int charWidth(char c);
-
-extern void ledDisplayToggle(void);
-
+extern void ledMatrixInitMutexes(void);
 
 #endif
 

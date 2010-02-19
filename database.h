@@ -31,7 +31,8 @@
 #include "mysql/mysql.h"
 #include "had.h"
 
-extern int initDatabase(void);
+#define DATABASE_FIFO_SIZE 1024
+
 /** get the daily graph
  * \param modul modul number
  * \param sensor sensor number
@@ -50,11 +51,9 @@ void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci);
 /** insert measured temperature
  * \param modul modul
  * \param sensor sensor
- * \param celsius degree celsius
- * \param decicelsius decicelsius
- * \param *ptm struct holding time of measurement
  */
-void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, time_t timestamp);
+void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t timestamp);
+void databaseInsertDigitalValue(int modul, int sensor, int value, time_t timestamp); 
 
 #endif
 

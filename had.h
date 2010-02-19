@@ -26,8 +26,10 @@
 #ifndef __HAD_H__
 #define __HAD_H__
 
-#include <pthread.h>
+#include <glib.h>
+//#include <pthread.h>
 #include <inttypes.h>
+#include "misc.h"
 
 #define HAD_CONFIG_FILE "/etc/had.conf"
 
@@ -63,14 +65,12 @@
 
 #define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd > /dev/null 2>&1"
 #define SYSTEM_KILL_MPD "mpd --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1; sleep 1; sdparm -q -C stop /dev/discs/disc0/generic"
-extern void updateGlcd();
 
-extern pthread_t threads[5];
-
-extern char *theTime(void);
+//extern pthread_t threads[5];
 
 extern int16_t lastTemperature[9][9][2];
 extern int16_t lastVoltage[9];
+extern GThread *ledMatrixThread;
 
 struct _remote_control_keys
 {

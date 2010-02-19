@@ -32,12 +32,18 @@
 #include "database.h"
 
 
-static MYSQL *mysql_connection;
+static MYSQL *mysql_connection = NULL;
 
-int initDatabase(void)
+static int initDatabase(void)
 {
+	my_bool reconnect = 1;
+	int timeout = 2;
+
 	mysql_connection = mysql_init(NULL);
-	
+	mysql_options(mysql_connection, MYSQL_OPT_RECONNECT, &reconnect);
+	mysql_options(mysql_connection, MYSQL_OPT_WRITE_TIMEOUT, &timeout); // 2 sec
+	mysql_options(mysql_connection, MYSQL_OPT_READ_TIMEOUT, &timeout); // 2 sec
+
 	if (!mysql_real_connect(mysql_connection, 
 				config.database_server, 
 				config.database_user,
@@ -45,9 +51,10 @@ int initDatabase(void)
 				config.database_database, 0, NULL, 0))
 	{
 		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+		mysql_close(mysql_connection);
+		mysql_connection = NULL;
 		return -1;
 	}
-	mysql_connection->reconnect=1;
 	return 0;
 }
 
@@ -142,27 +149,53 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	mysql_free_result(mysql_res);
 }
 
-void databaseInsertTemperature(int modul, int sensor, int celsius, int decicelsius, time_t timestamp)
+void databaseInsertDigitalValue
+(int modul, int sensor, int value, time_t timestamp)
 {
-	static int justInserting = 0;
-	char query[512];
-	sprintf(query,"INSERT INTO modul_%d (date,sensor,value) \
-		VALUES ('%d','%ld','%d.%04d')",modul, timestamp, sensor, celsius, decicelsius);
-	/* the following is needed because libmysqlclient is not thread safe */
-	while(justInserting)
+	float fvalue = (float)value;
+	databaseInsertTemperature(modul, sensor, &fvalue, timestamp);
+}
+
+void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t timestamp)
+{
+	static char query[DATABASE_FIFO_SIZE][128];
+	static int fifo_low = 0, fifo_high = 0;
+	int i;
+
+	if(!mysql_connection)
 	{
-		usleep(1000);
+		initDatabase();
 	}
-	justInserting = 1;
-	while(mysql_query(mysql_connection,query))
+
+	verbose_printf(9,"fifo_low = %d, fifo_high = %d\n",fifo_low, fifo_high);
+	verbose_printf(9,"temperature = %2.4f\n",*temperature);
+	sprintf(query[fifo_high],"INSERT INTO modul_%d (date,sensor,value) VALUES ('%ld','%d','%4.4f')",modul, timestamp, sensor, *temperature);
+
+	verbose_printf(9,"query = %s\n",query[fifo_high]);
+
+	if(++fifo_high > (DATABASE_FIFO_SIZE -1)) fifo_high = 0;
+
+	while( fifo_low != fifo_high )
 	{
-		usleep(1000);
+		if(mysql_query(mysql_connection,query[fifo_low])) // not successfull
+		{
+			break; // dont try further
+		}
+		else // query was successfull
+		{
+			if(++fifo_low > (DATABASE_FIFO_SIZE - 1)) fifo_low = 0;
+		}
+
 	}
-	justInserting = 0;
 }
 
 void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
 {
+	if(!mysql_connection)
+	{
+		initDatabase();
+	}
+
 	if(lastTemperature[modul][sensor][0] == -1)
 	{
 		char query[255];
