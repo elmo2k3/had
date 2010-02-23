@@ -32,7 +32,7 @@
  *
  * \param *message null terminated string with message
  */
-extern void sms(char *message);
+extern void sms(char *number, char *message);
 
 #endif
 

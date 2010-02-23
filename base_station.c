@@ -423,7 +423,7 @@ void process_command(struct BaseStation *base_station)
 }
 
 static gboolean serialReceive
-(GIOChannel *channel, GIOCondition *condition, struct BaseStation *base_station)
+(GIOChannel *channel, GIOCondition condition, struct BaseStation *base_station)
 {
     gchar buf[2048];
     gsize bytes_read;
@@ -683,6 +683,15 @@ void open_door()
 		g_usleep(1000000);
 	g_usleep(9000000);
 	relaisP.port &= ~(16);
+	sendPacket(&relaisP, RELAIS_PACKET);
+}
+
+void set_hifi(int on)
+{
+	if(on)
+		relaisP.port |= RELAIS_HIFI;
+	else
+		relaisP.port &= ~RELAIS_HIFI;
 	sendPacket(&relaisP, RELAIS_PACKET);
 }
 

@@ -67,7 +67,7 @@ static size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp)
 }
 
 
-void sms(char *message)
+void sms(char *number, char *message)
 {
 	char buf[2048];
 	char buf2[2048];
@@ -91,7 +91,7 @@ void sms(char *message)
 	
 	curl_slist_free_all(headers);
 
-	sprintf(buf2, sms_string, config.cellphone, message);
+	sprintf(buf2, sms_string, number, message);
 	headers = NULL;
 	headers = curl_slist_append(headers, "Content-Type: text/xml");
 	sprintf(buf, "Content-length: %d", (int)strlen(buf2));

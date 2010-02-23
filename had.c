@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libmpd/libmpd.h>
-//#include <pthread.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sysexits.h>
@@ -41,7 +40,8 @@
 #include "database.h"
 #include "had.h"
 #include "mpd.h"
-#include "network.h"
+#include "listen.h"
+#include "client.h"
 #include "config.h"
 #include "led_routines.h"
 #include "sms.h"
@@ -51,14 +51,12 @@
 #include "statefile.h"
 
 /*! thread variable array for network, mpd and ledmatrix */
-//pthread_t threads[5];
 GMainLoop *had_main_loop;
 
 /*! big array for the last measured temperatures */
 int16_t lastTemperature[9][9][2];
 /*! big array for the last measured voltages at the rf temperature modules */
 int16_t lastVoltage[9];
-static int database_status = 0;
 
 static int killDaemon(int signal);
 static void hadSignalHandler(int signal);
@@ -76,7 +74,7 @@ int main(int argc, char* argv[])
 	signal(SIGINT, (void*)hadSignalHandler);
 	signal(SIGTERM, (void*)hadSignalHandler);
 	struct RfidTagReader *tag_reader;
-	struct NetworkServer *network_server; 
+	GError *error = NULL;
 
 	g_thread_init(NULL);
 
@@ -86,6 +84,12 @@ int main(int argc, char* argv[])
 	had_check_daemonize();
 	had_print_version();
 	had_load_state();
+	client_manager_init();
+	listen_global_init(&error);
+	if(error) {
+		g_error("%s",error->message);
+		g_error_free(error);
+	}
 	mpdInit();
 	ledMatrixStart();
 	had_init_hr20();
@@ -96,11 +100,12 @@ int main(int argc, char* argv[])
 
 	tag_reader = rfid_tag_reader_new("/dev/ttyUSB1");
 	rfid_tag_reader_set_callback(tag_reader, tag_read);
-	network_server = network_server_new();
 
 	had_main_loop = g_main_loop_new(NULL,FALSE);
+
 	g_main_loop_run(had_main_loop);
-	
+
+	listen_global_finish();
 	verbose_printf(0,"some cleanups missing\n");
 	return 0;
 }

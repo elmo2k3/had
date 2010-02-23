@@ -37,7 +37,7 @@ static MYSQL *mysql_connection = NULL;
 static int initDatabase(void)
 {
 	my_bool reconnect = 1;
-	int timeout = 2;
+	const char timeout = 2;
 
 	mysql_connection = mysql_init(NULL);
 	mysql_options(mysql_connection, MYSQL_OPT_RECONNECT, &reconnect);
@@ -160,8 +160,6 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
 {
 	static char query[DATABASE_FIFO_SIZE][128];
 	static int fifo_low = 0, fifo_high = 0;
-	int i;
-
 	if(!mysql_connection)
 	{
 		initDatabase();

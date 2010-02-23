@@ -35,6 +35,9 @@
 #include "had.h"
 #include "scrobbler.h"
 #include "led_routines.h"
+
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "mpd"
 	
 static MpdObj *mpd;
 
@@ -46,8 +49,8 @@ static guint now_playing_source = 0;
 
 static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what);
 static gboolean mpdCheckConnected(gpointer data);
-static gboolean submitTrack(void);
-static gboolean submitNowPlaying(void);
+static gboolean submitTrack(gpointer data);
+static gboolean submitNowPlaying(gpointer data);
 
 struct _track_information
 {
@@ -103,7 +106,7 @@ int mpdInit(void)
 
 	if(mpd_connect(mpd))
 	{
-		verbose_printf(0,"Error connecting to mpd!\n");
+		g_message("Error connecting to mpd!");
 		return 1;
 	}
 	isPlaying = mpd_player_get_state(mpd);
@@ -124,16 +127,19 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 		if(song)
 		{
 			clearScreen(&ledLineMpd);
-			char stringToPrint[100];
 			putString("\r",&ledLineMpd);
 			putString(song->artist,&ledLineMpd);
 			putString("\a - \b",&ledLineMpd);
 			putString(song->title,&ledLineMpd);
 
-			strcpy(current_track.last_artist, song->artist);
-			strcpy(current_track.last_album, song->album);
-			strcpy(current_track.last_title, song->title);
-			strcpy(current_track.current_track, song->track);
+			if(song->artist)
+				strcpy(current_track.last_artist, song->artist);
+			if(song->album)
+				strcpy(current_track.last_album, song->album);
+			if(song->title)
+				strcpy(current_track.last_title, song->title);
+			if(song->track)
+				strcpy(current_track.current_track, song->track);
 			current_track.length = song->time;
 			current_track.started_playing = time(NULL);
 
@@ -142,7 +148,6 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			else
 				shortest_time = 240;
 
-			verbose_printf(9,"song changed, time is %lld\n",time(NULL));
 			/* Auf PIN4 liegt die Stereoanlage
 			 * Nur wenn diese an ist zu last.fm submitten!
 			 */
@@ -168,7 +173,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			}
 			else
 			{
-				verbose_printf(9, "Stereoanlage ist aus, kein Submit zu last.fm\n");
+				g_message("Stereoanlage ist aus, kein Submit zu last.fm");
 			}
 
 			sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
@@ -230,14 +235,15 @@ static gboolean mpdCheckConnected(gpointer data)
 	if(!mpd_check_connected(mpd))
 	{
 		if(!mpd_connect(mpd))
-			verbose_printf(0,"Connection to mpd successfully initiated!\n");
+			g_message("Connection to mpd successfully initiated!");
 	}
 	return TRUE;
 }
 
-static gboolean submitTrack(void)
+static gboolean submitTrack(gpointer data)
 {
-	verbose_printf(9,"Now submitting track %s\n", current_track.current_track);
+	g_debug("Now submitting track %s\n", current_track.current_track);
+
 	scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
 		current_track.last_album, current_track.length, current_track.current_track,
 		current_track.started_playing, 0);
@@ -245,9 +251,9 @@ static gboolean submitTrack(void)
 	return FALSE;
 }
 
-static gboolean submitNowPlaying(void)
+static gboolean submitNowPlaying(gpointer data)
 {
-	verbose_printf(9,"Now submitting now playing track %s\n", current_track.current_track);
+	g_debug("Now submitting now playing track %s\n", current_track.current_track);
 	scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
 		current_track.last_album, current_track.length, current_track.current_track,
 		current_track.started_playing, 1);

@@ -37,9 +37,7 @@
 
 #include "led_routines.h"
 #include "fonts/arial_bold_14.h"
-#include "fonts/arial_8.h"
 #include "fonts/Comic_8.h"
-#include "fonts/Comic_9.h"
 #include "fonts/Comic_10.h"
 #include "had.h"
 #include "mpd.h"
@@ -53,7 +51,7 @@ static int stringWidth(char *string);
 static int shiftLeft(struct _ledLine *ledLine);
 static int initNetwork(void);
 static void ledPopFromStack(void);
-static int ledMatrixStartThread(void);
+static gpointer ledMatrixStartThread(gpointer data);
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
 
 static uint8_t *font = Arial_Bold_14;
@@ -490,7 +488,7 @@ static void ledPopFromStack(void)
 
 }
 
-static int ledMatrixStartThread(void)
+static gpointer ledMatrixStartThread(gpointer data)
 {
 	verbose_printf(9,"LedMatrixThread gestartet\n");
 
@@ -526,9 +524,9 @@ static int ledMatrixStartThread(void)
 	if(initNetwork() < 0)
 	{
 		verbose_printf(0, "Stopping led_matrix thread\n");
-		g_mutex_lock(mutex_is_running);
 		running = 0;
 		g_mutex_unlock(mutex_is_running);
+		return NULL;
 	}
 
 	ledLineToDraw = &ledLineTime;
@@ -536,6 +534,7 @@ static int ledMatrixStartThread(void)
 	g_mutex_lock(mutex_shutdown);
 	shutdown = shutting_down;
 	g_mutex_unlock(mutex_shutdown);
+	g_mutex_unlock(mutex_is_running);
 	while(!shutdown)
 	{
 		if(led_stack_size)
@@ -645,12 +644,11 @@ static int ledMatrixStartThread(void)
 	g_mutex_lock(mutex_is_running);
 	running = 0;
 	g_mutex_unlock(mutex_is_running);
-	return 0;
+	return NULL;
 }
 
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
 {
-	static int counter = 0;
 	if(shift_speed)
 	{
 		shiftLeft(ledLineToDraw);
@@ -680,6 +678,5 @@ void ledMatrixStart(void)
 		running = 1;
 		ledMatrixThread = g_thread_create(ledMatrixStartThread, NULL, TRUE, NULL);
 	}
-	g_mutex_unlock(mutex_is_running);
 }
 

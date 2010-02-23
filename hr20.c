@@ -29,10 +29,12 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "hr20.h"
 #include "had.h"
 #include "config.h"
+#include "database.h"
 
 static int fd;
 
@@ -267,11 +269,6 @@ int hr20GetStatus(struct _hr20info *hr20info)
 
 	length = strlen(line);
 	
-	if(!line)
-	{
-		close(fd);
-		return 0;
-	}
 	if(length < 4)
 	{
 //		verbose_printf(0,"hr20.c: length of line = %d\n",length);
@@ -386,8 +383,6 @@ static int16_t hexCharToInt(char c)
 
 gboolean hr20update()
 {
-	struct tm *ptm;
-	struct tm time_copy;
 	time_t rawtime;
 	struct _hr20info hr20info;
 	int decicelsius;
@@ -399,14 +394,14 @@ gboolean hr20update()
 		time(&rawtime);
 		celsius = hr20info.tempis / 100;
 		decicelsius = (hr20info.tempis - (celsius*100))*100;
-		databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, rawtime);
+		//databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, rawtime);
 		celsius = hr20info.tempset / 100;
 		decicelsius = (hr20info.tempset - (celsius*100))*100;
-		databaseInsertTemperature(config.hr20_database_number,1, celsius, decicelsius, rawtime);
-		databaseInsertTemperature(config.hr20_database_number,2, hr20info.valve, 0, rawtime);
+		//databaseInsertTemperature(config.hr20_database_number,1, celsius, decicelsius, rawtime);
+		//databaseInsertTemperature(config.hr20_database_number,2, hr20info.valve, 0, rawtime);
 		celsius = hr20info.voltage / 1000;
 		decicelsius = (hr20info.voltage - (celsius*1000))*10;
-		databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, rawtime);
+		//databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, rawtime);
 		verbose_printf(10,"hr20 read successfull\n");
 	}
 	else

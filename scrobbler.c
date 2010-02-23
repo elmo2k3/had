@@ -33,6 +33,10 @@
 #include "had.h"
 #include "scrobbler.h"
 
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "scrobbler"
+
+
 static char *scrobblerGetAuthHash(time_t timestamp);
 static gboolean handshake_successfull = FALSE;
 
@@ -94,7 +98,7 @@ static char *scrobblerGetAuthHash(time_t timestamp)
 
 	char *authHash = (char*)malloc(sizeof(char)*MD5_DIGEST_LENGTH*2+1);
 	
-	MD5(config.scrobbler_pass, strlen(config.scrobbler_pass), digest);
+	MD5((unsigned char*)config.scrobbler_pass, strlen(config.scrobbler_pass), digest);
 	
 	for(i=0; i < MD5_DIGEST_LENGTH; i++)
 	{
@@ -102,7 +106,7 @@ static char *scrobblerGetAuthHash(time_t timestamp)
 	}
 
 	sprintf(executeString, "%s%qd", authHash, (long long int)timestamp);
-	MD5(executeString, strlen(executeString), digest);
+	MD5((unsigned char*)executeString, strlen(executeString), digest);
 	
 	for(i=0; i < MD5_DIGEST_LENGTH; i++)
 	{
@@ -124,17 +128,20 @@ int length, char *track, time_t started_playing, int isNowPlaying)
 
 	if(!handshake_successfull)
 	{
+		g_debug("handshaking");
 		handshake_successfull = scrobblerHandshake();
 	}
 	
 	if(isNowPlaying)
 	{
+		g_debug("submitting now playing");
 		chars = snprintf(executeString[fifo_high],1023, SCROBBLER_NOW_PLAYING_EXECUTE,
 			config.scrobbler_tmpfile, scrobbler_data.now_playing_url, scrobbler_data.session_id,
 			artist, title, album, length, track);
 	}
 	else
 	{
+		g_debug("submitting track");
 		chars = snprintf(executeString[fifo_high],1023,SCROBBLER_SUBMISSION_EXECUTE,
 			config.scrobbler_tmpfile, scrobbler_data.submission_url, scrobbler_data.session_id,
 			artist, title, album, length, track, (long long int)started_playing);

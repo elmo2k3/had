@@ -21,6 +21,8 @@
 
 #include <glib.h>
 
+#define RELAIS_HIFI 4
+#define RELAIS_DOOR 16
 
 /**
  * Create a new Rfid Tag Reader interface
@@ -65,10 +67,11 @@ void sendBaseLcdText(char *text);
 void setBeepOn();
 
 /** turn the base station beep off */
-void setBeepOff();
+extern void setBeepOff();
 extern void setCurrentRgbValues();
-void open_door();
-void updateGlcd();
-void base_station_rgb_blink_all(int num);
+extern void open_door();
+extern void updateGlcd();
+extern void base_station_rgb_blink_all(int num);
+extern void set_hifi(int on);
 
 #endif
