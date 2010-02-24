@@ -89,6 +89,7 @@ int main(int argc, char* argv[])
 	if(error) {
 		g_error("%s",error->message);
 		g_error_free(error);
+		return EXIT_FAILURE;
 	}
 	mpdInit();
 	ledMatrixStart();

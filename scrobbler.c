@@ -158,7 +158,7 @@ int length, char *track, time_t started_playing, int isNowPlaying)
 		{
 			fscanf(tmpFile,"%s",(char*)&status);
 			fclose(tmpFile);
-			unlink(config.scrobbler_tmpfile);
+//			unlink(config.scrobbler_tmpfile);
 		}
 		else
 		{
