@@ -21,15 +21,6 @@
 
 #include <glib.h>
 
-#define RELAIS_HIFI 4
-#define RELAIS_DOOR 16
-
-/**
- * Create a new Rfid Tag Reader interface
- *
- * \param serial_device path to serial device (e.g. /dev/ttyS0)
- * \returns dynamically allocated struct of #BaseStation. use g_free later
- */
 extern int base_station_init(char *serial_device);
 
 /** Send a packet
@@ -73,5 +64,8 @@ extern void open_door();
 extern void updateGlcd();
 extern void base_station_rgb_blink_all(int num);
 extern void set_hifi(int on);
+extern int base_station_hifi_is_on(void);
+extern void base_station_hifi_on(void);
+extern void base_station_hifi_off(void);
 
 #endif

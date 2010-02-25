@@ -63,8 +63,8 @@
                 printf(args); \
 	}
 
-#define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd > /dev/null 2>&1"
-#define SYSTEM_KILL_MPD "mpd --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1; sleep 1; sdparm -q -C stop /dev/discs/disc0/generic"
+#define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd /etc/mpd.conf > /dev/null 2>&1"
+#define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1; sleep 1; sdparm -q -C stop /dev/discs/disc0/generic"
 
 //extern pthread_t threads[5];
 
@@ -150,6 +150,9 @@ struct _config
 	int digital_input_module;
 	int door_sensor_id;
 	int window_sensor_id;
+
+	char rfid_port[255];
+	int rfid_activated;
 
 	struct _remote_control_keys rkeys;
 }config;
@@ -244,15 +247,6 @@ struct _rgbPacket
 	unsigned char blue; /**< blue color */
 	unsigned char smoothness; /**< time for overblending */
 };
-
-/**
- * struct for transmitting the setting for the relais port
- */
-struct _relaisPacket
-{
-	struct headPacket headP; /**< header */
-	unsigned char port; /**< port setting */
-}relaisP;
 
 
 #endif

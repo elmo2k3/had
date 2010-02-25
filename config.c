@@ -31,7 +31,7 @@
 #include "config.h"
 #include "had.h"
 
-#define NUM_PARAMS 40
+#define NUM_PARAMS 42
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
 	"db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
 	"scrobbler_pass", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
@@ -40,7 +40,7 @@ static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_
 	"sms_activated","sipgate_user","sipgate_pass","cellphone","hr20_activated","hr20_port",
 	"mpd_activated","usbtemp_activated","usbtemp_device_id","usbtemp_device_module","usbtemp_device_sensor",
 	"hr20_database_activated","hr20_database_number","door_sensor_id","window_sensor_id",
-	"digital_input_module","password"};
+	"digital_input_module","password","rfid_port","rfid_activated"};
 
 
 int loadConfig(char *conf)
@@ -249,6 +249,12 @@ int loadConfig(char *conf)
 				/* had password */
 				case 39: strcpy(config.password, value);
 					 break;
+				/* rfid port */
+				case 40: strcpy(config.rfid_port, value);
+					 break;
+				/* rfid_activated */
+				case 41: config.rfid_activated = atoi(value);
+					break;
 			}
 		}
 	}

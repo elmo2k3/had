@@ -35,6 +35,7 @@
 #include "had.h"
 #include "scrobbler.h"
 #include "led_routines.h"
+#include "base_station.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "mpd"
@@ -102,7 +103,7 @@ int mpdInit(void)
 
 	mpd_set_connection_timeout(mpd,10);
 	g_timeout_add(500, mpdStatusUpdate, NULL);
-	g_timeout_add_seconds(3, mpdCheckConnected, NULL);
+	g_timeout_add_seconds(1, mpdCheckConnected, NULL);
 
 	if(mpd_connect(mpd))
 	{
@@ -151,7 +152,8 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			/* Auf PIN4 liegt die Stereoanlage
 			 * Nur wenn diese an ist zu last.fm submitten!
 			 */
-			if((relaisP.port & 4) && config.scrobbler_activated && hadState.scrobbler_user_activated)
+			if(base_station_hifi_is_on() && config.scrobbler_activated
+				&& hadState.scrobbler_user_activated)
 			{
 				/* check if the track ran at least 2:40 or half of its runtime */
 				if(song->artist && song->title)

@@ -25,6 +25,9 @@ extern int fileExists(const char *filename);
 extern char *theTime(void);
 extern void printUsage(void);
 extern int buffer2array(char *buffer, char *array[], const int max);
+extern void had_log_handler
+    (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message,
+    gpointer user_data);
 
 #endif
 

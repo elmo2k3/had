@@ -29,6 +29,26 @@
 #include "led_routines.h"
 #include "database.h"
 
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "base_station"
+
+#define BASE_STATION_GET_RELAIS 6
+
+#define RELAIS_PRINTER 1
+#define RELAIS_HIFI 4
+#define RELAIS_DOOR 16
+#define RELAIS_LIGHT 32
+
+/**
+ * struct for transmitting the setting for the relais port
+ */
+struct _relaisPacket
+{
+	struct headPacket headP; /**< header */
+	unsigned char port; /**< port setting */
+}relaisP;
+
+
 static void incrementColor(uint8_t *color);
 
 static struct BaseStation
@@ -40,22 +60,60 @@ static struct BaseStation
 	GIOChannel *channel;
 }base_station;
 
-void process_glcd_remote(gchar **strings, int argc)
+void base_station_hifi_off(void)
+{
+	ledMatrixStop();
+	relaisP.port &= ~RELAIS_HIFI;
+	sendPacket(&relaisP, RELAIS_PACKET);
+	hadState.relais_state = relaisP.port;
+}
+
+void base_station_hifi_on(void)
+{
+	ledMatrixStart();
+	relaisP.port |= RELAIS_HIFI;
+	sendPacket(&relaisP, RELAIS_PACKET);
+	hadState.relais_state = relaisP.port;
+}
+
+int base_station_hifi_is_on(void)
+{
+	return (int)(relaisP.port & RELAIS_HIFI);
+}
+
+void base_station_everything_off(void)
+{
+	base_station_hifi_off();
+	mpdPause();
+	for(int i= 0;i < 3; i++)
+	{
+		hadState.rgbModuleValues[i].red = 0;
+		hadState.rgbModuleValues[i].green = 0;
+		hadState.rgbModuleValues[i].blue = 0;
+	}
+	setCurrentRgbValues();
+	system(SYSTEM_KILL_MPD);
+}
+
+void base_station_music_on_hifi_on(void)
+{
+	base_station_hifi_on();
+	system(SYSTEM_MOUNT_MPD);
+	g_usleep(1000000); // wait until libmpd got connection
+	mpdPlay();
+}
+
+void process_remote(gchar **strings, int argc)
 {
 	int command;
 	int gpcounter;
 	
-	verbose_printf(9,"Processing glcd_remote packet\n");
+	verbose_printf(9,"Processing remote packet\n");
 
 	if(strings[1])
 	{
 		command = atoi(strings[1]);
-		if(command == 2)
-		{
-			updateGlcd();
-			verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
-		}
-		else if(command == config.rkeys.mpd_random)
+		if(command == config.rkeys.mpd_random)
 		{
 
 			/* 50 - 82 reserved for remote control */
@@ -77,47 +135,18 @@ void process_glcd_remote(gchar **strings, int argc)
 		}
 		else if(command == config.rkeys.music_on_hifi_on)
 		{
-			system(SYSTEM_MOUNT_MPD);
-			relaisP.port |= 4;
-			sendPacket(&relaisP, RELAIS_PACKET);
-			if(relaisP.port & 4)
-			{
-				ledMatrixStart();
-				hadState.ledmatrix_user_activated = 1;
-			}
-			hadState.relais_state = relaisP.port;
-			mpdPlay();
+			base_station_music_on_hifi_on();
 		}
 		else if(command == config.rkeys.everything_off)
 		{
-			relaisP.port = 0;
-			sendPacket(&relaisP, RELAIS_PACKET);
-			ledMatrixStop();
-			hadState.relais_state = relaisP.port;
-			mpdPause();
-			for(gpcounter = 0; gpcounter < 3; gpcounter++)
-			{
-				hadState.rgbModuleValues[gpcounter].red = 0;
-				hadState.rgbModuleValues[gpcounter].green = 0;
-				hadState.rgbModuleValues[gpcounter].blue = 0;
-			}
-			setCurrentRgbValues();
-			system(SYSTEM_KILL_MPD);
+			base_station_everything_off();
 		}
 		else if(command == config.rkeys.hifi_on_off)
 		{
-			relaisP.port ^= 4;
-			sendPacket(&relaisP, RELAIS_PACKET);
-			if(relaisP.port & 4)
-			{
-				ledMatrixStart();
-				hadState.ledmatrix_user_activated = 1;
-			}
+			if(base_station_hifi_is_on())
+				base_station_hifi_off();
 			else
-			{
-				ledMatrixStop();
-			}
-			hadState.relais_state = relaisP.port;
+				base_station_hifi_on();
 		}
 		else if(command == config.rkeys.brightlight)
 		{
@@ -246,6 +275,34 @@ void process_glcd_remote(gchar **strings, int argc)
 	}
 }
 
+static void init_relais_state(unsigned char port)
+{
+	relaisP.port = port;
+	
+	if(port & RELAIS_HIFI) {
+		ledMatrixStart();
+	}
+}
+
+void process_glcd_remote(gchar **strings, int argc)
+{
+	int command;
+	
+	if(strings[1])
+	{
+		command = atoi(strings[1]);
+		if(command == 2)
+		{
+			updateGlcd();
+			verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
+		}
+		else { // old remote address
+			verbose_printf(9,"Processing old remote\r\n");
+			process_remote(strings, argc);
+		}
+	}
+}
+
 void process_temperature_module(gchar **strings, int argc)
 {
 	int modul_id, sensor_id;
@@ -260,12 +317,16 @@ void process_temperature_module(gchar **strings, int argc)
 		verbose_printf(0,"Got wrong count of parameters from temperature-module\n");
 		return;
 	}
-
-	sprintf(temp_string,"%s.%s",strings[2], strings[3]);
+	
+	g_debug("temperature = %s.%s",strings[2],strings[3]);
+	if(strlen(strings[3]) == 3) // 0625 is send as 625
+		sprintf(temp_string,"%s.0%s",strings[2], strings[3]);
+	else
+		sprintf(temp_string,"%s.%s",strings[2], strings[3]);
 	temperature = atof(temp_string);
 	modul_id = atoi(strings[0]);
 	sensor_id = atoi(strings[1]);
-	voltage = atoi(strings[2]);
+	voltage = atoi(strings[4]);
 
 	verbose_printf(9,"Modul ID: %d\t",modul_id);
 	verbose_printf(9,"Sensor ID: %d\t",sensor_id);
@@ -329,6 +390,13 @@ void process_base_station(gchar **strings, int argc)
 		else if(command == 12)
 		{
 			verbose_printf(0,"Serial Modul uart timeout\n");
+		}
+		else if(command == 13)
+		{
+			if(strings[2]) {
+				g_debug("received old relais state: %d",atoi(strings[2]));
+				init_relais_state((unsigned char)atoi(strings[2]));
+			}
 		}
 		else if(command == 30)
 		{
@@ -410,6 +478,7 @@ void process_command(struct BaseStation *base_station)
 		{
 			case '3':	process_temperature_module(strings,i); break;
 			case '7':	process_glcd_remote(strings,i); break;
+			case '8':	process_remote(strings,i);break;
 			case '1':	if(strings[0][1] == '0') process_base_station(strings,i); break;
 			default: 	
 						g_debug("Unknown command: %s",strings[0]);
@@ -468,6 +537,21 @@ static gboolean serialReceive
     return TRUE;
 }
 
+static void getRelaisState(void)
+{
+	gsize bytes_written;
+	GError *error = NULL;
+	struct headPacket headP;
+	headP.address = 0x02;
+	headP.count = 1;
+	headP.command = BASE_STATION_GET_RELAIS;
+	g_io_channel_write_chars(base_station.channel, (char*)&headP, sizeof(headP),
+		&bytes_written, &error);
+	if(error)
+		g_error_free(error);
+	g_io_channel_flush(base_station.channel, NULL);
+}
+
 int base_station_init(char *serial_device)
 {
     int fd;
@@ -477,7 +561,7 @@ int base_station_init(char *serial_device)
 	fd = open(serial_device, O_RDWR | O_NOCTTY /*| O_NDELAY*/ | O_NONBLOCK );
 	if (fd <0) 
     {
-		return 1;
+		return -1;
 	}
 
 	memset(&newtio, 0, sizeof(newtio)); /* clear struct for new port settings */
@@ -487,22 +571,22 @@ int base_station_init(char *serial_device)
 	tcflush(fd, TCIFLUSH);
 	if(tcsetattr(fd,TCSANOW,&newtio) < 0)
 	{
-		return 1;
+		return -1;
 	}
     
     GIOChannel *serial_device_chan = g_io_channel_unix_new(fd);
     guint serial_watch = g_io_add_watch(serial_device_chan, G_IO_IN | G_IO_ERR | G_IO_HUP,
 		(GIOFunc)serialReceive, &base_station);
-//    g_io_add_watch(serial_device_chan, G_IO_OUT,
-//		(GIOFunc)serialTransmit, base_station_to_return);
-//	g_io_add_watch(serial_device_chan, G_IO_ERR, (GIOFunc)exit, NULL);
 	g_io_channel_set_encoding(serial_device_chan, NULL, &error);
     g_io_channel_unref(serial_device_chan);
 	base_station.channel = serial_device_chan;
 	base_station.serial_port_watcher = serial_watch;
 
+	getRelaisState();
+
 	return 0;
 }
+
 
 void sendPacket(void *packet, int type)
 {
@@ -625,8 +709,6 @@ void setBeepOff()
 	if(config.serial_activated)
 		g_io_channel_write_chars(base_station.channel, (char*)&headP, sizeof(headP),
 			&bytes_written, &error);
-//	if(config.serial_activated)
-//		write(fd,&headP,sizeof(headP));
 	if(error)
 		g_error_free(error);
 	g_io_channel_flush(base_station.channel, NULL);
@@ -643,8 +725,6 @@ void setBaseLcdOn()
 	if(config.serial_activated)
 		g_io_channel_write_chars(base_station.channel, (char*)&headP, sizeof(headP),
 			&bytes_written, &error);
-//	if(config.serial_activated)
-//		write(fd,&headP,sizeof(headP));
 	if(error)
 		g_error_free(error);
 	g_io_channel_flush(base_station.channel, NULL);
@@ -661,8 +741,6 @@ void setBaseLcdOff()
 	if(config.serial_activated)
 		g_io_channel_write_chars(base_station.channel, (char*)&headP, sizeof(headP),
 			&bytes_written, &error);
-//	if(config.serial_activated)
-//		write(fd,&headP,sizeof(headP));
 	if(error)
 		g_error_free(error);
 	g_io_channel_flush(base_station.channel, NULL);
@@ -686,15 +764,6 @@ void open_door()
 	sendPacket(&relaisP, RELAIS_PACKET);
 }
 
-void set_hifi(int on)
-{
-	if(on)
-		relaisP.port |= RELAIS_HIFI;
-	else
-		relaisP.port &= ~RELAIS_HIFI;
-	sendPacket(&relaisP, RELAIS_PACKET);
-}
-
 void sendBaseLcdText(char *text)
 {
 	gsize bytes_written;
@@ -713,8 +782,6 @@ void sendBaseLcdText(char *text)
 	if(config.serial_activated)
 		g_io_channel_write_chars(base_station.channel, (char*)&lcd_text, sizeof(lcd_text),
 			&bytes_written, &error);
-	//if(config.serial_activated)
-	//	write(fd,&lcd_text,sizeof(lcd_text));
 	if(error)
 		g_error_free(error);
 	g_io_channel_flush(base_station.channel, NULL);

@@ -105,13 +105,6 @@ action_get_temperature(struct client *client, int argc, char **argv)
 }
 
 static enum command_return
-action_get_relais(struct client *client, int argc, char **argv)
-{
-    client_printf(client, "relais: %x\r\n",relaisP.port);
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
 action_get_voltage(struct client *client, int argc, char **argv)
 {
     int modul;
@@ -195,7 +188,10 @@ static enum command_return action_led_matrix_on_off
 static enum command_return action_set_hifi
 (struct client *client, int argc, char *argv[])
 {
-	set_hifi(atoi(argv[1]));
+	if(atoi(argv[1]))
+		base_station_hifi_on();
+	else
+		base_station_hifi_off();
     return COMMAND_RETURN_OK;
 }
 
@@ -400,7 +396,6 @@ static const struct command commands[] = {
     {"base_lcd_backlight",PERMISSION_ADMIN,1,1, action_toggle_base_lcd_backlight},
     {"blink",PERMISSION_ADMIN,0,0, action_rgb_blink},
     {"commands",PERMISSION_ADMIN,  0, 0,      action_commands},
-    {"get_relais",PERMISSION_ADMIN, 0,0, action_get_relais},
     {"get_temperature",PERMISSION_ADMIN, 2,2, action_get_temperature},
     {"get_voltage",PERMISSION_ADMIN, 1,1, action_get_voltage},
     {"led_display_text",PERMISSION_ADMIN, 1,2, action_led_display_text},

@@ -4,6 +4,7 @@
 #include <glib.h>
 #include "string.h"
 #include "misc.h"
+#include "had.h"
 
 /*!
  *******************************************************************************
@@ -98,3 +99,17 @@ int buffer2array(char *buffer, char *array[], const int max)
 	return i;
 }
 
+void had_log_handler
+(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message,
+gpointer user_data)
+{
+	if (log_level & G_LOG_LEVEL_DEBUG) {
+		verbose_printf(9,"%s-Message: %s\n",log_domain,message);
+	} else {
+		if (log_domain) {
+			verbose_printf(0,"%s-Message: %s\n",log_domain,message);
+		} else {
+			verbose_printf(0,"%s\n",message);
+		}
+	}
+}

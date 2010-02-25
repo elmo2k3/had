@@ -97,7 +97,7 @@ struct RfidTagReader *rfid_tag_reader_new(char *serial_device)
 	fd = open(serial_device, O_RDONLY | O_NOCTTY | O_NDELAY );
 	if (fd <0) 
     {
-//		return NULL;
+		return NULL;
 	}
 
 	memset(&newtio, 0, sizeof(newtio)); /* clear struct for new port settings */
@@ -106,7 +106,7 @@ struct RfidTagReader *rfid_tag_reader_new(char *serial_device)
 	tcflush(fd, TCIFLUSH);
 	if(tcsetattr(fd,TCSANOW,&newtio) < 0)
 	{
-//		return NULL;
+		return NULL;
 	}
     
 	struct RfidTagReader *rfid_tag_reader_to_return = g_new0(struct RfidTagReader, 1);

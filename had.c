@@ -82,25 +82,30 @@ int main(int argc, char* argv[])
 	had_find_config();
 	had_check_parameters(argc,argv);
 	had_check_daemonize();
+	g_log_set_default_handler(had_log_handler, NULL);
 	had_print_version();
 	had_load_state();
 	client_manager_init();
 	listen_global_init(&error);
 	if(error) {
+		if(config.daemonize) unlink(config.pid_file);
 		g_error("%s",error->message);
 		g_error_free(error);
 		return EXIT_FAILURE;
 	}
 	mpdInit();
-	ledMatrixStart();
 	had_init_hr20();
 	had_init_base_station();
 
-	lastTemperature[3][1][0] = -1;
-	lastTemperature[3][0][0] = -1;
-
-	tag_reader = rfid_tag_reader_new("/dev/ttyUSB1");
-	rfid_tag_reader_set_callback(tag_reader, tag_read);
+	if(config.rfid_activated) {
+		tag_reader = rfid_tag_reader_new(config.rfid_port);
+		if(tag_reader == NULL) {
+			if(config.daemonize) unlink(config.pid_file);
+			g_error("Error opening %s for tagreader",config.rfid_port);
+			return EXIT_FAILURE;
+		}
+		rfid_tag_reader_set_callback(tag_reader, tag_read);
+	}
 
 	had_main_loop = g_main_loop_new(NULL,FALSE);
 
@@ -281,13 +286,13 @@ static void had_load_state(void)
 	if(loadStateFile(config.statefile))
 	{
 		verbose_printf(9, "Statefile successfully read\n");
-		relaisP.port = hadState.relais_state;
+		//relaisP.port = hadState.relais_state;
 	}
 	else
 	{
 		verbose_printf(9, "Statefile could not be read, using default values\n");
 		memset(&hadState, 0, sizeof(hadState));
-		memset(&relaisP, 0, sizeof(relaisP));
+//		memset(&relaisP, 0, sizeof(relaisP));
 		hadState.scrobbler_user_activated = config.scrobbler_activated;
 		hadState.ledmatrix_user_activated = config.led_matrix_activated;
 		hadState.beep_on_door_opened = 1;
@@ -308,7 +313,11 @@ static void had_init_base_station(void)
 	int celsius,decicelsius;
 	if(config.serial_activated)
 	{
-		base_station_init(config.tty);
+		if(base_station_init(config.tty)) {
+			if(config.daemonize) unlink(config.pid_file);
+			g_error("Error opening %s",config.tty);
+			exit(EXIT_FAILURE);
+		}
 		
 		glcdP.backlight = 1;
 
