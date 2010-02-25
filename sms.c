@@ -27,7 +27,11 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 #include <string.h>
+#include <glib.h>
 #include "had.h"
+
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "sms"
 
 static size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp);
 
@@ -102,7 +106,6 @@ void sms(char *number, char *message)
 	curl_easy_setopt(curlhandler, CURLOPT_HTTPHEADER, headers);
 	curl_easy_setopt(curlhandler, CURLOPT_POSTFIELDSIZE, strlen(buf2));
 
-	verbose_printf(0,"sms send %s\n",message);
-//	printf(buf);
+	g_message("sms send %s to number %s",message, number);
 	curl_easy_perform(curlhandler);
 }

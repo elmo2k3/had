@@ -36,6 +36,9 @@
 #include "config.h"
 #include "database.h"
 
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "hr20"
+
 static int fd;
 
 static void hr20GetStatusLine(char *line);
@@ -402,11 +405,11 @@ gboolean hr20update()
 		celsius = hr20info.voltage / 1000;
 		decicelsius = (hr20info.voltage - (celsius*1000))*10;
 		//databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, rawtime);
-		verbose_printf(10,"hr20 read successfull\n");
+		g_debug("hr20 read successfull");
 	}
 	else
 	{
-		verbose_printf(10,"hr20 read unsuccessfull\n");
+		g_debug("hr20 read unsuccessfull");
 	}
 	return TRUE;
 }

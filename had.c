@@ -112,7 +112,6 @@ int main(int argc, char* argv[])
 	g_main_loop_run(had_main_loop);
 
 	listen_global_finish();
-	verbose_printf(0,"some cleanups missing\n");
 	return 0;
 }
 
@@ -125,14 +124,14 @@ static void hadSignalHandler(int signal)
 			unlink(config.pid_file);
 		//networkThreadStop();
 		writeStateFile(config.statefile);
-		verbose_printf(0,"Shutting down\n");
+		g_message("Shutting down");
 	}
 	else if(signal == SIGHUP)
 	{
 		struct _config configTemp;
 		memcpy(&configTemp, &config, sizeof(config));
 
-		verbose_printf(0,"Config reloaded\n");
+		g_message("Config reloaded");
 		loadConfig(HAD_CONFIG_FILE);
 
 //		// check if ledmatrix should be turned off
@@ -174,7 +173,7 @@ static int killDaemon(int signal)
 
 static void tag_read(struct RfidTagReader *tag_reader)
 {
-	verbose_printf(0,"tag read: %s\n", rfid_tag_reader_last_tag(tag_reader));
+	g_debug("tag read: %s", rfid_tag_reader_last_tag(tag_reader));
 }
 
 static void had_check_parameters(int argc, char **argv)
@@ -208,11 +207,11 @@ static void had_find_config(void)
 {
 	if(loadConfig(HAD_CONFIG_FILE))
 	{
-		verbose_printf(0,"Using config %s\n",HAD_CONFIG_FILE);
+		g_message("Using config %s",HAD_CONFIG_FILE);
 	}
 	else if(loadConfig("had.conf"))
 	{
-		verbose_printf(0,"Using config %s\n","had.conf");
+		g_message("Using config %s","had.conf");
 	}
 	else
 		exit(EX_NOINPUT);
@@ -257,11 +256,6 @@ static void had_check_daemonize(void)
 		fprintf(pid_file,"%d\n",(int)getpid());
 		fclose(pid_file);
 
-		if(config.verbosity >= 9)
-			printf("My PID is %d\n",(int)getpid());
-
-
-		
 		freopen(config.logfile, "a", stdout);
 //		freopen("/dev/null", "a", stderr);
 
@@ -275,9 +269,9 @@ static void had_check_daemonize(void)
 static void had_print_version(void)
 {
 #ifdef VERSION
-	verbose_printf(0, "had %s started\n",VERSION);
+	g_message("had %s started",VERSION);
 #else
-	verbose_printf(0, "had started\n");
+	g_message("had started");
 #endif
 }
 
@@ -285,12 +279,12 @@ static void had_load_state(void)
 {
 	if(loadStateFile(config.statefile))
 	{
-		verbose_printf(9, "Statefile successfully read\n");
+		g_debug("Statefile successfully read");
 		//relaisP.port = hadState.relais_state;
 	}
 	else
 	{
-		verbose_printf(9, "Statefile could not be read, using default values\n");
+		g_debug("Statefile could not be read, using default values");
 		memset(&hadState, 0, sizeof(hadState));
 //		memset(&relaisP, 0, sizeof(relaisP));
 		hadState.scrobbler_user_activated = config.scrobbler_activated;
@@ -334,7 +328,7 @@ static void had_init_base_station(void)
 	} // config.serial_activated
 	else
 	{
-		verbose_printf(9,"Serial port deactivated\n");
+		g_debug("Serial port deactivated");
 	}
 }
 

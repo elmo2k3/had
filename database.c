@@ -31,6 +31,8 @@
 #include "had.h"
 #include "database.h"
 
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "database"
 
 static MYSQL *mysql_connection = NULL;
 
@@ -83,7 +85,7 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 	if(!mysql_row[0])
 	{
 		mysql_free_result(mysql_res);
-		verbose_printf(2,"Keine Daten fuer den Graphen vorhanden!\n");
+		g_message("Keine Daten fuer den Graphen vorhanden!");
 		return;
 	}
 	*max = atof(mysql_row[0]);
@@ -144,7 +146,7 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	graph->numberOfPoints = x_div; // Letzter Wert
 	
 	
-	verbose_printf(9,"Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
+	g_debug("Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
 	
 	mysql_free_result(mysql_res);
 }
@@ -165,11 +167,11 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
 		initDatabase();
 	}
 
-	verbose_printf(9,"fifo_low = %d, fifo_high = %d\n",fifo_low, fifo_high);
-	verbose_printf(9,"temperature = %2.4f\n",*temperature);
+	g_debug("fifo_low = %d, fifo_high = %d",fifo_low, fifo_high);
+	g_debug("temperature = %2.4f",*temperature);
 	sprintf(query[fifo_high],"INSERT INTO modul_%d (date,sensor,value) VALUES ('%ld','%d','%4.4f')",modul, timestamp, sensor, *temperature);
 
-	verbose_printf(9,"query = %s\n",query[fifo_high]);
+	g_debug("query = %s",query[fifo_high]);
 
 	if(++fifo_high > (DATABASE_FIFO_SIZE -1)) fifo_high = 0;
 

@@ -56,12 +56,6 @@
 #define SERIAL_CMD_TEMP_INSERT 1
 #define SERIAL_CMD_ 1
 
-#define verbose_printf(X,args...) \
-	if(X <= config.verbosity) \
-        {\
-                printf("%s    ",theTime()); \
-                printf(args); \
-	}
 
 #define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd /etc/mpd.conf > /dev/null 2>&1"
 #define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1; sleep 1; sdparm -q -C stop /dev/discs/disc0/generic"

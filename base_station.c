@@ -108,7 +108,7 @@ void process_remote(gchar **strings, int argc)
 	int command;
 	int gpcounter;
 	
-	verbose_printf(9,"Processing remote packet\n");
+	g_debug("Processing remote packet");
 
 	if(strings[1])
 	{
@@ -121,12 +121,12 @@ void process_remote(gchar **strings, int argc)
 		}
 		else if(command == config.rkeys.mpd_prev)
 		{
-				verbose_printf(9,"MPD prev\r\n");
+				g_debug("MPD prev\r");
 				mpdPrev();
 		}
 		else if(command == config.rkeys.mpd_next)
 		{
-			verbose_printf(9,"MPD next song\r\n");
+			g_debug("MPD next song\r");
 			mpdNext();
 		}
 		else if(command == config.rkeys.mpd_play_pause)
@@ -294,10 +294,10 @@ void process_glcd_remote(gchar **strings, int argc)
 		if(command == 2)
 		{
 			updateGlcd();
-			verbose_printf(9,"GraphLCD Info Paket gesendet\r\n");
+			g_debug("GraphLCD Info Paket gesendet\r");
 		}
 		else { // old remote address
-			verbose_printf(9,"Processing old remote\r\n");
+			g_debug("Processing old remote\r");
 			process_remote(strings, argc);
 		}
 	}
@@ -311,10 +311,10 @@ void process_temperature_module(gchar **strings, int argc)
 	char temp_string[1023];
 	char buf[256];
 	
-	verbose_printf(9,"Processing temperature_module packet\n");
+	g_debug("Processing temperature_module packet");
 	if(argc != 5)
 	{
-		verbose_printf(0,"Got wrong count of parameters from temperature-module\n");
+		g_warning("Got wrong count of parameters from temperature-module");
 		return;
 	}
 	
@@ -328,14 +328,12 @@ void process_temperature_module(gchar **strings, int argc)
 	sensor_id = atoi(strings[1]);
 	voltage = atoi(strings[4]);
 
-	verbose_printf(9,"Modul ID: %d\t",modul_id);
-	verbose_printf(9,"Sensor ID: %d\t",sensor_id);
-	verbose_printf(9,"Temperatur: %2.2f\t\n",temperature);
+	g_debug("Temperatur: %2.2f\t",temperature);
 	switch(modul_id)
 	{
-		case 1: verbose_printf(9,"Spannung: %2.2f\n",ADC_MODUL_1/voltage); break;
-		case 3: verbose_printf(9,"Spannung: %2.2f\n",ADC_MODUL_3/voltage); break;
-		default: verbose_printf(9,"Spannung: %2.2f\n",ADC_MODUL_DEFAULT/voltage);
+		case 1: g_debug("Spannung: %2.2f",ADC_MODUL_1/voltage); break;
+		case 3: g_debug("Spannung: %2.2f",ADC_MODUL_3/voltage); break;
+		default: g_debug("Spannung: %2.2f",ADC_MODUL_DEFAULT/voltage);
 	}		
 
 	//rawtime -= 32; // Modul misst immer vor dem Schlafengehen
@@ -371,7 +369,7 @@ void process_base_station(gchar **strings, int argc)
 	int command;
 	int rawtime;
 	
-	verbose_printf(9,"Processing base_station packet\n");
+	g_debug("Processing base_station packet");
 	
 	rawtime = time(NULL);
 
@@ -380,16 +378,16 @@ void process_base_station(gchar **strings, int argc)
 		command = atoi(strings[1]);
 		if(command == 10)
 		{
-			verbose_printf(0,"Serial Modul hard-reset\n");
+			g_warning("Serial Modul hard-reset");
 			sendBaseLcdText("Modul neu gestartet ....");
 		}
 		else if(command == 11)
 		{
-			verbose_printf(0,"Serial Modul Watchdog-reset\n");
+			g_warning("Serial Modul Watchdog-reset");
 		}
 		else if(command == 12)
 		{
-			verbose_printf(0,"Serial Modul uart timeout\n");
+			g_warning("Serial Modul uart timeout");
 		}
 		else if(command == 13)
 		{
@@ -400,12 +398,12 @@ void process_base_station(gchar **strings, int argc)
 		}
 		else if(command == 30)
 		{
-			verbose_printf(1,"Door opened\n");
+			g_debug("Door opened");
 			hadState.input_state |= 1;
 			/* check for opened window */
 			if(hadState.input_state & 8)
 			{
-				verbose_printf(0,"Window and door open at the same time! BEEEEP\n");
+				g_message("Window and door open at the same time! BEEEEP");
 				if(hadState.beep_on_window_left_open)
 				{
 					setBeepOn();
@@ -419,7 +417,7 @@ void process_base_station(gchar **strings, int argc)
 		}
 		else if(command == 31)
 		{
-			verbose_printf(1,"Door closed\n");
+			g_debug("Door closed");
 			hadState.input_state &= ~1;
 			setBeepOff();
 			if(config.door_sensor_id && config.digital_input_module)
@@ -432,7 +430,7 @@ void process_base_station(gchar **strings, int argc)
 		else if(command == 35) {}
 		else if(command == 36)
 		{
-			verbose_printf(1,"Window closed\n");
+			g_debug("Window closed");
 			hadState.input_state &= ~8;
 			setBeepOff();
 			if(config.window_sensor_id && config.digital_input_module)
@@ -446,7 +444,7 @@ void process_base_station(gchar **strings, int argc)
 		}
 		else if(command == 36)
 		{
-			verbose_printf(1,"Window opened\n");
+			g_debug("Window opened");
 			hadState.input_state |= 8;
 			if(config.window_sensor_id && config.digital_input_module)
 				databaseInsertDigitalValue(config.digital_input_module,
@@ -481,7 +479,7 @@ void process_command(struct BaseStation *base_station)
 			case '8':	process_remote(strings,i);break;
 			case '1':	if(strings[0][1] == '0') process_base_station(strings,i); break;
 			default: 	
-						g_debug("Unknown command: %s",strings[0]);
+						g_warning("Unknown command: %s",strings[0]);
 						break;
 		}
 	}
@@ -502,7 +500,7 @@ static gboolean serialReceive
 	
 	if(condition != G_IO_IN)
 	{
-		g_debug("base_station: error in serialReceive");
+		g_warning("base_station: error in serialReceive");
 	}
     status = g_io_channel_read_chars(channel, buf, sizeof(buf), &bytes_read, &error);
 	if( status != G_IO_STATUS_NORMAL && status != G_IO_STATUS_AGAIN)
@@ -510,7 +508,7 @@ static gboolean serialReceive
 		g_debug("status = %d",status);
 		if(error)
 		{
-			g_debug("error = %s",error->message);
+			g_warning("error = %s",error->message);
 			g_error_free(error);
 		}
 		return FALSE;
@@ -748,7 +746,7 @@ void setBaseLcdOff()
 
 void open_door()
 {
-	verbose_printf(0,"Opening Door\n");
+	g_debug("Opening Door");
 	relaisP.port |= 16;
 	sendPacket(&relaisP, RELAIS_PACKET);
 	if(hadState.beep_on_door_opened)

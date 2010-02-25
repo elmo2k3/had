@@ -364,8 +364,10 @@ static int initNetwork(void)
 	struct sockaddr_in server;
 
 	client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if(client_sock < 0)
-		verbose_printf(0,"Keine Verbindung zum LED-Modul\n");
+	if(client_sock < 0) {
+		g_warning("Keine Verbindung zum LED-Modul");
+		return -1;
+	}
 	server.sin_family = AF_INET;
 	server.sin_port = htons(config.led_matrix_port);
 #ifdef _WIN32
@@ -379,7 +381,7 @@ static int initNetwork(void)
 
 	if(connect(client_sock, (struct sockaddr*)&server, sizeof(server)) != 0)
 	{
-		verbose_printf(0,"Konnte nicht zum LED-Modul verbinden\n");
+		g_warning("Konnte nicht zum LED-Modul verbinden");
 		return -1;
 	}	
 
@@ -390,19 +392,19 @@ void ledMatrixStop()
 {
 	if(!ledIsRunning()) // something went terribly wrong
 	{
-		verbose_printf(0,"LedMatrixThread not running\n");
+		g_warning("LedMatrixThread not running");
 		return;
 	}
-	verbose_printf(9,"LedMatrixThread stopping\n");
+	g_debug("LedMatrixThread stopping");
 	g_mutex_lock(mutex_shutdown);
 	shutting_down = 1;
 	g_mutex_unlock(mutex_shutdown);
-	verbose_printf(9,"LedMatrixThread joining\n");
+	g_debug("LedMatrixThread joining");
 	g_thread_join(ledMatrixThread);
 	g_mutex_lock(mutex_shutdown);
 	shutting_down = 0;
 	g_mutex_unlock(mutex_shutdown);
-	verbose_printf(9,"LedMatrixThread gestoppt\n");
+	g_debug("LedMatrixThread gestoppt");
 }
 
 int allocateLedLine(struct _ledLine *ledLine, int line_length)
@@ -433,13 +435,13 @@ int allocateLedLine(struct _ledLine *ledLine, int line_length)
 void freeLedLine(struct _ledLine *ledLine)
 {
 	if(!ledLine->column_red)
-		verbose_printf(0,"ledLine.column_red was not allocated\n");
+		g_warning("ledLine.column_red was not allocated");
 	if(!ledLine->column_green)
-		verbose_printf(0,"ledLine.column_green was not allocated\n");
+		g_warning("ledLine.column_green was not allocated");
 	if(!ledLine->column_red_output)
-		verbose_printf(0,"ledLine.column_red_output was not allocated\n");
+		g_warning("ledLine.column_red_output was not allocated");
 	if(!ledLine->column_green_output)
-		verbose_printf(0,"ledLine.column_green_output was not allocated\n");
+		g_warning("ledLine.column_green_output was not allocated");
 	free(ledLine->column_red);
 	free(ledLine->column_green);
 	
@@ -456,11 +458,11 @@ void ledPushToStack(char *string, int shift, int lifetime)
 		int x;
 		if(!allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH))
 		{
-			verbose_printf(0,"Could not allocate memory!!\n");
+			g_warning("Could not allocate memory!!");
 			return;
 		}
 		
-		verbose_printf(9,"String pushed to stack: %s\n",string);
+		g_debug("String pushed to stack: %s",string);
 		putString(string,&ledLineStack[led_stack_size]);
 		
 		x = ledLineStack[led_stack_size].x;
@@ -476,13 +478,13 @@ void ledPushToStack(char *string, int shift, int lifetime)
 	}
 	else
 	{
-		verbose_printf(0,"LED-Stack is full!!\n");
+		g_warning("LED-Stack is full!!");
 	}
 }
 
 static void ledPopFromStack(void)
 {
-	verbose_printf(9,"String popped from stack\n");
+	g_debug("String popped from stack");
 	freeLedLine(&ledLineStack[led_stack_size-1]);
 	led_stack_size--;
 
@@ -490,7 +492,7 @@ static void ledPopFromStack(void)
 
 static gpointer ledMatrixStartThread(gpointer data)
 {
-	verbose_printf(9,"LedMatrixThread gestartet\n");
+	g_debug("LedMatrixThread gestartet");
 
 	enum _screenToDraw
 	{
@@ -523,7 +525,7 @@ static gpointer ledMatrixStartThread(gpointer data)
 
 	if(initNetwork() < 0)
 	{
-		verbose_printf(0, "Stopping led_matrix thread\n");
+		g_debug("Stopping led_matrix thread");
 		running = 0;
 		g_mutex_unlock(mutex_is_running);
 		return NULL;
@@ -640,7 +642,7 @@ static gpointer ledMatrixStartThread(gpointer data)
 
 	freeLedLine(&ledLineTime);
 	freeLedLine(&ledLineVoid);
-	verbose_printf(9,"close status = %d\n",close(client_sock));
+	g_debug("close status = %d",close(client_sock));
 	g_mutex_lock(mutex_is_running);
 	running = 0;
 	g_mutex_unlock(mutex_is_running);

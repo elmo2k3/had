@@ -76,7 +76,7 @@ int mpdGetState(void)
 
 void mpdErrorCallback(MpdObj *mi, int errorid, char *msg, void *userdata)
 {
-	verbose_printf(0,"Error: %i : %s \n", errorid, msg);
+	g_warning("Error: %i : %s ", errorid, msg);
 }
 
 static gboolean mpdStatusUpdate(gpointer data)

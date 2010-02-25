@@ -38,7 +38,7 @@ int writeStateFile(char *filename)
 	}
 	else
 	{
-		verbose_printf(0,"Could not write statefile!\n");
+		g_warning("Could not write statefile!");
 		return 0;
 	}
 }
@@ -55,7 +55,7 @@ int loadStateFile(char *filename)
 	}
 	else
 	{
-		verbose_printf(0,"Count not read statefile!\n");
+		g_warning("Count not read statefile!");
 		return 0;
 	}
 }

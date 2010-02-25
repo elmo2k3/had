@@ -79,13 +79,13 @@ static int scrobblerHandshake(void)
 //		unlink(config.scrobbler_tmpfile);
 	}
 	else
-		verbose_printf(0, "%s konnte nicht geoffnet werden\n",config.scrobbler_tmpfile);
+		g_warning("%s konnte nicht geoffnet werden",config.scrobbler_tmpfile);
 	
 	if(!strcmp(status,"OK"))
 		return 1;
 	else
 	{
-		verbose_printf(0,"Fehler: %s\n",status);
+		g_warning("Fehler: %s",status);
 		return 0;
 	}
 }
@@ -173,7 +173,7 @@ int length, char *track, time_t started_playing, int isNowPlaying)
 		else
 		{
 			handshake_successfull = 0;
-			verbose_printf(0, "Fehler: %s\n",status);
+			g_warning("Fehler: %s",status);
 			break; // dont try further
 		}
 	}

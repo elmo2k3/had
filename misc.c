@@ -6,6 +6,13 @@
 #include "misc.h"
 #include "had.h"
 
+#define verbose_printf(X,args...) \
+	if(X <= config.verbosity) \
+        {\
+                printf("%s    ",theTime()); \
+                printf(args); \
+	}
+
 /*!
  *******************************************************************************
  * check if a file exists
@@ -34,7 +41,7 @@ int fileExists(const char *filename)
  *
  * \returns the date and time in format Dec 1 12:31:19
  *******************************************************************************/
-char *theTime(void)
+static char *theTime(void)
 {
 	static char returnValue[9];
 	time_t currentTime;
@@ -104,7 +111,11 @@ void had_log_handler
 gpointer user_data)
 {
 	if (log_level & G_LOG_LEVEL_DEBUG) {
-		verbose_printf(9,"%s-Message: %s\n",log_domain,message);
+		if (log_domain) {
+			verbose_printf(9,"%s-Message: %s\n",log_domain,message);
+		} else {
+			verbose_printf(9,"%s\n",message);
+		}
 	} else {
 		if (log_domain) {
 			verbose_printf(0,"%s-Message: %s\n",log_domain,message);
