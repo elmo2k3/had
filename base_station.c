@@ -28,6 +28,7 @@
 #include "mpd.h"
 #include "led_routines.h"
 #include "database.h"
+#include "security.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "base_station"
@@ -99,7 +100,7 @@ void base_station_music_on_hifi_on(void)
 {
 	base_station_hifi_on();
 	system(SYSTEM_MOUNT_MPD);
-	g_usleep(1000000); // wait until libmpd got connection
+	g_usleep(3000000); // wait until libmpd got connection
 	mpdPlay();
 }
 
@@ -303,6 +304,16 @@ void process_glcd_remote(gchar **strings, int argc)
 	}
 }
 
+void base_station_beep(int count, int time, int pause)
+{
+	for (int i=0;i<count;i++) {
+		setBeepOn();
+		g_usleep(time*1000);
+		setBeepOff();
+		g_usleep(pause*1000);
+	}
+}
+
 void process_temperature_module(gchar **strings, int argc)
 {
 	int modul_id, sensor_id;
@@ -406,20 +417,19 @@ void process_base_station(gchar **strings, int argc)
 				g_message("Window and door open at the same time! BEEEEP");
 				if(hadState.beep_on_window_left_open)
 				{
-					setBeepOn();
-					g_usleep(1000000);
-					setBeepOff();
+					base_station_beep(3,100,100);
 				}
 			}
-			if(config.door_sensor_id && config.digital_input_module)
+			if(config.door_sensor_id && config.digital_input_module) {
 				databaseInsertDigitalValue(config.digital_input_module,
 					config.door_sensor_id, 1, rawtime);
+			}
+			security_door_opened();
 		}
 		else if(command == 31)
 		{
 			g_debug("Door closed");
 			hadState.input_state &= ~1;
-			setBeepOff();
 			if(config.door_sensor_id && config.digital_input_module)
 				databaseInsertDigitalValue(config.digital_input_module,
 					config.door_sensor_id, 0, rawtime);
@@ -432,7 +442,6 @@ void process_base_station(gchar **strings, int argc)
 		{
 			g_debug("Window closed");
 			hadState.input_state &= ~8;
-			setBeepOff();
 			if(config.window_sensor_id && config.digital_input_module)
 				databaseInsertDigitalValue(config.digital_input_module,
 					config.window_sensor_id, 0, rawtime);
@@ -442,7 +451,7 @@ void process_base_station(gchar **strings, int argc)
 //					hr20SetTemperature(hr20info.tempset);
 //				}
 		}
-		else if(command == 36)
+		else if(command == 37)
 		{
 			g_debug("Window opened");
 			hadState.input_state |= 8;
@@ -726,6 +735,7 @@ void setBaseLcdOn()
 	if(error)
 		g_error_free(error);
 	g_io_channel_flush(base_station.channel, NULL);
+	glcdP.backlight = 1;
 }
 
 void setBaseLcdOff()
@@ -742,6 +752,7 @@ void setBaseLcdOff()
 	if(error)
 		g_error_free(error);
 	g_io_channel_flush(base_station.channel, NULL);
+	glcdP.backlight = 0;
 }
 
 void open_door()
@@ -751,9 +762,7 @@ void open_door()
 	sendPacket(&relaisP, RELAIS_PACKET);
 	if(hadState.beep_on_door_opened)
 	{
-		setBeepOn();
-		g_usleep(1000000);
-		setBeepOff();
+		base_station_beep(1,1000,0);
 	}
 	else
 		g_usleep(1000000);

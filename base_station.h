@@ -67,5 +67,9 @@ extern void set_hifi(int on);
 extern int base_station_hifi_is_on(void);
 extern void base_station_hifi_on(void);
 extern void base_station_hifi_off(void);
+extern void base_station_music_on_hifi_on(void);
+extern void base_station_beep(int count, int time, int pause);
+extern void base_station_everything_off(void);
+
 
 #endif
