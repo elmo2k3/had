@@ -148,6 +148,8 @@ struct _config
 	char rfid_port[255];
 	int rfid_activated;
 
+	int switch_off_with_security;
+
 	struct _remote_control_keys rkeys;
 }config;
 

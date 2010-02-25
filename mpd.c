@@ -107,7 +107,7 @@ int mpdInit(void)
 
 	if(mpd_connect(mpd))
 	{
-		g_message("Error connecting to mpd!");
+		g_debug("Error connecting to mpd!");
 		return 1;
 	}
 	isPlaying = mpd_player_get_state(mpd);
@@ -175,7 +175,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 			}
 			else
 			{
-				g_message("Stereoanlage ist aus, kein Submit zu last.fm");
+				g_debug("Stereoanlage ist aus, kein Submit zu last.fm");
 			}
 
 			sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
@@ -237,14 +237,14 @@ static gboolean mpdCheckConnected(gpointer data)
 	if(!mpd_check_connected(mpd))
 	{
 		if(!mpd_connect(mpd))
-			g_message("Connection to mpd successfully initiated!");
+			g_debug("Connection to mpd successfully initiated!");
 	}
 	return TRUE;
 }
 
 static gboolean submitTrack(gpointer data)
 {
-	g_debug("Now submitting track %s\n", current_track.current_track);
+	g_debug("Now submitting track %s", current_track.current_track);
 
 	scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
 		current_track.last_album, current_track.length, current_track.current_track,
@@ -255,7 +255,7 @@ static gboolean submitTrack(gpointer data)
 
 static gboolean submitNowPlaying(gpointer data)
 {
-	g_debug("Now submitting now playing track %s\n", current_track.current_track);
+	g_debug("Now submitting now playing track %s", current_track.current_track);
 	scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
 		current_track.last_album, current_track.length, current_track.current_track,
 		current_track.started_playing, 1);

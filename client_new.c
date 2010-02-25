@@ -21,6 +21,7 @@
 #include "fifo_buffer.h"
 #include "socket_util.h"
 #include "command.h"
+#include "version.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -32,7 +33,7 @@
 
 #define LOG_LEVEL_SECURE G_LOG_LEVEL_INFO
 
-static const char GREETING[] = "OK MPD \n";
+static const char GREETING[] = "OK HAD " VERSION "\n";
 
 void client_new(int fd, const struct sockaddr *sa, size_t sa_length, int uid)
 {

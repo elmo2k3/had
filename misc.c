@@ -112,15 +112,15 @@ gpointer user_data)
 {
 	if (log_level & G_LOG_LEVEL_DEBUG) {
 		if (log_domain) {
-			verbose_printf(9,"%s-Message: %s\n",log_domain,message);
+			verbose_printf(9,"%s-Debug: %s\n",log_domain,message);
 		} else {
-			verbose_printf(9,"%s\n",message);
+			verbose_printf(9,"Debug: %s\n",message);
 		}
 	} else {
 		if (log_domain) {
 			verbose_printf(0,"%s-Message: %s\n",log_domain,message);
 		} else {
-			verbose_printf(0,"%s\n",message);
+			verbose_printf(0,"Message: %s\n",message);
 		}
 	}
 }

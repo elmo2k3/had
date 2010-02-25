@@ -49,6 +49,7 @@
 #include "hr20.h"
 #include "rfid_tag_reader.h"
 #include "statefile.h"
+#include "security.h"
 
 /*! thread variable array for network, mpd and ledmatrix */
 GMainLoop *had_main_loop;
@@ -60,7 +61,6 @@ int16_t lastVoltage[9];
 
 static int killDaemon(int signal);
 static void hadSignalHandler(int signal);
-static void tag_read(struct RfidTagReader *tag_reader);
 static void had_check_parameters(int argc, char **argv);
 static void had_find_config(void);
 static void had_check_daemonize(void);
@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
 			g_error("Error opening %s for tagreader",config.rfid_port);
 			return EXIT_FAILURE;
 		}
-		rfid_tag_reader_set_callback(tag_reader, tag_read);
+		rfid_tag_reader_set_callback(tag_reader, security_tag_handler);
 	}
 
 	had_main_loop = g_main_loop_new(NULL,FALSE);
@@ -133,23 +133,6 @@ static void hadSignalHandler(int signal)
 
 		g_message("Config reloaded");
 		loadConfig(HAD_CONFIG_FILE);
-
-//		// check if ledmatrix should be turned off
-//		if(configTemp.led_matrix_activated != config.led_matrix_activated)
-//		{
-//			if(config.led_matrix_activated)
-//			{
-//				if(!ledIsRunning() && (hadState.relais_state & 4))
-//				{
-//					////pthread_create(&threads[2],NULL,(void*)&ledMatrixThread,NULL);
-//					//pthread_detach(threads[2]);
-//				}
-//				hadState.ledmatrix_user_activated = 1;
-//			}
-//			else
-//				ledMatrixStop();
-//		}
-
 	}
 }
 
@@ -169,11 +152,6 @@ static int killDaemon(int signal)
 
 	kill(pid,signal);
 	return EXIT_SUCCESS;
-}
-
-static void tag_read(struct RfidTagReader *tag_reader)
-{
-	g_debug("tag read: %s", rfid_tag_reader_last_tag(tag_reader));
 }
 
 static void had_check_parameters(int argc, char **argv)

@@ -32,7 +32,8 @@ had: had.o \
 	fifo_buffer.o \
 	listen.o \
 	command.o \
-	tokenizer.o
+	tokenizer.o \
+	security.o
 
 clean:
 	$(RM) *.o had

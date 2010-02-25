@@ -21,6 +21,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 
 #include "command.h"
 #include "client.h"
@@ -32,6 +33,7 @@
 #include "sms.h"
 #include "tokenizer.h"
 #include "string.h"
+#include "security.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "command"
@@ -157,6 +159,13 @@ static enum command_return action_toggle_base_lcd_backlight(struct client *clien
         setBaseLcdOn();
     else
         setBaseLcdOff();
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return action_hifi_on_music_on
+(struct client *client, int argc, char **argv)
+{
+	base_station_music_on_hifi_on();
     return COMMAND_RETURN_OK;
 }
 
@@ -374,16 +383,39 @@ check_bool(struct client *client, bool *value_r, const char *s)
 static enum command_return
 action_open_door(struct client *client, int argc, char **argv)
 {
-    if(argc == 1)
+    if(argc == 2)
     {
-        g_debug("Opening door for %s\n",argv[1]);
+        g_debug("Opening door for %s",argv[1]);
+		security_main_door_opening(argv[1]);
     }
     else
     {
-        g_debug("Opening door\n");
+        g_debug("Opening door");
+		security_main_door_opening(NULL);
     }
     open_door();
     return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_beep(struct client *client,
+		int argc, char *argv[])
+{
+	int count, time, pause;
+	if (argc == 1) {
+		base_station_beep(1,1000,0);
+	} else if (argc == 4) {
+		if (!check_int(client, &count, argv[1], need_positive))
+			return COMMAND_RETURN_ERROR;
+		if (!check_int(client, &time, argv[2], need_positive))
+			return COMMAND_RETURN_ERROR;
+		if (!check_int(client, &pause, argv[3], need_positive))
+			return COMMAND_RETURN_ERROR;
+		base_station_beep(count,time,pause);
+	}
+	else
+		return COMMAND_RETURN_ERROR;
+	return COMMAND_RETURN_OK;
 }
 
 
@@ -394,10 +426,12 @@ action_open_door(struct client *client, int argc, char **argv)
  */
 static const struct command commands[] = {
     {"base_lcd_backlight",PERMISSION_ADMIN,1,1, action_toggle_base_lcd_backlight},
+	{"beep",PERMISSION_ADMIN,0,3,action_beep},
     {"blink",PERMISSION_ADMIN,0,0, action_rgb_blink},
     {"commands",PERMISSION_ADMIN,  0, 0,      action_commands},
     {"get_temperature",PERMISSION_ADMIN, 2,2, action_get_temperature},
     {"get_voltage",PERMISSION_ADMIN, 1,1, action_get_voltage},
+    {"hifi_on",PERMISSION_ADMIN, 0,0, action_hifi_on_music_on},
     {"led_display_text",PERMISSION_ADMIN, 1,2, action_led_display_text},
     {"led_matrix",PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
     {"open_door",PERMISSION_ADMIN, 0,1, action_open_door},
