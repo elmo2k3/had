@@ -28,6 +28,7 @@
 #include <curl/curl.h>
 #include <string.h>
 #include <glib.h>
+#include <stdio.h>
 #include "had.h"
 
 #undef G_LOG_DOMAIN
@@ -76,8 +77,19 @@ void sms(char *number, char *message)
 	char buf[2048];
 	char buf2[2048];
 	char new_url[2048];
-
 	struct curl_slist *headers=NULL;
+
+	if(!config.sms_activated)
+		return;
+
+	g_assert(message);
+	g_assert(number);
+
+	if(strlen(message) > 160) {
+		g_message("message too long (%d)",(int)strlen(message));
+		message[160] = '\0';
+	}
+
 	headers = curl_slist_append(headers, "Content-Type: text/xml");
 
 	sprintf(new_url, url, config.sipgate_user, config.sipgate_pass);
