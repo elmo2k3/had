@@ -65,11 +65,16 @@ extern void updateGlcd();
 extern void base_station_rgb_blink_all(int num);
 extern void set_hifi(int on);
 extern int base_station_hifi_is_on(void);
+extern int base_station_printer_is_on(void);
+extern int base_station_sleep_light_is_on(void);
 extern void base_station_hifi_on(void);
 extern void base_station_hifi_off(void);
 extern void base_station_music_on_hifi_on(void);
 extern void base_station_beep(int count, int time, int pause);
 extern void base_station_everything_off(void);
-
+extern void base_station_printer_on(void);
+extern void base_station_printer_off(void);
+extern void base_station_sleep_light_on(void);
+extern void base_station_sleep_light_off(void);
 
 #endif

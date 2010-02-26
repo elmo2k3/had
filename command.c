@@ -100,8 +100,10 @@ action_get_temperature(struct client *client, int argc, char **argv)
 {
     int sensor, modul;
 
-    modul = atoi(argv[1]);
-    sensor = atoi(argv[2]);
+	if (!check_int(client, &sensor, argv[1], need_positive))
+		return COMMAND_RETURN_ERROR;
+	if (!check_int(client, &modul, argv[2], need_positive))
+		return COMMAND_RETURN_ERROR;
 
     client_printf(client,"temperature: %d %d %d.%d\r\n", modul, sensor,
         lastTemperature[modul][sensor][0], lastTemperature[modul][sensor][1]);
@@ -113,7 +115,8 @@ action_get_voltage(struct client *client, int argc, char **argv)
 {
     int modul;
 
-    modul = atoi(argv[1]);
+	if (!check_int(client, &modul, argv[1], need_positive))
+		return COMMAND_RETURN_ERROR;
 
     client_printf(client,"voltage: %d %d\r\n", modul,
         lastVoltage[modul]);
@@ -137,12 +140,22 @@ static enum command_return action_led_display_text(struct client *client, int ar
 static enum command_return action_set_rgb_all
 (struct client *client, int argc, char **argv)
 {
+	int red,green,blue,smoothness;
+
+	if (!check_int(client, &red, argv[1], need_positive))
+		return COMMAND_RETURN_ERROR;
+	if (!check_int(client, &green, argv[2], need_positive))
+		return COMMAND_RETURN_ERROR;
+	if (!check_int(client, &blue, argv[3], need_positive))
+		return COMMAND_RETURN_ERROR;
+	if (!check_int(client, &smoothness, argv[4], need_positive))
+		return COMMAND_RETURN_ERROR;
 	for(int i= 0;i < 3; i++)
 	{
-		hadState.rgbModuleValues[i].red = atoi(argv[1]);
-		hadState.rgbModuleValues[i].green = atoi(argv[2]);
-		hadState.rgbModuleValues[i].blue = atoi(argv[3]);
-		hadState.rgbModuleValues[i].smoothness = atoi(argv[4]);
+		hadState.rgbModuleValues[i].red = (unsigned char)red;
+		hadState.rgbModuleValues[i].green = (unsigned char)green;
+		hadState.rgbModuleValues[i].blue = (unsigned char)blue;
+		hadState.rgbModuleValues[i].smoothness = (unsigned char)smoothness;
 	}
 	setCurrentRgbValues();
     return COMMAND_RETURN_OK;
@@ -150,28 +163,43 @@ static enum command_return action_set_rgb_all
 
 static enum command_return action_set_rgb(struct client *client, int argc, char **argv)
 {
-   struct _rgbPacket rgbPacket;
+	struct _rgbPacket rgbPacket;
+	int red,green,blue,smoothness,address;
 
-   rgbPacket.headP.address = atoi(argv[1]);
-   rgbPacket.red = atoi(argv[2]);
-   rgbPacket.green = atoi(argv[3]);
-   rgbPacket.blue = atoi(argv[4]);
-   rgbPacket.smoothness = atoi(argv[5]);
-   sendPacket(&rgbPacket, RGB_PACKET);
-    
-    if(rgbPacket.headP.address >= 16 && rgbPacket.headP.address < 19)
-    {
-        hadState.rgbModuleValues[rgbPacket.headP.address-0x10].red = rgbPacket.red;
-        hadState.rgbModuleValues[rgbPacket.headP.address-0x10].green = rgbPacket.green;
-        hadState.rgbModuleValues[rgbPacket.headP.address-0x10].blue = rgbPacket.blue;
-        hadState.rgbModuleValues[rgbPacket.headP.address-0x10].smoothness = rgbPacket.smoothness;
-    }
-    return COMMAND_RETURN_OK;
+	if (!check_int(client, &address, argv[1], need_positive))
+		return COMMAND_RETURN_ERROR;
+	if (!check_int(client, &red, argv[2], need_positive))
+		return COMMAND_RETURN_ERROR;
+	if (!check_int(client, &green, argv[3], need_positive))
+		return COMMAND_RETURN_ERROR;
+	if (!check_int(client, &blue, argv[4], need_positive))
+		return COMMAND_RETURN_ERROR;
+	if (!check_int(client, &smoothness, argv[5], need_positive))
+		return COMMAND_RETURN_ERROR;
+
+	rgbPacket.headP.address = (unsigned char)address;
+	rgbPacket.red = (unsigned char)red;
+	rgbPacket.green = (unsigned char)green;
+	rgbPacket.blue = (unsigned char)blue;
+	rgbPacket.smoothness = (unsigned char)smoothness;
+	sendPacket(&rgbPacket, RGB_PACKET);
+
+	if(rgbPacket.headP.address >= 16 && rgbPacket.headP.address < 19)
+	{
+		hadState.rgbModuleValues[rgbPacket.headP.address-0x10].red = rgbPacket.red;
+		hadState.rgbModuleValues[rgbPacket.headP.address-0x10].green = rgbPacket.green;
+		hadState.rgbModuleValues[rgbPacket.headP.address-0x10].blue = rgbPacket.blue;
+		hadState.rgbModuleValues[rgbPacket.headP.address-0x10].smoothness = rgbPacket.smoothness;
+	}
+	return COMMAND_RETURN_OK;
 }
 
 static enum command_return action_toggle_base_lcd_backlight(struct client *client, int argc, char **argv)
 {
-    if(atoi(argv[1]))
+	bool on;
+	if (!check_bool(client, &on, argv[1]))
+		return COMMAND_RETURN_ERROR;
+    if(on)
         setBaseLcdOn();
     else
         setBaseLcdOff();
@@ -199,7 +227,10 @@ static enum command_return action_sms
 static enum command_return action_led_matrix_on_off
 (struct client *client, int argc, char *argv[])
 {
-    if(atoi(argv[1]))
+	bool on;
+	if (!check_bool(client, &on, argv[1]))
+		return COMMAND_RETURN_ERROR;
+    if(on)
 	{
         ledMatrixStart();
 	}
@@ -213,7 +244,10 @@ static enum command_return action_led_matrix_on_off
 static enum command_return action_set_hifi
 (struct client *client, int argc, char *argv[])
 {
-	if(atoi(argv[1]))
+	bool on;
+	if (!check_bool(client, &on, argv[1]));
+		return COMMAND_RETURN_ERROR;
+	if(on)
 		base_station_hifi_on();
 	else
 		base_station_hifi_off();
@@ -437,6 +471,70 @@ action_beep(struct client *client,
 	return COMMAND_RETURN_OK;
 }
 
+static enum command_return
+action_set_sleep_light(struct client *client,
+		int argc, char *argv[])
+{
+	bool on;
+	if (!check_bool(client, &on, argv[1]));
+		return COMMAND_RETURN_ERROR;
+	if(on)
+		base_station_sleep_light_on();
+	else
+		base_station_sleep_light_off();
+    return COMMAND_RETURN_OK;
+}
+
+
+static enum command_return
+action_set_printer(struct client *client,
+		int argc, char *argv[])
+{
+	bool on;
+	if (!check_bool(client, &on, argv[1]));
+		return COMMAND_RETURN_ERROR;
+	if(on)
+		base_station_printer_on();
+	else
+		base_station_printer_off();
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_get_security(struct client *client,
+		int argc, char *argv[])
+{
+	client_printf(client, "security: %s\n",
+		security_is_active() ? "activated":"deactivated");
+	return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_get_hifi(struct client *client,
+		int argc, char *argv[])
+{
+	client_printf(client, "hifi: %s\n",
+		base_station_hifi_is_on() ? "on":"off");
+	return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_get_sleep_light(struct client *client,
+		int argc, char *argv[])
+{
+	client_printf(client, "sleep_light: %s\n",
+		base_station_sleep_light_is_on() ? "on":"off");
+	return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_get_printer(struct client *client,
+		int argc, char *argv[])
+{
+	client_printf(client, "printer: %s\n",
+		base_station_printer_is_on() ? "on":"off");
+	return COMMAND_RETURN_OK;
+}
 
 /**
  * The command registry.
@@ -448,6 +546,10 @@ static const struct command commands[] = {
 	{"beep",PERMISSION_ADMIN,0,3,action_beep},
     {"blink",PERMISSION_ADMIN,0,0, action_rgb_blink},
     {"commands",PERMISSION_ADMIN,  0, 0,      action_commands},
+	{"get_hifi",PERMISSION_ADMIN,0,0,action_get_hifi},
+	{"get_printer",PERMISSION_ADMIN,0,0,action_get_printer},
+	{"get_security",PERMISSION_ADMIN,0,0,action_get_security},
+	{"get_sleep_light",PERMISSION_ADMIN,0,0,action_get_sleep_light},
     {"get_temperature",PERMISSION_ADMIN, 2,2, action_get_temperature},
     {"get_voltage",PERMISSION_ADMIN, 1,1, action_get_voltage},
     {"hifi_on",PERMISSION_ADMIN, 0,0, action_hifi_on_music_on},
@@ -456,6 +558,8 @@ static const struct command commands[] = {
     {"open_door",PERMISSION_ADMIN, 0,1, action_open_door},
     {"quit",PERMISSION_ADMIN,  0, 0,          action_disconnect},
 	{"set_hifi",PERMISSION_ADMIN,1,1, action_set_hifi},
+	{"set_printer",PERMISSION_ADMIN,1,1,action_set_printer},
+	{"set_sleep_light",PERMISSION_ADMIN,1,1,action_set_sleep_light},
     {"set_rgb",PERMISSION_ADMIN, 5,5, action_set_rgb},
 	{"set_rgb_all",PERMISSION_ADMIN, 4,4, action_set_rgb_all},
 	{"sms",PERMISSION_ADMIN,1,2, action_sms},

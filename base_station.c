@@ -80,9 +80,47 @@ void base_station_hifi_on(void)
 	hadState.relais_state = relaisP.port;
 }
 
+void base_station_printer_on(void)
+{
+	relaisP.port |= RELAIS_PRINTER;
+	sendPacket(&relaisP, RELAIS_PACKET);
+	hadState.relais_state = relaisP.port;
+}
+
+void base_station_printer_off(void)
+{
+	relaisP.port &= ~RELAIS_PRINTER;
+	sendPacket(&relaisP, RELAIS_PACKET);
+	hadState.relais_state = relaisP.port;
+}
+
+void base_station_sleep_light_on(void)
+{
+	relaisP.port |= RELAIS_LIGHT;
+	sendPacket(&relaisP, RELAIS_PACKET);
+	hadState.relais_state = relaisP.port;
+}
+
+void base_station_sleep_light_off(void)
+{
+	relaisP.port &= ~RELAIS_LIGHT;
+	sendPacket(&relaisP, RELAIS_PACKET);
+	hadState.relais_state = relaisP.port;
+}
+
 int base_station_hifi_is_on(void)
 {
 	return (int)(relaisP.port & RELAIS_HIFI);
+}
+
+int base_station_sleep_light_is_on(void)
+{
+	return (int)(relaisP.port & RELAIS_LIGHT);
+}
+
+int base_station_printer_is_on(void)
+{
+	return (int)(relaisP.port & RELAIS_PRINTER);
 }
 
 void base_station_everything_off(void)
