@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
+ * Copyright (C) 2007-2010 Bjoern Biesenbach <bjoern@bjoern-b.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -56,9 +56,6 @@
 #define SERIAL_CMD_TEMP_INSERT 1
 #define SERIAL_CMD_ 1
 
-
-#define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd /etc/mpd.conf > /dev/null 2>&1"
-#define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1; sleep 1; sdparm -q -C stop /dev/discs/disc0/generic"
 
 //extern pthread_t threads[5];
 

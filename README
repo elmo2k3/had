@@ -18,3 +18,34 @@ Functions:
 	- sending sms on special events
 	- communication with Honeywell HR20 thermometer (see http://openhr20.sourceforge.net)
 
+The following files are taken from mpd (www.musicpd.org) and were more or less modified by me:
+They represent the TCP server
+
+ack.h
+client.c
+client.h
+client_event.c
+client_expire.c
+client_global.c
+client_idle.c
+client_internal.h
+client_list.c
+client_new.c
+client_process.c
+client_read.c
+client_write.c
+command.c
+command.h
+fd_util.c
+fd_util.h
+fifo_buffer.c
+fifo_buffer.h
+idle.c
+idle.h
+listen.c
+listen.h
+socket_util.c
+socket_util.h
+tokenizer.c
+tokenizer.h
+

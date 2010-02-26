@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Bjoern Biesenbach <bjoern@bjoern-b.de>
  * Copyright (C) 2003-2010 The Music Player Daemon Project
  * http://www.musicpd.org
  *

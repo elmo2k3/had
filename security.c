@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2010 Bjoern Biesenbach <bjoern@bjoern-b.de>
+ * Copyright (C) 2010 Bjoern Biesenbach <bjoern@bjoern-b.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -130,12 +130,14 @@ void security_tag_handler(struct RfidTagReader *tag_reader)
 			activate_source = g_timeout_add_seconds(
 				SECURITY_TIME_TO_ACTIVATE, activate_security, NULL);
 		}
+		base_station_beep(1,50,0);
 	} else if (!strcmp(tag, SECURITY_TAG_DEACTIVATE)) {
 		deactivate_security();
+		base_station_beep(2,50,50);
 	} else {
 		g_message("unknown tag scanned: %s",tag);
+		base_station_beep(1,50,0);
 	}
-	base_station_beep(1,50,0);
 }
 
 

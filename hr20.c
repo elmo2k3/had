@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
+ * Copyright (C) 2009-2010 Bjoern Biesenbach <bjoern@bjoern-b.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as

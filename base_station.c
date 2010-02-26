@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
+ * Copyright (C) 2009-2010 Bjoern Biesenbach <bjoern@bjoern-b.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -39,6 +39,9 @@
 #define RELAIS_HIFI 4
 #define RELAIS_DOOR 16
 #define RELAIS_LIGHT 32
+
+#define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd /etc/mpd.conf > /dev/null 2>&1"
+#define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1 && sleep 1 && sdparm -q -C stop /dev/discs/disc0/generic"
 
 /**
  * struct for transmitting the setting for the relais port
@@ -84,7 +87,8 @@ int base_station_hifi_is_on(void)
 
 void base_station_everything_off(void)
 {
-	base_station_hifi_off();
+	relaisP.port = 0;
+	sendPacket(&relaisP, RELAIS_PACKET);
 	mpdPause();
 	for(int i= 0;i < 3; i++)
 	{

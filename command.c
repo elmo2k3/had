@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Bjoern Biesenbach <bjoern@bjoern-b.de>
  * Copyright (C) 2003-2010 The Music Player Daemon Project
  * http://www.musicpd.org
  *
@@ -22,6 +23,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "command.h"
 #include "client.h"
@@ -129,6 +131,20 @@ static enum command_return action_led_display_text(struct client *client, int ar
 		return COMMAND_RETURN_ERROR;
     ledPushToStack(argv[1],shift,count);
 
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return action_set_rgb_all
+(struct client *client, int argc, char **argv)
+{
+	for(int i= 0;i < 3; i++)
+	{
+		hadState.rgbModuleValues[i].red = atoi(argv[1]);
+		hadState.rgbModuleValues[i].green = atoi(argv[2]);
+		hadState.rgbModuleValues[i].blue = atoi(argv[3]);
+		hadState.rgbModuleValues[i].smoothness = atoi(argv[4]);
+	}
+	setCurrentRgbValues();
     return COMMAND_RETURN_OK;
 }
 
@@ -383,10 +399,13 @@ check_bool(struct client *client, bool *value_r, const char *s)
 static enum command_return
 action_open_door(struct client *client, int argc, char **argv)
 {
+	gchar led_string[1024];
     if(argc == 2)
     {
         g_debug("Opening door for %s",argv[1]);
+		snprintf(led_string,1024,"Tuer geoeffnet fuer %s", argv[1]);
 		security_main_door_opening(argv[1]);
+		ledPushToStack(led_string,1,2);
     }
     else
     {
@@ -438,6 +457,7 @@ static const struct command commands[] = {
     {"quit",PERMISSION_ADMIN,  0, 0,          action_disconnect},
 	{"set_hifi",PERMISSION_ADMIN,1,1, action_set_hifi},
     {"set_rgb",PERMISSION_ADMIN, 5,5, action_set_rgb},
+	{"set_rgb_all",PERMISSION_ADMIN, 4,4, action_set_rgb_all},
 	{"sms",PERMISSION_ADMIN,1,2, action_sms},
     {"toggle_lm",PERMISSION_ADMIN, 0,0, action_led_matrix_toggle}
 };

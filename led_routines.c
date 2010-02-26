@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Bjoern Biesenbach <bjoern@bjoern-b.de>
+ * Copyright (C) 2008-2010 Bjoern Biesenbach <bjoern@bjoern-b.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -392,7 +392,7 @@ void ledMatrixStop()
 {
 	if(!ledIsRunning()) // something went terribly wrong
 	{
-		g_warning("LedMatrixThread not running");
+		g_debug("LedMatrixThread not running");
 		return;
 	}
 	g_debug("LedMatrixThread stopping");
