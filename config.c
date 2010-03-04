@@ -31,7 +31,7 @@
 #include "config.h"
 #include "had.h"
 
-#define NUM_PARAMS 43
+#define NUM_PARAMS 46
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
 	"db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
 	"scrobbler_pass", "scrobbler_tmpfile", "logfile", "verbosity", "daemonize",
@@ -40,7 +40,8 @@ static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_
 	"sms_activated","sipgate_user","sipgate_pass","cellphone","hr20_activated","hr20_port",
 	"mpd_activated","usbtemp_activated","usbtemp_device_id","usbtemp_device_module","usbtemp_device_sensor",
 	"hr20_database_activated","hr20_database_number","door_sensor_id","window_sensor_id",
-	"digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security"};
+	"digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security",
+	"sms_on_main_door","time_to_active","time_before_alarm"};
 
 
 int loadConfig(char *conf)
@@ -96,6 +97,9 @@ int loadConfig(char *conf)
 	config.rkeys.blue_single[2] = 72;
 	config.rkeys.ledmatrix_toggle = 57;
 	config.rkeys.open_door = 65;
+
+	config.security_time_to_active = 60;
+	config.security_time_before_alarm = 60;
 
 	/* step through every line */
 	while(fgets(line, sizeof(line), config_file) != NULL)
@@ -257,6 +261,15 @@ int loadConfig(char *conf)
 					break;
 				/* switch everything off with security activation */
 				case 42: config.switch_off_with_security = atoi(value);
+					break;
+				/* send sms if main door was opened when security is active */
+				case 43: config.sms_on_main_door = atoi(value);
+					break;
+				/* time until security gets active after tag was scanned */
+				case 44: config.security_time_to_active = atoi(value);
+					break;
+				/* time until sms is send when door was opened */
+				case 45: config.security_time_before_alarm = atoi(value);
 					break;
 			}
 		}

@@ -128,7 +128,7 @@ static enum command_return action_led_display_text(struct client *client, int ar
 	int count;
 	bool shift;
 	
-	if (!check_bool(client, &shift, argv[2]));
+	if (!check_bool(client, &shift, argv[2]))
 		return COMMAND_RETURN_ERROR;
 	if (!check_int(client, &count, argv[3], need_positive))
 		return COMMAND_RETURN_ERROR;
@@ -245,7 +245,7 @@ static enum command_return action_set_hifi
 (struct client *client, int argc, char *argv[])
 {
 	bool on;
-	if (!check_bool(client, &on, argv[1]));
+	if (!check_bool(client, &on, argv[1]))
 		return COMMAND_RETURN_ERROR;
 	if(on)
 		base_station_hifi_on();
@@ -476,7 +476,7 @@ action_set_sleep_light(struct client *client,
 		int argc, char *argv[])
 {
 	bool on;
-	if (!check_bool(client, &on, argv[1]));
+	if (!check_bool(client, &on, argv[1]))
 		return COMMAND_RETURN_ERROR;
 	if(on)
 		base_station_sleep_light_on();
@@ -491,7 +491,7 @@ action_set_printer(struct client *client,
 		int argc, char *argv[])
 {
 	bool on;
-	if (!check_bool(client, &on, argv[1]));
+	if (!check_bool(client, &on, argv[1]))
 		return COMMAND_RETURN_ERROR;
 	if(on)
 		base_station_printer_on();
@@ -559,9 +559,9 @@ static const struct command commands[] = {
     {"quit",PERMISSION_ADMIN,  0, 0,          action_disconnect},
 	{"set_hifi",PERMISSION_ADMIN,1,1, action_set_hifi},
 	{"set_printer",PERMISSION_ADMIN,1,1,action_set_printer},
-	{"set_sleep_light",PERMISSION_ADMIN,1,1,action_set_sleep_light},
     {"set_rgb",PERMISSION_ADMIN, 5,5, action_set_rgb},
 	{"set_rgb_all",PERMISSION_ADMIN, 4,4, action_set_rgb_all},
+	{"set_sleep_light",PERMISSION_ADMIN,1,1,action_set_sleep_light},
 	{"sms",PERMISSION_ADMIN,1,2, action_sms},
     {"toggle_lm",PERMISSION_ADMIN, 0,0, action_led_matrix_toggle}
 };

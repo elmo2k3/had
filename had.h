@@ -27,7 +27,6 @@
 #define __HAD_H__
 
 #include <glib.h>
-//#include <pthread.h>
 #include <inttypes.h>
 #include "misc.h"
 
@@ -146,6 +145,9 @@ struct _config
 	int rfid_activated;
 
 	int switch_off_with_security;
+	int sms_on_main_door;
+	int security_time_to_active;
+	int security_time_before_alarm;
 
 	struct _remote_control_keys rkeys;
 }config;

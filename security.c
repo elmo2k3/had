@@ -30,8 +30,7 @@
 
 #define SECURITY_TAG_ACTIVATE "0183C3637E"
 #define SECURITY_TAG_DEACTIVATE "0108A2072F"
-#define SECURITY_TIME_TO_ALARM 30
-#define SECURITY_TIME_TO_ACTIVATE 1*60
+#define SECURITY_TAG_DEACTIVATE2 "01087214A1"
 
 static int activated = 0; //later this could be read from statefile or so
 static guint activate_source = 0;
@@ -98,7 +97,7 @@ void security_main_door_opening(gchar *number)
 			return;
 		}
 	}
-	if(security_is_active()) {
+	if(security_is_active() && config.sms_on_main_door) {
 		if(number) {
 			snprintf(sms_string, 160, "HAD: Haustür während Abwesenheit geöffnet von %s",
 				number);
@@ -113,7 +112,7 @@ void security_door_opened(void)
 {
 	if(activated) {
 		if(!alarm_source) {
-			alarm_source = g_timeout_add_seconds(SECURITY_TIME_TO_ALARM
+			alarm_source = g_timeout_add_seconds(config.security_time_before_alarm
 				,door_alarm, NULL);
 		}
 	}
@@ -128,10 +127,11 @@ void security_tag_handler(struct RfidTagReader *tag_reader)
 	if (!strcmp(tag, SECURITY_TAG_ACTIVATE)) { // activate
 		if(!activate_source) {
 			activate_source = g_timeout_add_seconds(
-				SECURITY_TIME_TO_ACTIVATE, activate_security, NULL);
+				config.security_time_to_active, activate_security, NULL);
 		}
 		base_station_beep(1,50,0);
-	} else if (!strcmp(tag, SECURITY_TAG_DEACTIVATE)) {
+	} else if (!strcmp(tag, SECURITY_TAG_DEACTIVATE) || 
+				!strcmp(tag, SECURITY_TAG_DEACTIVATE2)) {
 		deactivate_security();
 		base_station_beep(2,50,50);
 	} else {

@@ -74,10 +74,10 @@ void base_station_hifi_off(void)
 
 void base_station_hifi_on(void)
 {
-	ledMatrixStart();
 	relaisP.port |= RELAIS_HIFI;
 	sendPacket(&relaisP, RELAIS_PACKET);
 	hadState.relais_state = relaisP.port;
+	ledMatrixStart();
 }
 
 void base_station_printer_on(void)
@@ -127,7 +127,9 @@ void base_station_everything_off(void)
 {
 	relaisP.port = 0;
 	sendPacket(&relaisP, RELAIS_PACKET);
+	ledMatrixStop();
 	mpdPause();
+	g_usleep(100000);
 	for(int i= 0;i < 3; i++)
 	{
 		hadState.rgbModuleValues[i].red = 0;
