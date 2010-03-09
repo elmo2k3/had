@@ -27,6 +27,7 @@
 #include "rfid_tag_reader.h"
 #include "sms.h"
 #include "had.h"
+#include "misc.h"
 
 #define SECURITY_TAG_ACTIVATE "0183C3637E"
 #define SECURITY_TAG_DEACTIVATE "0108A2072F"
@@ -64,7 +65,7 @@ static void deactivate_security(void)
 		g_debug("removing alarm_source");
 		g_source_remove(alarm_source);
 	}
-	if(config.switch_off_with_security) {
+	if(config.switch_off_with_security && !is_daylight()) {
 		for(int i = 0; i < 3; i++)
 		{
 			hadState.rgbModuleValues[i].red = 255;

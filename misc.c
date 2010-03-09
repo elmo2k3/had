@@ -31,6 +31,21 @@
                 printf(args); \
 	}
 
+const int local_daylight[12] = {16,17,18,19,20,20,20,21,20,18,17,16};
+
+int is_daylight(void)
+{
+	struct tm *ptm;
+	time_t currentTime;
+
+	time(&currentTime);
+	ptm = localtime(&currentTime);
+	if (ptm->tm_hour > 7 && ptm->tm_hour <= local_daylight[ptm->tm_mon])
+		return 1;
+	else
+		return 0;
+}
+
 /*!
  *******************************************************************************
  * check if a file exists
