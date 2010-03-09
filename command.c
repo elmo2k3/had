@@ -528,6 +528,29 @@ action_get_sleep_light(struct client *client,
 }
 
 static enum command_return
+action_uptime(struct client *client,
+		int argc, char *argv[])
+{
+#define SECONDS_PER_MINUTE 60
+#define SECONDS_PER_HOUR (SECONDS_PER_MINUTE*60)
+#define SECONDS_PER_DAY (24*SECONDS_PER_HOUR)
+	time_t diff_time = time(NULL) - time_had_started;
+	time_t days, hours, minutes, seconds;
+
+	days = diff_time / SECONDS_PER_DAY;
+	diff_time -= days*SECONDS_PER_DAY;
+	hours = diff_time / SECONDS_PER_HOUR;
+	diff_time -= hours*SECONDS_PER_HOUR;
+	minutes = diff_time / SECONDS_PER_MINUTE;
+	diff_time -= minutes*SECONDS_PER_MINUTE;
+	seconds = diff_time;
+
+	client_printf(client, "uptime: %d days, %02d:%02d:%02d\n",
+		(int)days,(int)hours,(int)minutes,(int)seconds);
+	return COMMAND_RETURN_OK;
+}
+
+static enum command_return
 action_get_printer(struct client *client,
 		int argc, char *argv[])
 {
@@ -563,7 +586,8 @@ static const struct command commands[] = {
 	{"set_rgb_all",PERMISSION_ADMIN, 4,4, action_set_rgb_all},
 	{"set_sleep_light",PERMISSION_ADMIN,1,1,action_set_sleep_light},
 	{"sms",PERMISSION_ADMIN,1,2, action_sms},
-    {"toggle_lm",PERMISSION_ADMIN, 0,0, action_led_matrix_toggle}
+    {"toggle_lm",PERMISSION_ADMIN, 0,0, action_led_matrix_toggle},
+	{"uptime",PERMISSION_ADMIN,0,0,action_uptime}
 };
 
 static const unsigned num_commands = sizeof(commands) / sizeof(commands[0]);

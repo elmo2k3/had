@@ -59,6 +59,8 @@ int16_t lastTemperature[9][9][2];
 /*! big array for the last measured voltages at the rf temperature modules */
 int16_t lastVoltage[9];
 
+time_t time_had_started;
+
 static int killDaemon(int signal);
 static void hadSignalHandler(int signal);
 static void had_check_parameters(int argc, char **argv);
@@ -77,6 +79,8 @@ int main(int argc, char* argv[])
 	GError *error = NULL;
 
 	g_thread_init(NULL);
+
+	time_had_started = time(NULL);
 
 	ledMatrixInitMutexes();
 	had_find_config();
