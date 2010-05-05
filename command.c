@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include "command.h"
+#include "database.h"
 #include "client.h"
 #include "had.h"
 #include "base_station.h"
@@ -559,6 +560,15 @@ action_get_printer(struct client *client,
 	return COMMAND_RETURN_OK;
 }
 
+static enum command_return
+action_sent_graph(struct client *client,
+		int argc, char *argv[])
+{
+	getDailyGraph(3,1,&graphP);
+	sendPacket(&graphP, GRAPH_PACKET);
+	return COMMAND_RETURN_OK;
+}
+
 /**
  * The command registry.
  *
@@ -580,6 +590,7 @@ static const struct command commands[] = {
     {"led_matrix",PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
     {"open_door",PERMISSION_ADMIN, 0,1, action_open_door},
     {"quit",PERMISSION_ADMIN,  0, 0,          action_disconnect},
+	{"sent_graph",PERMISSION_ADMIN,0,0,action_sent_graph},
 	{"set_hifi",PERMISSION_ADMIN,1,1, action_set_hifi},
 	{"set_printer",PERMISSION_ADMIN,1,1,action_set_printer},
     {"set_rgb",PERMISSION_ADMIN, 5,5, action_set_rgb},

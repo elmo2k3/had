@@ -384,6 +384,8 @@ void process_glcd_remote(gchar **strings, int argc)
 		if(command == 2)
 		{
 			updateGlcd();
+			getDailyGraph(3,1,&graphP);
+			sendPacket(&graphP, GRAPH_PACKET);
 			g_debug("GraphLCD Info Paket gesendet\r");
 		}
 		else { // old remote address
@@ -707,6 +709,11 @@ void sendPacket(void *packet, int type)
 		{
 			/* Very dirty! Zweistufiges Senden wegen Pufferueberlauf */
 			headP->address = GLCD_ADDRESS;
+			headP->count = 121;
+			headP->command = GRAPH_PACKET;
+			g_io_channel_write_chars(base_station.channel, packet, sizeof(graphP),
+				&bytes_written, &error);
+/*			headP->address = GLCD_ADDRESS;
 			headP->count = 61;
 			headP->command = GRAPH_PACKET;
 			g_io_channel_write_chars(base_station.channel, packet, 63,
@@ -717,7 +724,7 @@ void sendPacket(void *packet, int type)
 			g_io_channel_write_chars(base_station.channel, ptr, 3,
 				&bytes_written, &error);
 			g_io_channel_write_chars(base_station.channel, ptr+62, 60,
-				&bytes_written, &error);
+				&bytes_written, &error); */
 		}
 		else if(type == RGB_PACKET)
 		{
@@ -939,4 +946,5 @@ void base_station_rgb_blink_all(int num)
 		g_usleep(100000);
 	}
 }
+
 

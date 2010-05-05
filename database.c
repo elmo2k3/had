@@ -73,7 +73,7 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 	MYSQL_RES *mysql_res;
 	MYSQL_ROW mysql_row;
 
-	sprintf(query,"SELECT MAX(temperature),MIN(temperature) FROM temperatures WHERE modul_id='%d' AND sensor_id='%d' AND DATE(date)=CURDATE() ORDER BY date asc",modul,sensor);
+	sprintf(query,"SELECT MAX(value), MIN(value) FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
 	if(mysql_query(mysql_connection,query))
 	{
 		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
@@ -86,6 +86,8 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 	{
 		mysql_free_result(mysql_res);
 		g_message("Keine Daten fuer den Graphen vorhanden!");
+		*max = -1000.0;
+		*min = -1000.0;
 		return;
 	}
 	*max = atof(mysql_row[0]);
@@ -107,6 +109,7 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	min = 0.0;
 	max = 0.0;
 
+	graph->numberOfPoints = 0;
 	
 	MYSQL_RES *mysql_res;
 	MYSQL_ROW mysql_row;
@@ -120,21 +123,19 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 
 	temp_max = ((int)((float)graph->max[0]/10)+1)*10;
 	temp_min = (int)((float)graph->min[0]/10)*10;
-	//temp_max = (float)graphP.max[0]/10*10;
-	//temp_min = (float)graphP.min[0]/10*10;
-
 	
-	sprintf(query,"SELECT TIME_TO_SEC(date), temperature FROM temperatures WHERE modul_id='%d' AND sensor_id='%d' AND DATE(date)=CURDATE() ORDER BY date asc",modul,sensor);
+	sprintf(query,"SELECT TIME_TO_SEC(FROM_UNIXTIME(date)), value FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
 	if(mysql_query(mysql_connection,query))
 	{
 		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+		return;
 	}
 
 	mysql_res = mysql_use_result(mysql_connection);
 	while((mysql_row = mysql_fetch_row(mysql_res)))
 	{
 		sec = atoi(mysql_row[0]);
-		x_div = (sec/(60*60*24))*115;
+		x_div = ((float)sec/(60.0*60.0*24.0))*120.0;
 		y = transformY(atof(mysql_row[1]),temp_max,temp_min);
 		if(graph->temperature_history[(int)x_div] !=0)
 			graph->temperature_history[(int)x_div] = (graph->temperature_history[(int)x_div] + y ) / 2;
@@ -162,6 +163,7 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
 {
 	static char query[DATABASE_FIFO_SIZE][128];
 	static int fifo_low = 0, fifo_high = 0;
+	int status;
 	if(!mysql_connection)
 	{
 		initDatabase();
@@ -177,8 +179,12 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
 
 	while( fifo_low != fifo_high )
 	{
-		if(mysql_query(mysql_connection,query[fifo_low])) // not successfull
+		if((status = mysql_query(mysql_connection,query[fifo_low]))) // not successfull
 		{
+			if(status == 2006 ) { //CR_SERVER_GONE_ERROR
+				mysql_close(mysql_connection);
+				initDatabase();
+			}
 			break; // dont try further
 		}
 		else // query was successfull
@@ -196,33 +202,25 @@ void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
 		initDatabase();
 	}
 
-	if(lastTemperature[modul][sensor][0] == -1)
+	char query[255];
+
+	MYSQL_RES *mysql_res;
+	MYSQL_ROW mysql_row;
+
+	sprintf(query,"SELECT value FROM modul_%d WHERE sensor=%d ORDER BY date DESC LIMIT 1",modul,sensor);
+	if(mysql_query(mysql_connection,query))
 	{
-		char query[255];
-
-		MYSQL_RES *mysql_res;
-		MYSQL_ROW mysql_row;
-
-		sprintf(query,"SELECT value FROM modul_%d WHERE sensor=%d ORDER BY date DESC LIMIT 1",modul,sensor);
-		if(mysql_query(mysql_connection,query))
-		{
-			fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		}
-
-		mysql_res = mysql_use_result(mysql_connection);
-		mysql_row = mysql_fetch_row(mysql_res);
-		if(mysql_row[0])
-		{
-			*temp = atoi(mysql_row[0]);
-			*temp_deci = (atof(mysql_row[0]) - *temp)*10;
-		}
-		
-		mysql_free_result(mysql_res);
+		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
 	}
-	else
+
+	mysql_res = mysql_use_result(mysql_connection);
+	mysql_row = mysql_fetch_row(mysql_res);
+	if(mysql_row[0])
 	{
-		*temp = (int)lastTemperature[modul][sensor][0];
-		*temp_deci = (int)lastTemperature[modul][sensor][1];
+		*temp = atoi(mysql_row[0]);
+		*temp_deci = (atof(mysql_row[0]) - *temp)*10;
 	}
+	
+	mysql_free_result(mysql_res);
 }
 
