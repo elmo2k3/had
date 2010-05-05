@@ -116,6 +116,7 @@ void security_door_opened(void)
 			alarm_source = g_timeout_add_seconds(config.security_time_before_alarm
 				,door_alarm, NULL);
 		}
+		base_station_beep(2,100,100);
 	}
 }
 

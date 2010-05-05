@@ -1,5 +1,5 @@
 CFLAGS=`pkg-config --cflags glib-2.0 gthread-2.0 libmpd libcurl` -Wall -g -std=gnu99
-LDFLAGS=`pkg-config --libs glib-2.0 gthread-2.0 libmpd libcurl` -lmysqlclient
+LDFLAGS=`pkg-config --libs glib-2.0 gthread-2.0 libmpd libcurl` -lmysqlclient -lssl
 
 .PHONY: clean
 

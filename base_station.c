@@ -64,6 +64,51 @@ static struct BaseStation
 	GIOChannel *channel;
 }base_station;
 
+gboolean cycle_base_lcd(gpointer data)
+{
+#define SECONDS_PER_MINUTE 60
+#define SECONDS_PER_HOUR (SECONDS_PER_MINUTE*60)
+#define SECONDS_PER_DAY (24*SECONDS_PER_HOUR)
+	time_t diff_time = time(NULL) - time_had_started;
+	time_t days, hours, minutes, seconds;
+	static int state = 0;
+	char buf[64];
+	struct tm *ptm;
+	time_t rawtime;
+	
+	if (state == 0) {
+		sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
+			lastTemperature[3][1][0],
+			lastTemperature[3][1][1]/100,
+			lastTemperature[3][0][0],
+			lastTemperature[3][0][1]/100);
+	}
+	else if (state == 1) {
+		time(&rawtime);
+		ptm = localtime(&rawtime);
+		sprintf(buf,"      %02d:%02d        %02d.%02d.%d",
+			ptm->tm_hour, ptm->tm_min,
+			ptm->tm_mday, ptm->tm_mon+1, ptm->tm_year +1900);
+	}
+	else if (state == 2) {
+		days = diff_time / SECONDS_PER_DAY;
+		diff_time -= days*SECONDS_PER_DAY;
+		hours = diff_time / SECONDS_PER_HOUR;
+		diff_time -= hours*SECONDS_PER_HOUR;
+		minutes = diff_time / SECONDS_PER_MINUTE;
+		diff_time -= minutes*SECONDS_PER_MINUTE;
+		seconds = diff_time;
+
+		sprintf(buf, "     uptime      %3d days, %02d:%02d\n",
+			(int)days,(int)hours,(int)minutes);
+	}
+	if (++state > 2)
+		state = 0;
+
+	sendBaseLcdText(buf);
+	return TRUE;
+}
+
 void base_station_hifi_off(void)
 {
 	ledMatrixStop();
@@ -364,7 +409,6 @@ void process_temperature_module(gchar **strings, int argc)
 	int voltage;
 	float temperature;
 	char temp_string[1023];
-	char buf[256];
 	
 	g_debug("Processing temperature_module packet");
 	if(argc != 5)
@@ -397,13 +441,6 @@ void process_temperature_module(gchar **strings, int argc)
 	lastVoltage[modul_id] = voltage;
 	
 	databaseInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
-
-	sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
-			lastTemperature[3][1][0],
-			lastTemperature[3][1][1]/100,
-			lastTemperature[3][0][0],
-			lastTemperature[3][0][1]/100);
-	sendBaseLcdText(buf);
 
 //	if(lastTemperature[3][0][0] < 15 && !belowMinTemp &&
 //			config.sms_activated)
@@ -634,7 +671,8 @@ int base_station_init(char *serial_device)
 	base_station.serial_port_watcher = serial_watch;
 
 	getRelaisState();
-
+	
+	g_timeout_add_seconds(5, cycle_base_lcd, NULL);
 	return 0;
 }
 
