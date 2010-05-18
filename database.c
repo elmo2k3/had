@@ -63,7 +63,10 @@ static int initDatabase(void)
 static int transformY(float temperature, int max, int min)
 {
 	const float range = max - min; // hier muss noch was getan werden!
-	return ((temperature-min)/range)*40;
+	if(range != 0)
+		return ((temperature-min)/range)*40;
+	else
+		return 40;
 }
 
 static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
@@ -73,10 +76,20 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 	MYSQL_RES *mysql_res;
 	MYSQL_ROW mysql_row;
 
+	*min = 0.0;
+	*max = 0.0;
+
+	if(!mysql_connection)
+	{
+		if(initDatabase())
+			return;
+	}
+
 	sprintf(query,"SELECT MAX(value), MIN(value) FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
 	if(mysql_query(mysql_connection,query))
 	{
 		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+		return;
 	}
 
 	mysql_res = mysql_use_result(mysql_connection);
@@ -110,6 +123,12 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 	max = 0.0;
 
 	graph->numberOfPoints = 0;
+	
+	if(!mysql_connection)
+	{
+		if(initDatabase())
+			return;
+	}
 	
 	MYSQL_RES *mysql_res;
 	MYSQL_ROW mysql_row;
@@ -166,7 +185,8 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
 	int status;
 	if(!mysql_connection)
 	{
-		initDatabase();
+		if(initDatabase())
+			return;
 	}
 
 	g_debug("fifo_low = %d, fifo_high = %d",fifo_low, fifo_high);
@@ -183,7 +203,8 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
 		{
 			if(status == 2006 ) { //CR_SERVER_GONE_ERROR
 				mysql_close(mysql_connection);
-				initDatabase();
+				if(initDatabase())
+					return;
 			}
 			break; // dont try further
 		}
@@ -197,20 +218,25 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
 
 void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
 {
-	if(!mysql_connection)
-	{
-		initDatabase();
-	}
-
 	char query[255];
 
 	MYSQL_RES *mysql_res;
 	MYSQL_ROW mysql_row;
 
+	*temp = 0;
+	*temp_deci = 0;
+	
+	if(!mysql_connection)
+	{
+		if(initDatabase())
+			return;
+	}
+
 	sprintf(query,"SELECT value FROM modul_%d WHERE sensor=%d ORDER BY date DESC LIMIT 1",modul,sensor);
 	if(mysql_query(mysql_connection,query))
 	{
 		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+		return;
 	}
 
 	mysql_res = mysql_use_result(mysql_connection);

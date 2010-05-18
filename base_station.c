@@ -384,14 +384,21 @@ void process_glcd_remote(gchar **strings, int argc)
 		if(command == 2)
 		{
 			updateGlcd();
-			getDailyGraph(3,1,&graphP);
-			sendPacket(&graphP, GRAPH_PACKET);
 			g_debug("GraphLCD Info Paket gesendet\r");
 		}
-		else { // old remote address
-			g_debug("Processing old remote\r");
-			process_remote(strings, argc);
+		else if(command == 3)
+		{
+			if(strings[2] && strings[3])
+			{
+				getDailyGraph(atoi(strings[2]),atoi(strings[3]),&graphP);
+				sendPacket(&graphP, GRAPH_PACKET);
+				g_debug("GraphLCD Graph Paket gesendet\r");
+			}
 		}
+	//	else { // old remote address
+	//		g_debug("Processing old remote\r");
+	//		process_remote(strings, argc);
+	//	}
 	}
 }
 
@@ -713,18 +720,6 @@ void sendPacket(void *packet, int type)
 			headP->command = GRAPH_PACKET;
 			g_io_channel_write_chars(base_station.channel, packet, sizeof(graphP),
 				&bytes_written, &error);
-/*			headP->address = GLCD_ADDRESS;
-			headP->count = 61;
-			headP->command = GRAPH_PACKET;
-			g_io_channel_write_chars(base_station.channel, packet, 63,
-				&bytes_written, &error);
-
-			headP->command = GRAPH_PACKET2;
-			char *ptr = (char*)packet;
-			g_io_channel_write_chars(base_station.channel, ptr, 3,
-				&bytes_written, &error);
-			g_io_channel_write_chars(base_station.channel, ptr+62, 60,
-				&bytes_written, &error); */
 		}
 		else if(type == RGB_PACKET)
 		{

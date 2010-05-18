@@ -561,6 +561,14 @@ action_get_printer(struct client *client,
 }
 
 static enum command_return
+action_all_off(struct client *client,
+		int argc, char *argv[])
+{
+	base_station_everything_off();
+	return COMMAND_RETURN_OK;
+}
+
+static enum command_return
 action_sent_graph(struct client *client,
 		int argc, char *argv[])
 {
@@ -575,6 +583,7 @@ action_sent_graph(struct client *client,
  * This array must be sorted!
  */
 static const struct command commands[] = {
+	{"all_off",PERMISSION_ADMIN, 0,0,action_all_off},
     {"base_lcd_backlight",PERMISSION_ADMIN,1,1, action_toggle_base_lcd_backlight},
 	{"beep",PERMISSION_ADMIN,0,3,action_beep},
     {"blink",PERMISSION_ADMIN,0,0, action_rgb_blink},
