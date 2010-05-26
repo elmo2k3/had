@@ -577,6 +577,27 @@ action_sent_graph(struct client *client,
 	return COMMAND_RETURN_OK;
 }
 
+static enum command_return
+action_led_matrix_select_screen(struct client *client,
+		int argc, char *argv[])
+{
+	int screen_num;
+	enum _screenToDraw screen;
+
+	if (!check_int(client, &screen_num, argv[1], need_positive))
+		return COMMAND_RETURN_ERROR;
+	switch(screen_num)
+	{
+		case 0:	screen = SCREEN_TIME; break;
+		case 1: screen = SCREEN_MPD; break;
+		case 2: screen = SCREEN_TEMPERATURES; break;
+		case 3: screen = SCREEN_VOID; break;
+		default: screen = SCREEN_VOID; break;
+	}
+	ledMatrixSelectScreen(screen);
+	return COMMAND_RETURN_OK;
+}
+
 /**
  * The command registry.
  *
@@ -597,6 +618,7 @@ static const struct command commands[] = {
     {"hifi_on",PERMISSION_ADMIN, 0,0, action_hifi_on_music_on},
     {"led_display_text",PERMISSION_ADMIN, 1,2, action_led_display_text},
     {"led_matrix",PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
+    {"lm_select_screen",PERMISSION_ADMIN, 1,1, action_led_matrix_select_screen},
     {"open_door",PERMISSION_ADMIN, 0,1, action_open_door},
     {"quit",PERMISSION_ADMIN,  0, 0,          action_disconnect},
 	{"sent_graph",PERMISSION_ADMIN,0,0,action_sent_graph},

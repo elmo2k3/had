@@ -51,6 +51,9 @@
 #include "statefile.h"
 #include "security.h"
 
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "had"
+
 /*! thread variable array for network, mpd and ledmatrix */
 GMainLoop *had_main_loop;
 
@@ -82,7 +85,7 @@ int main(int argc, char* argv[])
 
 	time_had_started = time(NULL);
 
-	ledMatrixInitMutexes();
+	ledMatrixInit();
 	had_find_config();
 	had_check_parameters(argc,argv);
 	had_check_daemonize();

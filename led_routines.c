@@ -42,6 +42,9 @@
 #include "had.h"
 #include "mpd.h"
 
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "led_routines"
+
 static uint16_t charGetStart(char c);
 static int initNetwork(void);
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
@@ -70,19 +73,22 @@ static int client_sock;
 volatile int led_stack_size = 0;
 static GMutex *mutex_is_running = NULL;
 static GMutex *mutex_led_matrix = NULL;
-static GMutex *mutex_shutdown = NULL;
-static GMutex *mutex_toggle = NULL;
 GThread *ledMatrixThread;
 static int shutting_down;
 static int running;
-static int toggle;
 
-void ledMatrixInitMutexes(void)
+GAsyncQueue *async_queue_shutdown;
+GAsyncQueue *async_queue_toggle_screen;
+GAsyncQueue *async_queue_select_screen;
+
+void ledMatrixInit(void)
 {
+	async_queue_shutdown = g_async_queue_new();
+	async_queue_toggle_screen = g_async_queue_new();
+	async_queue_select_screen = g_async_queue_new();
+
 	mutex_is_running = g_mutex_new();
 	mutex_led_matrix = g_mutex_new();
-	mutex_shutdown = g_mutex_new();
-	mutex_toggle = g_mutex_new();
 	running = 0;
 	shutting_down = 0;
 }
@@ -390,20 +396,17 @@ static int initNetwork(void)
 
 void ledMatrixStop()
 {
+	gboolean shutdown = TRUE;
+
 	if(!ledIsRunning()) // something went terribly wrong
 	{
 		g_debug("LedMatrixThread not running");
 		return;
 	}
 	g_debug("LedMatrixThread stopping");
-	g_mutex_lock(mutex_shutdown);
-	shutting_down = 1;
-	g_mutex_unlock(mutex_shutdown);
+	g_async_queue_push(async_queue_shutdown, &shutdown);
 	g_debug("LedMatrixThread joining");
 	g_thread_join(ledMatrixThread);
-	g_mutex_lock(mutex_shutdown);
-	shutting_down = 0;
-	g_mutex_unlock(mutex_shutdown);
 	g_debug("LedMatrixThread gestoppt");
 }
 
@@ -494,14 +497,6 @@ static gpointer ledMatrixStartThread(gpointer data)
 {
 	g_debug("LedMatrixThread gestartet");
 
-	enum _screenToDraw
-	{
-		SCREEN_VOID,
-		SCREEN_TIME,
-		SCREEN_MPD,
-		SCREEN_TEMPERATURES
-	}screen_to_draw;
-
 	struct _ledLine ledLineTime;
 	struct _ledLine ledLineVoid;
 	struct _ledLine *ledLineToDraw;
@@ -509,20 +504,12 @@ static gpointer ledMatrixStartThread(gpointer data)
 	time_t rawtime;
 	struct tm *ptm;
 	int last_mpd_state = 0;
-	int shutdown;
-	int iToggle;
-
 	char time_string[20];
+	GAsyncQueue *queue_shutdown, *queue_toggle, *queue_select_screen;
+	enum _screenToDraw screen_to_draw, *screen_switch;
 
-	g_mutex_lock(mutex_toggle);
-	toggle = 0;
-	g_mutex_unlock(mutex_toggle);
 	screen_to_draw = SCREEN_TIME;
 	
-	allocateLedLine(&ledLineTime, LINE_LENGTH);
-	allocateLedLine(&ledLineVoid, LINE_LENGTH);
-	clearScreen(&ledLineVoid);
-
 	if(initNetwork() < 0)
 	{
 		g_debug("Stopping led_matrix thread");
@@ -530,14 +517,19 @@ static gpointer ledMatrixStartThread(gpointer data)
 		g_mutex_unlock(mutex_is_running);
 		return NULL;
 	}
+	
+	allocateLedLine(&ledLineTime, LINE_LENGTH);
+	allocateLedLine(&ledLineVoid, LINE_LENGTH);	
+	clearScreen(&ledLineVoid);
+	
+	queue_shutdown = g_async_queue_ref(async_queue_shutdown);
+	queue_toggle = g_async_queue_ref(async_queue_toggle_screen);
+	queue_select_screen = g_async_queue_ref(async_queue_select_screen);
 
 	ledLineToDraw = &ledLineTime;
 	
-	g_mutex_lock(mutex_shutdown);
-	shutdown = shutting_down;
-	g_mutex_unlock(mutex_shutdown);
 	g_mutex_unlock(mutex_is_running);
-	while(!shutdown)
+	while(1)
 	{
 		if(led_stack_size)
 		{
@@ -555,10 +547,7 @@ static gpointer ledMatrixStartThread(gpointer data)
 		/* Important! else doesn't work here */
 		if(!led_stack_size)
 		{
-			g_mutex_lock(mutex_toggle);
-			iToggle = toggle;
-			g_mutex_unlock(mutex_toggle);
-			if(iToggle)
+			if(g_async_queue_try_pop(queue_toggle) != NULL)
 			{
 				switch(screen_to_draw)
 				{
@@ -572,9 +561,19 @@ static gpointer ledMatrixStartThread(gpointer data)
 										else screen_to_draw = SCREEN_TIME;
 										break;
 				}
-				g_mutex_lock(mutex_toggle);
-				toggle = 0;
-				g_mutex_unlock(mutex_toggle);
+			}
+			else if((screen_switch = (enum _screenToDraw*)g_async_queue_try_pop(queue_select_screen)) != NULL)
+			{
+				g_debug("switching screen");
+				screen_to_draw = *screen_switch;
+				g_debug("switch value = %d", screen_to_draw);
+				switch(screen_to_draw)
+				{
+					case SCREEN_TIME: g_debug("screen switched to SCREEN_TIME"); break;
+					case SCREEN_VOID: g_debug("screen switched to SCREEN_VOID"); break;
+					case SCREEN_MPD: g_debug("screen switched to SCREEN_MPD"); break;
+					case SCREEN_TEMPERATURES: g_debug("screen switched to SCREEN_TEMPERATURES"); break;
+				}
 			}
 			else if(mpdGetState() == MPD_PLAYER_PLAY && last_mpd_state == 0)
 			{
@@ -634,11 +633,16 @@ static gpointer ledMatrixStartThread(gpointer data)
 				shift_speed = 0;
 			}
 			ledDisplayMain(ledLineToDraw, shift_speed);
-		}	
-	g_mutex_lock(mutex_shutdown);
-	shutdown = shutting_down;
-	g_mutex_unlock(mutex_shutdown);
+		}
+		if(g_async_queue_try_pop(queue_shutdown) != NULL)
+		{
+			break;
+		}
 	}
+	
+	g_async_queue_unref(async_queue_shutdown);
+	g_async_queue_unref(async_queue_toggle_screen);
+	g_async_queue_unref(async_queue_select_screen);
 
 	freeLedLine(&ledLineTime);
 	freeLedLine(&ledLineVoid);
@@ -666,14 +670,19 @@ static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
 
 void ledMatrixToggle(void)
 {
-	g_mutex_lock(mutex_toggle);
-	toggle = 1;
-	g_mutex_unlock(mutex_toggle);
+	gboolean toggle = TRUE;
+	if(ledIsRunning())
+		g_async_queue_push(async_queue_toggle_screen, &toggle);
+}
+
+void ledMatrixSelectScreen(enum _screenToDraw screen)
+{
+//	if(ledIsRunning())
+//		g_async_queue_push(async_queue_select_screen, &screen);
 }
 
 void ledMatrixStart(void)
 {
-	//if(config.led_matrix_activated && (relaisP.port & 4) && hadState.ledmatrix_user_activated)
 	if(config.led_matrix_activated && !ledIsRunning())
 	{
 		g_mutex_lock(mutex_is_running);

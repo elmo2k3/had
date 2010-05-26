@@ -52,6 +52,14 @@ struct _ledLine
 	int shift_position; /**< position of the output arrays */
 };
 
+enum _screenToDraw
+{
+	SCREEN_VOID,
+	SCREEN_TIME,
+	SCREEN_MPD,
+	SCREEN_TEMPERATURES
+};
+
 /** Start main thread for the led-matrix-display
  *
  * May only be started once
@@ -107,7 +115,9 @@ extern void ledPushToStack(char *string, int shift, int lifetime);
 
 extern void ledMatrixToggle(void);
 
-extern void ledMatrixInitMutexes(void);
+extern void ledMatrixInit(void);
+
+extern void ledMatrixSelectScreen(enum _screenToDraw screen);
 
 #endif
 
