@@ -28,19 +28,19 @@
 static gboolean rfid_timeout
 (struct RfidTagReader *rfid_tag_reader)
 {
-	rfid_tag_reader->last_tagid[0] = '\0';
-	rfid_tag_reader->timeout_active = 0;
-	return FALSE;
+    rfid_tag_reader->last_tagid[0] = '\0';
+    rfid_tag_reader->timeout_active = 0;
+    return FALSE;
 }
 
 void rfid_tag_reader_set_callback(struct RfidTagReader *tag_reader, void *callback)
 {
-	tag_reader->callback = callback;
+    tag_reader->callback = callback;
 }
 
 gchar *rfid_tag_reader_last_tag(struct RfidTagReader *tag_reader)
 {
-	return tag_reader->tagid;
+    return tag_reader->tagid;
 }
 
 static gboolean serialReceive
@@ -62,27 +62,27 @@ static gboolean serialReceive
                 rfid_tag_reader->tagid[10] = '\0';
                 rfid_tag_reader->tagposition = 0;
 
-				/* check if old and new tagid are not equal */
-				if(g_strcmp0(rfid_tag_reader->tagid, rfid_tag_reader->last_tagid))
-				{
-					if(rfid_tag_reader->callback)
-					{
-						rfid_tag_reader->callback(rfid_tag_reader);
-					}
-                	//fprintf(stdout,"tagid =  %s\n",rfid_tag_reader->tagid);
-					g_strlcpy(rfid_tag_reader->last_tagid, 
-						rfid_tag_reader->tagid,
-						sizeof(rfid_tag_reader->last_tagid));
-				}
-				else // they were equal
-				{
-					if(!rfid_tag_reader->timeout_active)
-					{
-						rfid_tag_reader->timeout_active = 1;
-						g_timeout_add_seconds(30, (GSourceFunc)
-							rfid_timeout, rfid_tag_reader);
-					}
-				}
+                /* check if old and new tagid are not equal */
+                if(g_strcmp0(rfid_tag_reader->tagid, rfid_tag_reader->last_tagid))
+                {
+                    if(rfid_tag_reader->callback)
+                    {
+                        rfid_tag_reader->callback(rfid_tag_reader);
+                    }
+                    //fprintf(stdout,"tagid =  %s\n",rfid_tag_reader->tagid);
+                    g_strlcpy(rfid_tag_reader->last_tagid, 
+                        rfid_tag_reader->tagid,
+                        sizeof(rfid_tag_reader->last_tagid));
+                }
+                else // they were equal
+                {
+                    if(!rfid_tag_reader->timeout_active)
+                    {
+                        rfid_tag_reader->timeout_active = 1;
+                        g_timeout_add_seconds(30, (GSourceFunc)
+                            rfid_timeout, rfid_tag_reader);
+                    }
+                }
             }
         }
     }
@@ -92,31 +92,31 @@ static gboolean serialReceive
 struct RfidTagReader *rfid_tag_reader_new(char *serial_device)
 {
     int fd;
-	struct termios newtio;
-	/* open the device */
-	fd = open(serial_device, O_RDONLY | O_NOCTTY | O_NDELAY );
-	if (fd <0) 
+    struct termios newtio;
+    /* open the device */
+    fd = open(serial_device, O_RDONLY | O_NOCTTY | O_NDELAY );
+    if (fd <0) 
     {
-		return NULL;
-	}
+        return NULL;
+    }
 
-	memset(&newtio, 0, sizeof(newtio)); /* clear struct for new port settings */
-	newtio.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
-	newtio.c_iflag = (ICANON);
-	tcflush(fd, TCIFLUSH);
-	if(tcsetattr(fd,TCSANOW,&newtio) < 0)
-	{
-		return NULL;
-	}
+    memset(&newtio, 0, sizeof(newtio)); /* clear struct for new port settings */
+    newtio.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
+    newtio.c_iflag = (ICANON);
+    tcflush(fd, TCIFLUSH);
+    if(tcsetattr(fd,TCSANOW,&newtio) < 0)
+    {
+        return NULL;
+    }
     
-	struct RfidTagReader *rfid_tag_reader_to_return = g_new0(struct RfidTagReader, 1);
+    struct RfidTagReader *rfid_tag_reader_to_return = g_new0(struct RfidTagReader, 1);
 
     GIOChannel *serial_device_chan = g_io_channel_unix_new(fd);
     guint serial_watch = g_io_add_watch(serial_device_chan, G_IO_IN, 
-		(GIOFunc)serialReceive, rfid_tag_reader_to_return);
-	g_io_add_watch(serial_device_chan, G_IO_ERR, (GIOFunc)exit, NULL);
+        (GIOFunc)serialReceive, rfid_tag_reader_to_return);
+    g_io_add_watch(serial_device_chan, G_IO_ERR, (GIOFunc)exit, NULL);
     g_io_channel_unref(serial_device_chan);
-	rfid_tag_reader_to_return->serial_port_watcher = serial_watch;
+    rfid_tag_reader_to_return->serial_port_watcher = serial_watch;
 
-	return rfid_tag_reader_to_return;
+    return rfid_tag_reader_to_return;
 }

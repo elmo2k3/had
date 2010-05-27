@@ -18,9 +18,9 @@
  */
 
 /*!
- * \file	mpd.c
- * \brief	mpd communication functions
- * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+ * \file    mpd.c
+ * \brief   mpd communication functions
+ * \author  Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
 
 #include <glib.h>
@@ -39,7 +39,7 @@
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "mpd"
-	
+    
 static MpdObj *mpd;
 
 static int isPlaying;
@@ -53,209 +53,209 @@ static gboolean submitNowPlaying(gpointer data);
 
 struct _track_information
 {
-	char last_artist[30];
-	char last_title[30];
-	char last_album[30];
-	char current_track[5];
+    char last_artist[30];
+    char last_title[30];
+    char last_album[30];
+    char current_track[5];
 
-	time_t started_playing;
-	int length;
+    time_t started_playing;
+    int length;
 }current_track;
 
 MpdObj *getMpdObject(void)
 {
-	return mpd;
+    return mpd;
 }
 
 int mpdGetState(void)
 {
-	return isPlaying;
+    return isPlaying;
 }
 
 void mpdErrorCallback(MpdObj *mi, int errorid, char *msg, void *userdata)
 {
-	g_warning("Error: %i : %s ", errorid, msg);
+    g_warning("Error: %i : %s ", errorid, msg);
 }
 
 static gboolean mpdStatusUpdate(gpointer data)
 {
-	mpd_status_update(mpd);
-	return TRUE;
+    mpd_status_update(mpd);
+    return TRUE;
 }
 
 int mpdInit(void)
 {
-	if(!config.mpd_activated)
-	{
-		return 1;
-	}
+    if(!config.mpd_activated)
+    {
+        return 1;
+    }
 
 
-	mpd = mpd_new(config.mpd_server,
-			config.mpd_port,
-			config.mpd_password);
+    mpd = mpd_new(config.mpd_server,
+            config.mpd_port,
+            config.mpd_password);
 
-	mpd_signal_connect_status_changed(mpd,(StatusChangedCallback)mpdStatusChanged, NULL);
-//	mpd_signal_connect_error(mpd,(ErrorCallback)mpdErrorCallback, NULL);
+    mpd_signal_connect_status_changed(mpd,(StatusChangedCallback)mpdStatusChanged, NULL);
+//  mpd_signal_connect_error(mpd,(ErrorCallback)mpdErrorCallback, NULL);
 
-	mpd_set_connection_timeout(mpd,10);
-	g_timeout_add(500, mpdStatusUpdate, NULL);
-	g_timeout_add_seconds(1, mpdCheckConnected, NULL);
+    mpd_set_connection_timeout(mpd,10);
+    g_timeout_add(500, mpdStatusUpdate, NULL);
+    g_timeout_add_seconds(1, mpdCheckConnected, NULL);
 
-	if(mpd_connect(mpd))
-	{
-		g_debug("Error connecting to mpd!");
-		return 1;
-	}
-	isPlaying = mpd_player_get_state(mpd);
-	return 0;
+    if(mpd_connect(mpd))
+    {
+        g_debug("Error connecting to mpd!");
+        return 1;
+    }
+    isPlaying = mpd_player_get_state(mpd);
+    return 0;
 }
 
 static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 {
-	time_t current_time;
-	guint shortest_time;
-	char led_matrix_text[255];
+    time_t current_time;
+    guint shortest_time;
+    char led_matrix_text[255];
 
-	isPlaying = mpd_player_get_state(mpd);
+    isPlaying = mpd_player_get_state(mpd);
 
-	if(what & MPD_CST_SONGID)
-	{
-		time(&current_time);
-		mpd_Song *song = mpd_playlist_get_current_song(mi);
-		if(song)
-		{
-			snprintf(led_matrix_text, sizeof(led_matrix_text),
-				"\r%s\a - \b%s", song->artist, song->title);
-			ledMatrixSetText(SCREEN_MPD,led_matrix_text);
+    if(what & MPD_CST_SONGID)
+    {
+        time(&current_time);
+        mpd_Song *song = mpd_playlist_get_current_song(mi);
+        if(song)
+        {
+            snprintf(led_matrix_text, sizeof(led_matrix_text),
+                "\r%s\a - \b%s", song->artist, song->title);
+            ledMatrixSetText(SCREEN_MPD,led_matrix_text);
 
-			if(song->artist)
-				strcpy(current_track.last_artist, song->artist);
-			if(song->album)
-				strcpy(current_track.last_album, song->album);
-			if(song->title)
-				strcpy(current_track.last_title, song->title);
-			if(song->track)
-				strcpy(current_track.current_track, song->track);
-			current_track.length = song->time;
-			current_track.started_playing = time(NULL);
+            if(song->artist)
+                strcpy(current_track.last_artist, song->artist);
+            if(song->album)
+                strcpy(current_track.last_album, song->album);
+            if(song->title)
+                strcpy(current_track.last_title, song->title);
+            if(song->track)
+                strcpy(current_track.current_track, song->track);
+            current_track.length = song->time;
+            current_track.started_playing = time(NULL);
 
-			if(song->time / 2 < 240)
-				shortest_time = song->time / 2 + 5;
-			else
-				shortest_time = 240;
+            if(song->time / 2 < 240)
+                shortest_time = song->time / 2 + 5;
+            else
+                shortest_time = 240;
 
-			/* Auf PIN4 liegt die Stereoanlage
-			 * Nur wenn diese an ist zu last.fm submitten!
-			 */
-			if(base_station_hifi_is_on() && config.scrobbler_activated
-				&& hadState.scrobbler_user_activated)
-			{
-				/* check if the track ran at least 2:40 or half of its runtime */
-				if(song->artist && song->title)
-				{
-					if(submit_source)
-					{
-						g_source_remove(submit_source);
-					}
-					submit_source = g_timeout_add_seconds(shortest_time,
-						submitTrack, NULL);
+            /* Auf PIN4 liegt die Stereoanlage
+             * Nur wenn diese an ist zu last.fm submitten!
+             */
+            if(base_station_hifi_is_on() && config.scrobbler_activated
+                && hadState.scrobbler_user_activated)
+            {
+                /* check if the track ran at least 2:40 or half of its runtime */
+                if(song->artist && song->title)
+                {
+                    if(submit_source)
+                    {
+                        g_source_remove(submit_source);
+                    }
+                    submit_source = g_timeout_add_seconds(shortest_time,
+                        submitTrack, NULL);
 
-					if(now_playing_source)
-					{
-						g_source_remove(now_playing_source);
-					}
-					now_playing_source = g_timeout_add_seconds(5,
-						submitNowPlaying, NULL);
-				}
-			}
-			else
-			{
-				g_debug("Stereoanlage ist aus, kein Submit zu last.fm");
-			}
+                    if(now_playing_source)
+                    {
+                        g_source_remove(now_playing_source);
+                    }
+                    now_playing_source = g_timeout_add_seconds(5,
+                        submitNowPlaying, NULL);
+                }
+            }
+            else
+            {
+                g_debug("Stereoanlage ist aus, kein Submit zu last.fm");
+            }
 
-			sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
-		//	sendPacket(&mpdP,MPD_PACKET);
-	//		sendBaseLcdText(mpdP.currentSong);
-		}
-	}
+            sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
+        //  sendPacket(&mpdP,MPD_PACKET);
+    //      sendBaseLcdText(mpdP.currentSong);
+        }
+    }
 }
 
 void mpdTogglePlayPause(void)
 {
-	if(mpdGetState() == MPD_PLAYER_PLAY)
-		mpd_player_pause(mpd);
-	else
-		mpd_player_play(mpd);
+    if(mpdGetState() == MPD_PLAYER_PLAY)
+        mpd_player_pause(mpd);
+    else
+        mpd_player_play(mpd);
 }
 
 void mpdPlay(void)
 {
-	mpd_player_play(mpd);
+    mpd_player_play(mpd);
 }
 
 void mpdPause(void)
 {
-	mpd_player_pause(mpd);
+    mpd_player_pause(mpd);
 }
 
 void mpdNext(void)
 {
-	mpd_player_next(mpd);
+    mpd_player_next(mpd);
 }
 
 void mpdPrev(void)
 {
-	mpd_player_prev(mpd);
+    mpd_player_prev(mpd);
 }
 
 void mpdPlayNumber(int number)
 {
-	mpd_player_play_id(mpd, number);
+    mpd_player_play_id(mpd, number);
 }
 
 void mpdToggleRandom(void)
 {
-	if(mpd_player_get_random(mpd))
-	{
-		ledPushToStack("Random off", 2, 1);
-		mpd_player_set_random(mpd, 0);
-	}
-	else
-	{
-		ledPushToStack("Random on", 2, 1);
-		mpd_player_set_random(mpd, 1);
-	}
+    if(mpd_player_get_random(mpd))
+    {
+        ledPushToStack("Random off", 2, 1);
+        mpd_player_set_random(mpd, 0);
+    }
+    else
+    {
+        ledPushToStack("Random on", 2, 1);
+        mpd_player_set_random(mpd, 1);
+    }
 }
 
 static gboolean mpdCheckConnected(gpointer data)
 {
-	if(!mpd_check_connected(mpd))
-	{
-		if(!mpd_connect(mpd))
-			g_debug("Connection to mpd successfully initiated!");
-	}
-	return TRUE;
+    if(!mpd_check_connected(mpd))
+    {
+        if(!mpd_connect(mpd))
+            g_debug("Connection to mpd successfully initiated!");
+    }
+    return TRUE;
 }
 
 static gboolean submitTrack(gpointer data)
 {
-	g_debug("Now submitting track %s", current_track.current_track);
+    g_debug("Now submitting track %s", current_track.current_track);
 
-	scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
-		current_track.last_album, current_track.length, current_track.current_track,
-		current_track.started_playing, 0);
-	submit_source = 0;
-	return FALSE;
+    scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
+        current_track.last_album, current_track.length, current_track.current_track,
+        current_track.started_playing, 0);
+    submit_source = 0;
+    return FALSE;
 }
 
 static gboolean submitNowPlaying(gpointer data)
 {
-	g_debug("Now submitting now playing track %s", current_track.current_track);
-	scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
-		current_track.last_album, current_track.length, current_track.current_track,
-		current_track.started_playing, 1);
-	now_playing_source = 0;
-	return FALSE;
+    g_debug("Now submitting now playing track %s", current_track.current_track);
+    scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
+        current_track.last_album, current_track.length, current_track.current_track,
+        current_track.started_playing, 1);
+    now_playing_source = 0;
+    return FALSE;
 }
 

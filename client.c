@@ -22,20 +22,20 @@
 
 bool client_is_expired(const struct client *client)
 {
-	return client->channel == NULL;
+    return client->channel == NULL;
 }
 
 int client_get_uid(const struct client *client)
 {
-	return client->uid;
+    return client->uid;
 }
 
 unsigned client_get_permission(const struct client *client)
 {
-	return client->permission;
+    return client->permission;
 }
 
 void client_set_permission(struct client *client, unsigned permission)
 {
-	client->permission = permission;
+    client->permission = permission;
 }

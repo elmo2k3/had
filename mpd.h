@@ -18,9 +18,9 @@
  */
 
 /*!
- * \file	mpd.h
- * \brief	header for mpd communication
- * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+ * \file    mpd.h
+ * \brief   header for mpd communication
+ * \author  Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
 
 

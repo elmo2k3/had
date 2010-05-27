@@ -29,61 +29,61 @@
 static void
 client_idle_notify(struct client *client)
 {
-	unsigned flags, i;
-	const char *const* idle_names;
+    unsigned flags, i;
+    const char *const* idle_names;
 
-	assert(client->idle_waiting);
-	assert(client->idle_flags != 0);
+    assert(client->idle_waiting);
+    assert(client->idle_flags != 0);
 
-	flags = client->idle_flags;
-	client->idle_flags = 0;
-	client->idle_waiting = false;
+    flags = client->idle_flags;
+    client->idle_flags = 0;
+    client->idle_waiting = false;
 
-	idle_names = idle_get_names();
-	for (i = 0; idle_names[i]; ++i) {
-		if (flags & (1 << i) & client->idle_subscriptions)
-			client_printf(client, "changed: %s\n",
-				      idle_names[i]);
-	}
+    idle_names = idle_get_names();
+    for (i = 0; idle_names[i]; ++i) {
+        if (flags & (1 << i) & client->idle_subscriptions)
+            client_printf(client, "changed: %s\n",
+                      idle_names[i]);
+    }
 
-	client_puts(client, "OK\n");
-	g_timer_start(client->last_activity);
+    client_puts(client, "OK\n");
+    g_timer_start(client->last_activity);
 }
 
 static void
 client_idle_callback(gpointer data, gpointer user_data)
 {
-	struct client *client = data;
-	unsigned flags = GPOINTER_TO_UINT(user_data);
+    struct client *client = data;
+    unsigned flags = GPOINTER_TO_UINT(user_data);
 
-	if (client_is_expired(client))
-		return;
+    if (client_is_expired(client))
+        return;
 
-	client->idle_flags |= flags;
-	if (client->idle_waiting
-	    && (client->idle_flags & client->idle_subscriptions)) {
-		client_idle_notify(client);
-		client_write_output(client);
-	}
+    client->idle_flags |= flags;
+    if (client->idle_waiting
+        && (client->idle_flags & client->idle_subscriptions)) {
+        client_idle_notify(client);
+        client_write_output(client);
+    }
 }
 
 void client_manager_idle_add(unsigned flags)
 {
-	assert(flags != 0);
+    assert(flags != 0);
 
-	client_list_foreach(client_idle_callback, GUINT_TO_POINTER(flags));
+    client_list_foreach(client_idle_callback, GUINT_TO_POINTER(flags));
 }
 
 bool client_idle_wait(struct client *client, unsigned flags)
 {
-	assert(!client->idle_waiting);
+    assert(!client->idle_waiting);
 
-	client->idle_waiting = true;
-	client->idle_subscriptions = flags;
+    client->idle_waiting = true;
+    client->idle_subscriptions = flags;
 
-	if (client->idle_flags & client->idle_subscriptions) {
-		client_idle_notify(client);
-		return true;
-	} else
-		return false;
+    if (client->idle_flags & client->idle_subscriptions) {
+        client_idle_notify(client);
+        return true;
+    } else
+        return false;
 }

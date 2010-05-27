@@ -32,56 +32,56 @@ static unsigned idle_flags;
 static GMutex *idle_mutex = NULL;
 
 static const char *const idle_names[] = {
-	"database",
-	"stored_playlist",
-	"playlist",
-	"player",
-	"mixer",
-	"output",
-	"options",
-	"sticker",
-	"update",
+    "database",
+    "stored_playlist",
+    "playlist",
+    "player",
+    "mixer",
+    "output",
+    "options",
+    "sticker",
+    "update",
         NULL
 };
 
 void
 idle_init(void)
 {
-	g_assert(idle_mutex == NULL);
-	idle_mutex = g_mutex_new();
+    g_assert(idle_mutex == NULL);
+    idle_mutex = g_mutex_new();
 }
 
 void
 idle_deinit(void)
 {
-	g_assert(idle_mutex != NULL);
-	g_mutex_free(idle_mutex);
-	idle_mutex = NULL;
+    g_assert(idle_mutex != NULL);
+    g_mutex_free(idle_mutex);
+    idle_mutex = NULL;
 }
 
 void
 idle_add(unsigned flags)
 {
-	assert(flags != 0);
+    assert(flags != 0);
 
-	g_mutex_lock(idle_mutex);
-	idle_flags |= flags;
-	g_mutex_unlock(idle_mutex);
+    g_mutex_lock(idle_mutex);
+    idle_flags |= flags;
+    g_mutex_unlock(idle_mutex);
 
-//	event_pipe_emit(PIPE_EVENT_IDLE);
+//  event_pipe_emit(PIPE_EVENT_IDLE);
 }
 
 unsigned
 idle_get(void)
 {
-	unsigned flags;
+    unsigned flags;
 
-	g_mutex_lock(idle_mutex);
-	flags = idle_flags;
-	idle_flags = 0;
-	g_mutex_unlock(idle_mutex);
+    g_mutex_lock(idle_mutex);
+    flags = idle_flags;
+    idle_flags = 0;
+    g_mutex_unlock(idle_mutex);
 
-	return flags;
+    return flags;
 }
 
 const char*const*

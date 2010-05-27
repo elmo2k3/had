@@ -27,46 +27,46 @@
 #define G_LOG_DOMAIN "client"
 
 struct deferred_buffer {
-	size_t size;
-	char data[sizeof(long)];
+    size_t size;
+    char data[sizeof(long)];
 };
 
 struct client {
-	GIOChannel *channel;
-	guint source_id;
+    GIOChannel *channel;
+    guint source_id;
 
-	/** the buffer for reading lines from the #channel */
-	struct fifo_buffer *input;
+    /** the buffer for reading lines from the #channel */
+    struct fifo_buffer *input;
 
-	unsigned permission;
+    unsigned permission;
 
-	/** the uid of the client process, or -1 if unknown */
-	int uid;
+    /** the uid of the client process, or -1 if unknown */
+    int uid;
 
-	/**
-	 * How long since the last activity from this client?
-	 */
-	GTimer *last_activity;
+    /**
+     * How long since the last activity from this client?
+     */
+    GTimer *last_activity;
 
-	GSList *cmd_list;	/* for when in list mode */
-	int cmd_list_OK;	/* print OK after each command execution */
-	size_t cmd_list_size;	/* mem cmd_list consumes */
-	GQueue *deferred_send;	/* for output if client is slow */
-	size_t deferred_bytes;	/* mem deferred_send consumes */
-	unsigned int num;	/* client number */
+    GSList *cmd_list;   /* for when in list mode */
+    int cmd_list_OK;    /* print OK after each command execution */
+    size_t cmd_list_size;   /* mem cmd_list consumes */
+    GQueue *deferred_send;  /* for output if client is slow */
+    size_t deferred_bytes;  /* mem deferred_send consumes */
+    unsigned int num;   /* client number */
 
-	char send_buf[4096];
-	size_t send_buf_used;	/* bytes used this instance */
+    char send_buf[4096];
+    size_t send_buf_used;   /* bytes used this instance */
 
-	/** is this client waiting for an "idle" response? */
-	bool idle_waiting;
+    /** is this client waiting for an "idle" response? */
+    bool idle_waiting;
 
-	/** idle flags pending on this client, to be sent as soon as
-	    the client enters "idle" */
-	unsigned idle_flags;
+    /** idle flags pending on this client, to be sent as soon as
+        the client enters "idle" */
+    unsigned idle_flags;
 
-	/** idle flags that the client wants to receive */
-	unsigned idle_subscriptions;
+    /** idle flags that the client wants to receive */
+    unsigned idle_subscriptions;
 };
 
 extern unsigned int client_max_connections;
@@ -98,16 +98,16 @@ client_close(struct client *client);
 static inline void
 new_cmd_list_ptr(struct client *client, const char *s)
 {
-	client->cmd_list = g_slist_prepend(client->cmd_list, g_strdup(s));
+    client->cmd_list = g_slist_prepend(client->cmd_list, g_strdup(s));
 }
 
 static inline void
 free_cmd_list(GSList *list)
 {
-	for (GSList *tmp = list; tmp != NULL; tmp = g_slist_next(tmp))
-		g_free(tmp->data);
+    for (GSList *tmp = list; tmp != NULL; tmp = g_slist_next(tmp))
+        g_free(tmp->data);
 
-	g_slist_free(list);
+    g_slist_free(list);
 }
 
 void
@@ -140,6 +140,6 @@ client_write_output(struct client *client);
 
 gboolean
 client_in_event(GIOChannel *source, GIOCondition condition,
-		gpointer data);
+        gpointer data);
 
 #endif

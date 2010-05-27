@@ -54,15 +54,15 @@
 static int
 fd_mask_flags(int fd, int and_mask, int xor_mask)
 {
-	int ret;
+    int ret;
 
-	assert(fd >= 0);
+    assert(fd >= 0);
 
-	ret = fcntl(fd, F_GETFD, 0);
-	if (ret < 0)
-		return ret;
+    ret = fcntl(fd, F_GETFD, 0);
+    if (ret < 0)
+        return ret;
 
-	return fcntl(fd, F_SETFD, (ret & and_mask) ^ xor_mask);
+    return fcntl(fd, F_SETFD, (ret & and_mask) ^ xor_mask);
 }
 
 #endif /* !WIN32 */
@@ -71,10 +71,10 @@ static int
 fd_set_cloexec(int fd, bool enable)
 {
 #ifndef WIN32
-	return fd_mask_flags(fd, ~FD_CLOEXEC, enable ? FD_CLOEXEC : 0);
+    return fd_mask_flags(fd, ~FD_CLOEXEC, enable ? FD_CLOEXEC : 0);
 #else
-	(void)fd;
-	(void)enable;
+    (void)fd;
+    (void)enable;
 #endif
 }
 
@@ -86,62 +86,62 @@ static int
 fd_set_nonblock(int fd)
 {
 #ifdef WIN32
-	u_long val = 1;
-	return ioctlsocket(fd, FIONBIO, &val);
+    u_long val = 1;
+    return ioctlsocket(fd, FIONBIO, &val);
 #else
-	int flags;
+    int flags;
 
-	assert(fd >= 0);
+    assert(fd >= 0);
 
-	flags = fcntl(fd, F_GETFL);
-	if (flags < 0)
-		return flags;
+    flags = fcntl(fd, F_GETFL);
+    if (flags < 0)
+        return flags;
 
-	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 #endif
 }
 
 int
 open_cloexec(const char *path_fs, int flags, int mode)
 {
-	int fd;
+    int fd;
 
 #ifdef O_CLOEXEC
-	flags |= O_CLOEXEC;
+    flags |= O_CLOEXEC;
 #endif
 
 #ifdef O_NOCTTY
-	flags |= O_NOCTTY;
+    flags |= O_NOCTTY;
 #endif
 
-	fd = open(path_fs, flags, mode);
-	if (fd >= 0)
-		fd_set_cloexec(fd, true);
+    fd = open(path_fs, flags, mode);
+    if (fd >= 0)
+        fd_set_cloexec(fd, true);
 
-	return fd;
+    return fd;
 }
 
 int
 pipe_cloexec(int fd[2])
 {
 #ifdef WIN32
-	return _pipe(fd, 512, _O_BINARY);
+    return _pipe(fd, 512, _O_BINARY);
 #else
-	int ret;
+    int ret;
 
 #ifdef HAVE_PIPE2
-	ret = pipe2(fd, O_CLOEXEC);
-	if (ret >= 0 || errno != ENOSYS)
-		return ret;
+    ret = pipe2(fd, O_CLOEXEC);
+    if (ret >= 0 || errno != ENOSYS)
+        return ret;
 #endif
 
-	ret = pipe(fd);
-	if (ret >= 0) {
-		fd_set_cloexec(fd[0], true);
-		fd_set_cloexec(fd[1], true);
-	}
+    ret = pipe(fd);
+    if (ret >= 0) {
+        fd_set_cloexec(fd[0], true);
+        fd_set_cloexec(fd[1], true);
+    }
 
-	return ret;
+    return ret;
 #endif
 }
 
@@ -149,75 +149,75 @@ int
 pipe_cloexec_nonblock(int fd[2])
 {
 #ifdef WIN32
-	return _pipe(fd, 512, _O_BINARY);
+    return _pipe(fd, 512, _O_BINARY);
 #else
-	int ret;
+    int ret;
 
 #ifdef HAVE_PIPE2
-	ret = pipe2(fd, O_CLOEXEC|O_NONBLOCK);
-	if (ret >= 0 || errno != ENOSYS)
-		return ret;
+    ret = pipe2(fd, O_CLOEXEC|O_NONBLOCK);
+    if (ret >= 0 || errno != ENOSYS)
+        return ret;
 #endif
 
-	ret = pipe(fd);
-	if (ret >= 0) {
-		fd_set_cloexec(fd[0], true);
-		fd_set_cloexec(fd[1], true);
+    ret = pipe(fd);
+    if (ret >= 0) {
+        fd_set_cloexec(fd[0], true);
+        fd_set_cloexec(fd[1], true);
 
-		fd_set_nonblock(fd[0]);
-		fd_set_nonblock(fd[1]);
-	}
+        fd_set_nonblock(fd[0]);
+        fd_set_nonblock(fd[1]);
+    }
 
-	return ret;
+    return ret;
 #endif
 }
 
 int
 socket_cloexec_nonblock(int domain, int type, int protocol)
 {
-	int fd;
+    int fd;
 
 #if defined(SOCK_CLOEXEC) && defined(SOCK_NONBLOCK)
-	fd = socket(domain, type | SOCK_CLOEXEC | SOCK_NONBLOCK, protocol);
-	if (fd >= 0 || errno != EINVAL)
-		return fd;
+    fd = socket(domain, type | SOCK_CLOEXEC | SOCK_NONBLOCK, protocol);
+    if (fd >= 0 || errno != EINVAL)
+        return fd;
 #endif
 
-	fd = socket(domain, type, protocol);
-	if (fd >= 0) {
-		fd_set_cloexec(fd, true);
-		fd_set_nonblock(fd);
-	}
+    fd = socket(domain, type, protocol);
+    if (fd >= 0) {
+        fd_set_cloexec(fd, true);
+        fd_set_nonblock(fd);
+    }
 
-	return fd;
+    return fd;
 }
 
 int
 accept_cloexec_nonblock(int fd, struct sockaddr *address,
-			size_t *address_length_r)
+            size_t *address_length_r)
 {
-	int ret;
-	socklen_t address_length = *address_length_r;
+    int ret;
+    socklen_t address_length = *address_length_r;
 
 #ifdef HAVE_ACCEPT4
-	ret = accept4(fd, address, &address_length,
-		      SOCK_CLOEXEC|SOCK_NONBLOCK);
-	if (ret >= 0 || errno != ENOSYS) {
-		if (ret >= 0)
-			*address_length_r = address_length;
+    ret = accept4(fd, address, &address_length,
+              SOCK_CLOEXEC|SOCK_NONBLOCK);
+    if (ret >= 0 || errno != ENOSYS) {
+        if (ret >= 0)
+            *address_length_r = address_length;
 
-		return ret;
-	}
+        return ret;
+    }
 #endif
 
-	ret = accept(fd, address, &address_length);
-	if (ret >= 0) {
-		fd_set_cloexec(ret, true);
-		fd_set_nonblock(ret);
-		*address_length_r = address_length;
-	}
+    ret = accept(fd, address, &address_length);
+    if (ret >= 0) {
+        fd_set_cloexec(ret, true);
+        fd_set_nonblock(ret);
+        *address_length_r = address_length;
+    }
 
-	return ret;
+    return ret;
 }
 
 #ifdef HAVE_INOTIFY_INIT
@@ -225,19 +225,19 @@ accept_cloexec_nonblock(int fd, struct sockaddr *address,
 int
 inotify_init_cloexec(void)
 {
-	int fd;
+    int fd;
 
 #ifdef HAVE_INOTIFY_INIT1
-	fd = inotify_init1(IN_CLOEXEC);
-	if (fd >= 0 || errno != ENOSYS)
-		return fd;
+    fd = inotify_init1(IN_CLOEXEC);
+    if (fd >= 0 || errno != ENOSYS)
+        return fd;
 #endif
 
-	fd = inotify_init();
-	if (fd >= 0)
-		fd_set_cloexec(fd, true);
+    fd = inotify_init();
+    if (fd >= 0)
+        fd_set_cloexec(fd, true);
 
-	return fd;
+    return fd;
 }
 
 #endif

@@ -60,8 +60,8 @@ sockaddr_to_string(const struct sockaddr *sa, size_t length, GError **error);
  */
 int
 socket_bind_listen(int domain, int type, int protocol,
-		   const struct sockaddr *address, size_t address_length,
-		   int backlog,
-		   GError **error);
+           const struct sockaddr *address, size_t address_length,
+           int backlog,
+           GError **error);
 
 #endif

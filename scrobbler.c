@@ -18,9 +18,9 @@
  */
 
 /*!
- * \file	scrobbler.c
- * \brief	audioscrobbler plugin
- * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+ * \file    scrobbler.c
+ * \brief   audioscrobbler plugin
+ * \author  Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
 
 #include <stdio.h>
@@ -42,140 +42,140 @@ static gboolean handshake_successfull = FALSE;
 
 struct _scrobbler_data
 {
-	char session_id[50];
-	char now_playing_url[70];
-	char submission_url[70];
+    char session_id[50];
+    char now_playing_url[70];
+    char submission_url[70];
 }scrobbler_data;
 
 static int scrobblerHandshake(void)
 {
-	time_t rawtime;
-	/* String nur genau passend fuer Benutzer mit maximal 7 Zeichen! */
-	char wgetString[300];
-	char status[20];
-	char *authHash;
-	FILE *tmpFile;
+    time_t rawtime;
+    /* String nur genau passend fuer Benutzer mit maximal 7 Zeichen! */
+    char wgetString[300];
+    char status[20];
+    char *authHash;
+    FILE *tmpFile;
 
-	/* dirty hack. untraceable problems on mips otherwise */
-	long long int copy_of_time;
+    /* dirty hack. untraceable problems on mips otherwise */
+    long long int copy_of_time;
 
-	time(&rawtime);
+    time(&rawtime);
 
-	copy_of_time = (long long int)rawtime;
+    copy_of_time = (long long int)rawtime;
 
-	authHash = scrobblerGetAuthHash((time_t)copy_of_time);
-	sprintf(wgetString, SCROBBLER_HANDSHAKE_EXECUTE, config.scrobbler_tmpfile, config.scrobbler_user, copy_of_time, authHash);
-	system(wgetString);
-	free(authHash);
+    authHash = scrobblerGetAuthHash((time_t)copy_of_time);
+    sprintf(wgetString, SCROBBLER_HANDSHAKE_EXECUTE, config.scrobbler_tmpfile, config.scrobbler_user, copy_of_time, authHash);
+    system(wgetString);
+    free(authHash);
 
-	tmpFile = fopen(config.scrobbler_tmpfile,"r");
-	if(tmpFile)
-	{
-		fscanf(tmpFile,"%s\n%s\n%s\n%s",(char*)&status, 
-			scrobbler_data.session_id, scrobbler_data.now_playing_url,
-			scrobbler_data.submission_url);
-		fclose(tmpFile);
+    tmpFile = fopen(config.scrobbler_tmpfile,"r");
+    if(tmpFile)
+    {
+        fscanf(tmpFile,"%s\n%s\n%s\n%s",(char*)&status, 
+            scrobbler_data.session_id, scrobbler_data.now_playing_url,
+            scrobbler_data.submission_url);
+        fclose(tmpFile);
 
-//		unlink(config.scrobbler_tmpfile);
-	}
-	else
-		g_warning("%s konnte nicht geoffnet werden",config.scrobbler_tmpfile);
-	
-	if(!strcmp(status,"OK"))
-		return 1;
-	else
-	{
-		g_warning("Fehler: %s",status);
-		return 0;
-	}
+//      unlink(config.scrobbler_tmpfile);
+    }
+    else
+        g_warning("%s konnte nicht geoffnet werden",config.scrobbler_tmpfile);
+    
+    if(!strcmp(status,"OK"))
+        return 1;
+    else
+    {
+        g_warning("Fehler: %s",status);
+        return 0;
+    }
 }
 
 static char *scrobblerGetAuthHash(time_t timestamp)
 {
-	char executeString[160];
-	unsigned char digest[MD5_DIGEST_LENGTH];
-	int i;
+    char executeString[160];
+    unsigned char digest[MD5_DIGEST_LENGTH];
+    int i;
 
-	char *authHash = (char*)malloc(sizeof(char)*MD5_DIGEST_LENGTH*2+1);
-	
-	MD5((unsigned char*)config.scrobbler_pass, strlen(config.scrobbler_pass), digest);
-	
-	for(i=0; i < MD5_DIGEST_LENGTH; i++)
-	{
-		sprintf(&authHash[i*2],"%02x", digest[i]);
-	}
+    char *authHash = (char*)malloc(sizeof(char)*MD5_DIGEST_LENGTH*2+1);
+    
+    MD5((unsigned char*)config.scrobbler_pass, strlen(config.scrobbler_pass), digest);
+    
+    for(i=0; i < MD5_DIGEST_LENGTH; i++)
+    {
+        sprintf(&authHash[i*2],"%02x", digest[i]);
+    }
 
-	sprintf(executeString, "%s%qd", authHash, (long long int)timestamp);
-	MD5((unsigned char*)executeString, strlen(executeString), digest);
-	
-	for(i=0; i < MD5_DIGEST_LENGTH; i++)
-	{
-		sprintf(&authHash[i*2],"%02x", digest[i]);
-	}
-	
-	return authHash;
+    sprintf(executeString, "%s%qd", authHash, (long long int)timestamp);
+    MD5((unsigned char*)executeString, strlen(executeString), digest);
+    
+    for(i=0; i < MD5_DIGEST_LENGTH; i++)
+    {
+        sprintf(&authHash[i*2],"%02x", digest[i]);
+    }
+    
+    return authHash;
 }
 
 void scrobblerSubmitTrack
 (char *artist, char *title, char *album,
 int length, char *track, time_t started_playing, int isNowPlaying)
 {
-	static int fifo_low = 0, fifo_high = 0;
-	char executeString[10][1024];
-	char status[15];
-	FILE *tmpFile;
-	int chars;
+    static int fifo_low = 0, fifo_high = 0;
+    char executeString[10][1024];
+    char status[15];
+    FILE *tmpFile;
+    int chars;
 
-	if(!handshake_successfull)
-	{
-		g_debug("handshaking");
-		handshake_successfull = scrobblerHandshake();
-	}
-	
-	if(isNowPlaying)
-	{
-		g_debug("submitting now playing");
-		chars = snprintf(executeString[fifo_high],1023, SCROBBLER_NOW_PLAYING_EXECUTE,
-			config.scrobbler_tmpfile, scrobbler_data.now_playing_url, scrobbler_data.session_id,
-			artist, title, album, length, track);
-	}
-	else
-	{
-		g_debug("submitting track");
-		chars = snprintf(executeString[fifo_high],1023,SCROBBLER_SUBMISSION_EXECUTE,
-			config.scrobbler_tmpfile, scrobbler_data.submission_url, scrobbler_data.session_id,
-			artist, title, album, length, track, (long long int)started_playing);
-	}
-	executeString[fifo_high][chars] = '\0';
-	
-	if(++fifo_high > (SCROBBLER_FIFO_SIZE -1)) fifo_high = 0;
+    if(!handshake_successfull)
+    {
+        g_debug("handshaking");
+        handshake_successfull = scrobblerHandshake();
+    }
+    
+    if(isNowPlaying)
+    {
+        g_debug("submitting now playing");
+        chars = snprintf(executeString[fifo_high],1023, SCROBBLER_NOW_PLAYING_EXECUTE,
+            config.scrobbler_tmpfile, scrobbler_data.now_playing_url, scrobbler_data.session_id,
+            artist, title, album, length, track);
+    }
+    else
+    {
+        g_debug("submitting track");
+        chars = snprintf(executeString[fifo_high],1023,SCROBBLER_SUBMISSION_EXECUTE,
+            config.scrobbler_tmpfile, scrobbler_data.submission_url, scrobbler_data.session_id,
+            artist, title, album, length, track, (long long int)started_playing);
+    }
+    executeString[fifo_high][chars] = '\0';
+    
+    if(++fifo_high > (SCROBBLER_FIFO_SIZE -1)) fifo_high = 0;
 
-	while( fifo_low != fifo_high )
-	{
-		system(executeString[fifo_low]);
-		tmpFile = fopen(config.scrobbler_tmpfile, "r");
-		if(tmpFile)
-		{
-			fscanf(tmpFile,"%s",(char*)&status);
-			fclose(tmpFile);
-//			unlink(config.scrobbler_tmpfile);
-		}
-		else
-		{
-			handshake_successfull = 0;
-			break;
-		}
+    while( fifo_low != fifo_high )
+    {
+        system(executeString[fifo_low]);
+        tmpFile = fopen(config.scrobbler_tmpfile, "r");
+        if(tmpFile)
+        {
+            fscanf(tmpFile,"%s",(char*)&status);
+            fclose(tmpFile);
+//          unlink(config.scrobbler_tmpfile);
+        }
+        else
+        {
+            handshake_successfull = 0;
+            break;
+        }
 
-		if(!strcmp(status,"OK"))
-		{
-			if(++fifo_low > (SCROBBLER_FIFO_SIZE - 1)) fifo_low = 0;
-		}
-		else
-		{
-			handshake_successfull = 0;
-			g_warning("Fehler: %s",status);
-			break; // dont try further
-		}
-	}
+        if(!strcmp(status,"OK"))
+        {
+            if(++fifo_low > (SCROBBLER_FIFO_SIZE - 1)) fifo_low = 0;
+        }
+        else
+        {
+            handshake_successfull = 0;
+            g_warning("Fehler: %s",status);
+            break; // dont try further
+        }
+    }
 }
 

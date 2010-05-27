@@ -28,87 +28,87 @@
 static char *
 client_read_line(struct client *client)
 {
-	const char *p, *newline;
-	size_t length;
-	char *line;
+    const char *p, *newline;
+    size_t length;
+    char *line;
 
-	p = fifo_buffer_read(client->input, &length);
-	if (p == NULL)
-		return NULL;
+    p = fifo_buffer_read(client->input, &length);
+    if (p == NULL)
+        return NULL;
 
-	newline = memchr(p, '\n', length);
-	if (newline == NULL)
-		return NULL;
+    newline = memchr(p, '\n', length);
+    if (newline == NULL)
+        return NULL;
 
-	line = g_strndup(p, newline - p);
-	fifo_buffer_consume(client->input, newline - p + 1);
+    line = g_strndup(p, newline - p);
+    fifo_buffer_consume(client->input, newline - p + 1);
 
-	return g_strchomp(line);
+    return g_strchomp(line);
 }
 
 static enum command_return
 client_input_received(struct client *client, size_t bytesRead)
 {
-	char *line;
+    char *line;
 
-	fifo_buffer_append(client->input, bytesRead);
+    fifo_buffer_append(client->input, bytesRead);
 
-	/* process all lines */
+    /* process all lines */
 
-	while ((line = client_read_line(client)) != NULL) {
-		enum command_return ret = client_process_line(client, line);
-		g_free(line);
+    while ((line = client_read_line(client)) != NULL) {
+        enum command_return ret = client_process_line(client, line);
+        g_free(line);
 
-		if (ret == COMMAND_RETURN_KILL ||
-		    ret == COMMAND_RETURN_CLOSE)
-			return ret;
-		if (client_is_expired(client))
-			return COMMAND_RETURN_CLOSE;
-	}
+        if (ret == COMMAND_RETURN_KILL ||
+            ret == COMMAND_RETURN_CLOSE)
+            return ret;
+        if (client_is_expired(client))
+            return COMMAND_RETURN_CLOSE;
+    }
 
-	return COMMAND_RETURN_OK;
+    return COMMAND_RETURN_OK;
 }
 
 enum command_return
 client_read(struct client *client)
 {
-	char *p;
-	size_t max_length;
-	GError *error = NULL;
-	GIOStatus status;
-	gsize bytes_read;
+    char *p;
+    size_t max_length;
+    GError *error = NULL;
+    GIOStatus status;
+    gsize bytes_read;
 
-	assert(client != NULL);
-	assert(client->channel != NULL);
+    assert(client != NULL);
+    assert(client->channel != NULL);
 
-	p = fifo_buffer_write(client->input, &max_length);
-	if (p == NULL) {
-		g_warning("[%u] buffer overflow", client->num);
-		return COMMAND_RETURN_CLOSE;
-	}
+    p = fifo_buffer_write(client->input, &max_length);
+    if (p == NULL) {
+        g_warning("[%u] buffer overflow", client->num);
+        return COMMAND_RETURN_CLOSE;
+    }
 
-	status = g_io_channel_read_chars(client->channel, p, max_length,
-					 &bytes_read, &error);
-	switch (status) {
-	case G_IO_STATUS_NORMAL:
-		return client_input_received(client, bytes_read);
+    status = g_io_channel_read_chars(client->channel, p, max_length,
+                     &bytes_read, &error);
+    switch (status) {
+    case G_IO_STATUS_NORMAL:
+        return client_input_received(client, bytes_read);
 
-	case G_IO_STATUS_AGAIN:
-		/* try again later, after select() */
-		return COMMAND_RETURN_OK;
+    case G_IO_STATUS_AGAIN:
+        /* try again later, after select() */
+        return COMMAND_RETURN_OK;
 
-	case G_IO_STATUS_EOF:
-		/* peer disconnected */
-		return COMMAND_RETURN_CLOSE;
+    case G_IO_STATUS_EOF:
+        /* peer disconnected */
+        return COMMAND_RETURN_CLOSE;
 
-	case G_IO_STATUS_ERROR:
-		/* I/O error */
-		g_warning("failed to read from client %d: %s",
-			  client->num, error->message);
-		g_error_free(error);
-		return COMMAND_RETURN_CLOSE;
-	}
+    case G_IO_STATUS_ERROR:
+        /* I/O error */
+        g_warning("failed to read from client %d: %s",
+              client->num, error->message);
+        g_error_free(error);
+        return COMMAND_RETURN_CLOSE;
+    }
 
-	/* unreachable */
-	return COMMAND_RETURN_CLOSE;
+    /* unreachable */
+    return COMMAND_RETURN_CLOSE;
 }

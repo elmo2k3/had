@@ -25,84 +25,84 @@
 
 static gboolean
 client_out_event(G_GNUC_UNUSED GIOChannel *source, GIOCondition condition,
-		 gpointer data)
+         gpointer data)
 {
-	struct client *client = data;
+    struct client *client = data;
 
-	assert(!client_is_expired(client));
+    assert(!client_is_expired(client));
 
-	if (condition != G_IO_OUT) {
-		client_set_expired(client);
-		return false;
-	}
+    if (condition != G_IO_OUT) {
+        client_set_expired(client);
+        return false;
+    }
 
-	client_write_deferred(client);
+    client_write_deferred(client);
 
-	if (client_is_expired(client)) {
-		client_close(client);
-		return false;
-	}
+    if (client_is_expired(client)) {
+        client_close(client);
+        return false;
+    }
 
-	g_timer_start(client->last_activity);
+    g_timer_start(client->last_activity);
 
-	if (g_queue_is_empty(client->deferred_send)) {
-		/* done sending deferred buffers exist: schedule
-		   read */
-		client->source_id = g_io_add_watch(client->channel,
-						   G_IO_IN|G_IO_ERR|G_IO_HUP,
-						   client_in_event, client);
-		return false;
-	}
+    if (g_queue_is_empty(client->deferred_send)) {
+        /* done sending deferred buffers exist: schedule
+           read */
+        client->source_id = g_io_add_watch(client->channel,
+                           G_IO_IN|G_IO_ERR|G_IO_HUP,
+                           client_in_event, client);
+        return false;
+    }
 
-	/* write more */
-	return true;
+    /* write more */
+    return true;
 }
 
 gboolean
 client_in_event(G_GNUC_UNUSED GIOChannel *source, GIOCondition condition,
-		gpointer data)
+        gpointer data)
 {
-	struct client *client = data;
-	enum command_return ret;
+    struct client *client = data;
+    enum command_return ret;
 
-	assert(!client_is_expired(client));
+    assert(!client_is_expired(client));
 
-	if (condition != G_IO_IN) {
-		client_set_expired(client);
-		return false;
-	}
+    if (condition != G_IO_IN) {
+        client_set_expired(client);
+        return false;
+    }
 
-	g_timer_start(client->last_activity);
+    g_timer_start(client->last_activity);
 
-	ret = client_read(client);
-	switch (ret) {
-	case COMMAND_RETURN_OK:
-	case COMMAND_RETURN_ERROR:
-		break;
+    ret = client_read(client);
+    switch (ret) {
+    case COMMAND_RETURN_OK:
+    case COMMAND_RETURN_ERROR:
+        break;
 
-	case COMMAND_RETURN_KILL:
-		client_close(client);
-		//g_main_loop_quit(main_loop);
-		return false;
+    case COMMAND_RETURN_KILL:
+        client_close(client);
+        //g_main_loop_quit(main_loop);
+        return false;
 
-	case COMMAND_RETURN_CLOSE:
-		client_close(client);
-		return false;
-	}
+    case COMMAND_RETURN_CLOSE:
+        client_close(client);
+        return false;
+    }
 
-	if (client_is_expired(client)) {
-		client_close(client);
-		return false;
-	}
+    if (client_is_expired(client)) {
+        client_close(client);
+        return false;
+    }
 
-	if (!g_queue_is_empty(client->deferred_send)) {
-		/* deferred buffers exist: schedule write */
-		client->source_id = g_io_add_watch(client->channel,
-						   G_IO_OUT|G_IO_ERR|G_IO_HUP,
-						   client_out_event, client);
-		return false;
-	}
+    if (!g_queue_is_empty(client->deferred_send)) {
+        /* deferred buffers exist: schedule write */
+        client->source_id = g_io_add_watch(client->channel,
+                           G_IO_OUT|G_IO_ERR|G_IO_HUP,
+                           client_out_event, client);
+        return false;
+    }
 
-	/* read more */
-	return true;
+    /* read more */
+    return true;
 }

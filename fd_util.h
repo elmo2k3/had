@@ -79,7 +79,7 @@ socket_cloexec_nonblock(int domain, int type, int protocol);
  */
 int
 accept_cloexec_nonblock(int fd, struct sockaddr *address,
-			size_t *address_length_r);
+            size_t *address_length_r);
 
 /**
  * Wrapper for inotify_init(), which sets the CLOEXEC flag (atomically

@@ -27,10 +27,10 @@
 #include <stdbool.h>
 
 enum command_return {
-	COMMAND_RETURN_ERROR = -1,
-	COMMAND_RETURN_OK = 0,
-	COMMAND_RETURN_KILL = 10,
-	COMMAND_RETURN_CLOSE = 20,
+    COMMAND_RETURN_ERROR = -1,
+    COMMAND_RETURN_OK = 0,
+    COMMAND_RETURN_KILL = 10,
+    COMMAND_RETURN_CLOSE = 20,
 };
 
 #define PERMISSION_NONE    0                                                                                                   

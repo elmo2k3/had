@@ -18,9 +18,9 @@
  */
 
 /*!
- * \file	had.h
- * \brief	had header file. some constant and struct definitions
- * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+ * \file    had.h
+ * \brief   had header file. some constant and struct definitions
+ * \author  Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
 
 #ifndef __HAD_H__
@@ -65,25 +65,25 @@ extern time_t time_had_started;
 
 struct _remote_control_keys
 {
-	int mpd_play_pause;
-	int mpd_random;
-	int mpd_prev;
-	int mpd_next;
-	int hifi_on_off;
-	int light_on;
-	int light_off[2];
-	int red;
-	int green;
-	int blue;
-	int brightlight;
-	int music_on_hifi_on;
-	int everything_off;
-	int red_single[3];
-	int green_single[3];
-	int blue_single[3];
-	int light_single_off[3];
-	int ledmatrix_toggle;
-	int open_door;
+    int mpd_play_pause;
+    int mpd_random;
+    int mpd_prev;
+    int mpd_next;
+    int hifi_on_off;
+    int light_on;
+    int light_off[2];
+    int red;
+    int green;
+    int blue;
+    int brightlight;
+    int music_on_hifi_on;
+    int everything_off;
+    int red_single[3];
+    int green_single[3];
+    int blue_single[3];
+    int light_single_off[3];
+    int ledmatrix_toggle;
+    int open_door;
 };
 
 /** Struct holding all config vars
@@ -91,66 +91,66 @@ struct _remote_control_keys
  */
 struct _config
 {
-	char password[128];
-	int serial_activated; /**< communication to base station activated? */
-	char database_server[50]; /**< mysql server, can be hostname or ip */
-	char database_user[20]; /**< mysql user */
-	char database_password[30]; /**< mysql password */
-	char database_database[20]; /**< database name */
-	int database_port; /**< database port. default 3306 */
-	
-	int mpd_activated; /**< mpd activated */
-	char mpd_server[50]; /**< mpd server, hostname or ip */
-	char mpd_password[30]; /**< mpd password */
-	int mpd_port; /**< mpd port, default 6600 */
+    char password[128];
+    int serial_activated; /**< communication to base station activated? */
+    char database_server[50]; /**< mysql server, can be hostname or ip */
+    char database_user[20]; /**< mysql user */
+    char database_password[30]; /**< mysql password */
+    char database_database[20]; /**< database name */
+    int database_port; /**< database port. default 3306 */
+    
+    int mpd_activated; /**< mpd activated */
+    char mpd_server[50]; /**< mpd server, hostname or ip */
+    char mpd_password[30]; /**< mpd password */
+    int mpd_port; /**< mpd port, default 6600 */
 
-	char scrobbler_user[20]; /**< audioscrobbler user */
-	char scrobbler_pass[34]; /**< audioscrobbler password hash, see audioscrobbler docu */
-	char scrobbler_tmpfile[100]; /**< tempfile. ugly. wont be needed in future versions */
-	
-	char pid_file[100]; /**< had pid file */
-	char logfile[100]; /**< had logfile */
-	char tty[255]; /**< serial device */
-	int verbosity; /**< verbosity. currently 0 and 9 supported */
-	int daemonize; /**< detach from tty, 0 or 1 */
+    char scrobbler_user[20]; /**< audioscrobbler user */
+    char scrobbler_pass[34]; /**< audioscrobbler password hash, see audioscrobbler docu */
+    char scrobbler_tmpfile[100]; /**< tempfile. ugly. wont be needed in future versions */
+    
+    char pid_file[100]; /**< had pid file */
+    char logfile[100]; /**< had logfile */
+    char tty[255]; /**< serial device */
+    int verbosity; /**< verbosity. currently 0 and 9 supported */
+    int daemonize; /**< detach from tty, 0 or 1 */
 
-	char led_matrix_ip[50]; /**< ip address of led-matrix-display */
-	int led_matrix_port; /**< port of led-matrix-display */
-	int led_matrix_activated; /**< led-matrix-display activated, 0 or 1 */
-	int scrobbler_activated; /**< audioscrobbler activated, 0 or 1 */
-	int led_shift_speed; /**< Shift speed for texts on the led matrix */
+    char led_matrix_ip[50]; /**< ip address of led-matrix-display */
+    int led_matrix_port; /**< port of led-matrix-display */
+    int led_matrix_activated; /**< led-matrix-display activated, 0 or 1 */
+    int scrobbler_activated; /**< audioscrobbler activated, 0 or 1 */
+    int led_shift_speed; /**< Shift speed for texts on the led matrix */
 
-	int sms_activated; /**< send sms at several events? */
-	char sipgate_user[100]; /**< sipgate.de user for sending sms*/
-	char sipgate_pass[100]; /**< sipgate.de password */
-	char cellphone[100]; /**< cellphone number for sms (format +4912378877) */
+    int sms_activated; /**< send sms at several events? */
+    char sipgate_user[100]; /**< sipgate.de user for sending sms*/
+    char sipgate_pass[100]; /**< sipgate.de password */
+    char cellphone[100]; /**< cellphone number for sms (format +4912378877) */
 
-	int hr20_activated; /**< communication with hr20 thermostat activated? */
-	char hr20_port[255]; /**< serial port for hr20 communication */
-	int hr20_database_activated;
-	int hr20_database_number;
+    int hr20_activated; /**< communication with hr20 thermostat activated? */
+    char hr20_port[255]; /**< serial port for hr20 communication */
+    int hr20_database_activated;
+    int hr20_database_number;
 
-	char statefile[100]; /**< had statefile */
+    char statefile[100]; /**< had statefile */
 
-	int usbtemp_activated;
-	char usbtemp_device_id[MAX_USB_SENSORS][14];
-	int usbtemp_device_modul[MAX_USB_SENSORS];
-	int usbtemp_device_sensor[MAX_USB_SENSORS];
-	int usbtemp_num_devices;
+    int usbtemp_activated;
+    char usbtemp_device_id[MAX_USB_SENSORS][14];
+    int usbtemp_device_modul[MAX_USB_SENSORS];
+    int usbtemp_device_sensor[MAX_USB_SENSORS];
+    int usbtemp_num_devices;
 
-	int digital_input_module;
-	int door_sensor_id;
-	int window_sensor_id;
+    int digital_input_module;
+    int door_sensor_id;
+    int window_sensor_id;
 
-	char rfid_port[255];
-	int rfid_activated;
+    char rfid_port[255];
+    int rfid_activated;
 
-	int switch_off_with_security;
-	int sms_on_main_door;
-	int security_time_to_active;
-	int security_time_before_alarm;
+    int switch_off_with_security;
+    int sms_on_main_door;
+    int security_time_to_active;
+    int security_time_before_alarm;
 
-	struct _remote_control_keys rkeys;
+    struct _remote_control_keys rkeys;
 }config;
 
 /**
@@ -158,10 +158,10 @@ struct _config
  */ 
 struct _rgb
 {
-	uint8_t red; /**< red */
-	uint8_t green; /**< green */
-	uint8_t blue; /**< blue */
-	uint8_t smoothness; /**< smoothness (time for fading from one color to the other */
+    uint8_t red; /**< red */
+    uint8_t green; /**< green */
+    uint8_t blue; /**< blue */
+    uint8_t smoothness; /**< smoothness (time for fading from one color to the other */
 };
 
 /**
@@ -169,15 +169,15 @@ struct _rgb
  */ 
 struct _hadState
 {
-	struct _rgb rgbModuleValues[3]; /**< array holding current values of each light module */
-	struct _rgb rgbModuleValuesTemp[3]; /**< array holding temporary values of each light module */
-	uint8_t relais_state; /**< state of the relais */
-	uint8_t input_state; /**< state of the input port */
-	uint16_t last_voltage[3]; /**< last voltage values of rf modules */
-	uint8_t scrobbler_user_activated; /**< scrobbler activated? */
-	uint8_t ledmatrix_user_activated; /**< ledmatrix activated? */
-	uint8_t beep_on_window_left_open; 
-	uint8_t beep_on_door_opened;
+    struct _rgb rgbModuleValues[3]; /**< array holding current values of each light module */
+    struct _rgb rgbModuleValuesTemp[3]; /**< array holding temporary values of each light module */
+    uint8_t relais_state; /**< state of the relais */
+    uint8_t input_state; /**< state of the input port */
+    uint16_t last_voltage[3]; /**< last voltage values of rf modules */
+    uint8_t scrobbler_user_activated; /**< scrobbler activated? */
+    uint8_t ledmatrix_user_activated; /**< ledmatrix activated? */
+    uint8_t beep_on_window_left_open; 
+    uint8_t beep_on_door_opened;
 }hadState;
 
 
@@ -188,9 +188,9 @@ struct _hadState
  */ 
 struct headPacket
 {
-	unsigned char address; /**< to address */
-	unsigned char count; /**< how many bytes? payload + 1 byte for command! */
-	unsigned char command; /**< what to do with the payload? */
+    unsigned char address; /**< to address */
+    unsigned char count; /**< how many bytes? payload + 1 byte for command! */
+    unsigned char command; /**< what to do with the payload? */
 };
 
 
@@ -199,8 +199,8 @@ struct headPacket
  */
 struct mpdPacket
 {
-	struct headPacket headP;
-	char currentSong[31];
+    struct headPacket headP;
+    char currentSong[31];
 }mpdP;
 
 /**
@@ -208,27 +208,27 @@ struct mpdPacket
  */
 struct graphPacket
 {
-	struct headPacket headP; /**< header */
-	unsigned char numberOfPoints; /**< how many points? */
-	signed char max[2]; /**< max temperature in this interval */
-	signed char min[2]; /**< min temperature */
-	signed char temperature_history[115]; /**< the y points */
+    struct headPacket headP; /**< header */
+    unsigned char numberOfPoints; /**< how many points? */
+    signed char max[2]; /**< max temperature in this interval */
+    signed char min[2]; /**< min temperature */
+    signed char temperature_history[115]; /**< the y points */
 }graphP;
 
 
 struct __attribute__((packed)) glcdMainPacket
 {
-	struct headPacket headP;
-	unsigned char hour;
-	unsigned char minute;
-	unsigned char second;
-	unsigned char day;
-	unsigned char month;
-	unsigned char year;
-	unsigned char weekday;
-	int16_t temperature[4];
-	unsigned char backlight;
-	unsigned char wecker;
+    struct headPacket headP;
+    unsigned char hour;
+    unsigned char minute;
+    unsigned char second;
+    unsigned char day;
+    unsigned char month;
+    unsigned char year;
+    unsigned char weekday;
+    int16_t temperature[4];
+    unsigned char backlight;
+    unsigned char wecker;
 }glcdP;
 
 /**
@@ -237,11 +237,11 @@ struct __attribute__((packed)) glcdMainPacket
  */ 
 struct _rgbPacket
 {
-	struct headPacket headP; /**< header */
-	unsigned char red; /**< red color */
-	unsigned char green; /**< green color */
-	unsigned char blue; /**< blue color */
-	unsigned char smoothness; /**< time for overblending */
+    struct headPacket headP; /**< header */
+    unsigned char red; /**< red color */
+    unsigned char green; /**< green color */
+    unsigned char blue; /**< blue color */
+    unsigned char smoothness; /**< time for overblending */
 };
 
 

@@ -18,9 +18,9 @@
  */
 
 /*!
- * \file	sms.h
- * \brief	header for sending sms support
- * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+ * \file    sms.h
+ * \brief   header for sending sms support
+ * \author  Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
 
 #ifndef __SMS_H__

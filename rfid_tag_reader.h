@@ -26,18 +26,18 @@
 #include <glib.h>
 
 /**
- *	struct for one rfid tag reader
+ *  struct for one rfid tag reader
  */
 struct RfidTagReader
 {
-	gchar tagid[11];	/**< currently scanned id of tag */
-	gchar last_tagid[11]; /**< tag id of the last tag */
-	guint tagposition;	/**< position in the tagid char array */
-	guint serial_port_watcher; /**< glib watcher */
-	gchar error_string[1024]; /**< last error should be stored here (not in use yet) */
-	gboolean timeout_active; /**< timeout currently active? */
-	void (*callback)(void*); /** function to call after tag was successfully scanned */
-	void *user_data; /** data to pass to the function that is called */
+    gchar tagid[11];    /**< currently scanned id of tag */
+    gchar last_tagid[11]; /**< tag id of the last tag */
+    guint tagposition;  /**< position in the tagid char array */
+    guint serial_port_watcher; /**< glib watcher */
+    gchar error_string[1024]; /**< last error should be stored here (not in use yet) */
+    gboolean timeout_active; /**< timeout currently active? */
+    void (*callback)(void*); /** function to call after tag was successfully scanned */
+    void *user_data; /** data to pass to the function that is called */
 };
 
 /**

@@ -28,42 +28,42 @@ static unsigned num_clients;
 bool
 client_list_is_empty(void)
 {
-	return num_clients == 0;
+    return num_clients == 0;
 }
 
 bool
 client_list_is_full(void)
 {
-	return num_clients >= client_max_connections;
+    return num_clients >= client_max_connections;
 }
 
 struct client *
 client_list_get_first(void)
 {
-	assert(clients != NULL);
+    assert(clients != NULL);
 
-	return clients->data;
+    return clients->data;
 }
 
 void
 client_list_add(struct client *client)
 {
-	clients = g_list_prepend(clients, client);
-	++num_clients;
+    clients = g_list_prepend(clients, client);
+    ++num_clients;
 }
 
 void
 client_list_foreach(GFunc func, gpointer user_data)
 {
-	g_list_foreach(clients, func, user_data);
+    g_list_foreach(clients, func, user_data);
 }
 
 void
 client_list_remove(struct client *client)
 {
-	assert(num_clients > 0);
-	assert(clients != NULL);
+    assert(num_clients > 0);
+    assert(clients != NULL);
 
-	clients = g_list_remove(clients, client);
-	--num_clients;
+    clients = g_list_remove(clients, client);
+    --num_clients;
 }

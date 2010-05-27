@@ -18,9 +18,9 @@
  */
 
 /*!
-* \file	led_routines.h
-* \brief	header for functions for the ledmatrix display
-* \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+* \file led_routines.h
+* \brief    header for functions for the ledmatrix display
+* \author   Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
 
 #ifndef __LED_ROUTINES_H__
@@ -43,21 +43,21 @@
  */
 struct _ledLine
 {
-	uint16_t *column_red; /**< the red part of the string will be put here */
-	uint16_t *column_green; /**< the green part of the string will be put here */
-	uint16_t *column_red_output; /**< red part of the string, possibly shifted */
-	uint16_t *column_green_output; /**< green part of the string, possibly shifted */
-	int x; /**< current x position */
-	int y; /**< current y position */
-	int shift_position; /**< position of the output arrays */
+    uint16_t *column_red; /**< the red part of the string will be put here */
+    uint16_t *column_green; /**< the green part of the string will be put here */
+    uint16_t *column_red_output; /**< red part of the string, possibly shifted */
+    uint16_t *column_green_output; /**< green part of the string, possibly shifted */
+    int x; /**< current x position */
+    int y; /**< current y position */
+    int shift_position; /**< position of the output arrays */
 };
 
 enum _screenToDraw
 {
-	SCREEN_VOID,
-	SCREEN_TIME,
-	SCREEN_MPD,
-	SCREEN_TEMPERATURES
+    SCREEN_VOID,
+    SCREEN_TIME,
+    SCREEN_MPD,
+    SCREEN_TEMPERATURES
 };
 
 /** Start main thread for the led-matrix-display

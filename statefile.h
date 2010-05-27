@@ -18,9 +18,9 @@
  */
 
 /*!
- * \file	statefile.h
- * \brief	header for had statefile support
- * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+ * \file    statefile.h
+ * \brief   header for had statefile support
+ * \author  Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
 
 #ifndef __STATEFILE_H__

@@ -18,9 +18,9 @@
  */
 
 /*!
- * \file	had.c
- * \brief	main file for had
- * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+ * \file    had.c
+ * \brief   main file for had
+ * \author  Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
 
 #include <stdio.h>
@@ -76,244 +76,244 @@ static void had_init_base_station(void);
 
 int main(int argc, char* argv[])
 {
-	signal(SIGINT, (void*)hadSignalHandler);
-	signal(SIGTERM, (void*)hadSignalHandler);
-	struct RfidTagReader *tag_reader;
-	GError *error = NULL;
+    signal(SIGINT, (void*)hadSignalHandler);
+    signal(SIGTERM, (void*)hadSignalHandler);
+    struct RfidTagReader *tag_reader;
+    GError *error = NULL;
 
-	g_thread_init(NULL);
+    g_thread_init(NULL);
 
-	time_had_started = time(NULL);
+    time_had_started = time(NULL);
 
-	ledMatrixInit();
-	had_find_config();
-	had_check_parameters(argc,argv);
-	had_check_daemonize();
-	g_log_set_default_handler(had_log_handler, NULL);
-	had_print_version();
-	had_load_state();
-	client_manager_init();
-	listen_global_init(&error);
-	if(error) {
-		if(config.daemonize) unlink(config.pid_file);
-		g_error("%s",error->message);
-		g_error_free(error);
-		return EXIT_FAILURE;
-	}
-	mpdInit();
-	had_init_hr20();
-	had_init_base_station();
+    ledMatrixInit();
+    had_find_config();
+    had_check_parameters(argc,argv);
+    had_check_daemonize();
+    g_log_set_default_handler(had_log_handler, NULL);
+    had_print_version();
+    had_load_state();
+    client_manager_init();
+    listen_global_init(&error);
+    if(error) {
+        if(config.daemonize) unlink(config.pid_file);
+        g_error("%s",error->message);
+        g_error_free(error);
+        return EXIT_FAILURE;
+    }
+    mpdInit();
+    had_init_hr20();
+    had_init_base_station();
 
-	if(config.rfid_activated) {
-		tag_reader = rfid_tag_reader_new(config.rfid_port);
-		if(tag_reader == NULL) {
-			if(config.daemonize) unlink(config.pid_file);
-			g_error("Error opening %s for tagreader",config.rfid_port);
-			return EXIT_FAILURE;
-		}
-		rfid_tag_reader_set_callback(tag_reader, security_tag_handler);
-	}
+    if(config.rfid_activated) {
+        tag_reader = rfid_tag_reader_new(config.rfid_port);
+        if(tag_reader == NULL) {
+            if(config.daemonize) unlink(config.pid_file);
+            g_error("Error opening %s for tagreader",config.rfid_port);
+            return EXIT_FAILURE;
+        }
+        rfid_tag_reader_set_callback(tag_reader, security_tag_handler);
+    }
 
-	had_main_loop = g_main_loop_new(NULL,FALSE);
+    had_main_loop = g_main_loop_new(NULL,FALSE);
 
-	g_main_loop_run(had_main_loop);
+    g_main_loop_run(had_main_loop);
 
-	listen_global_finish();
-	return 0;
+    listen_global_finish();
+    return 0;
 }
 
 static void hadSignalHandler(int signal)
 {
-	if(signal == SIGTERM || signal == SIGINT)
-	{
-		g_main_loop_quit(had_main_loop);
-		if(config.daemonize)
-			unlink(config.pid_file);
-		//networkThreadStop();
-		writeStateFile(config.statefile);
-		g_message("Shutting down");
-	}
-	else if(signal == SIGHUP)
-	{
-		struct _config configTemp;
-		memcpy(&configTemp, &config, sizeof(config));
+    if(signal == SIGTERM || signal == SIGINT)
+    {
+        g_main_loop_quit(had_main_loop);
+        if(config.daemonize)
+            unlink(config.pid_file);
+        //networkThreadStop();
+        writeStateFile(config.statefile);
+        g_message("Shutting down");
+    }
+    else if(signal == SIGHUP)
+    {
+        struct _config configTemp;
+        memcpy(&configTemp, &config, sizeof(config));
 
-		g_message("Config reloaded");
-		loadConfig(HAD_CONFIG_FILE);
-	}
+        g_message("Config reloaded");
+        loadConfig(HAD_CONFIG_FILE);
+    }
 }
 
 static int killDaemon(int signal)
 {
-	FILE *pid_file = fopen(config.pid_file,"r");
+    FILE *pid_file = fopen(config.pid_file,"r");
 
-	int pid;
+    int pid;
 
-	if(!pid_file)
-	{
-		printf("Could not open %s. Maybe had is not running?\n",config.pid_file);
-		return(EXIT_FAILURE);
-	}
-	fscanf(pid_file,"%d",&pid);
-	fclose(pid_file);
+    if(!pid_file)
+    {
+        printf("Could not open %s. Maybe had is not running?\n",config.pid_file);
+        return(EXIT_FAILURE);
+    }
+    fscanf(pid_file,"%d",&pid);
+    fclose(pid_file);
 
-	kill(pid,signal);
-	return EXIT_SUCCESS;
+    kill(pid,signal);
+    return EXIT_SUCCESS;
 }
 
 static void had_check_parameters(int argc, char **argv)
 {
-	if(argc > 2)
-	{
-		printUsage();
-		exit(EXIT_FAILURE);
-	}
-	
-	if(argc >1)
-	{
-		if(!strcmp(argv[1],"--help"))
-		{
-			printUsage();
-			exit(EXIT_SUCCESS);
-		}
+    if(argc > 2)
+    {
+        printUsage();
+        exit(EXIT_FAILURE);
+    }
+    
+    if(argc >1)
+    {
+        if(!strcmp(argv[1],"--help"))
+        {
+            printUsage();
+            exit(EXIT_SUCCESS);
+        }
 
-		if(!strcmp(argv[1],"-k"))
-		{
-			exit(killDaemon(SIGTERM));
-		}
+        if(!strcmp(argv[1],"-k"))
+        {
+            exit(killDaemon(SIGTERM));
+        }
 
-		/* reload config */
-		if(!strcmp(argv[1],"-r"))
-			exit(killDaemon(SIGHUP));
-	}
+        /* reload config */
+        if(!strcmp(argv[1],"-r"))
+            exit(killDaemon(SIGHUP));
+    }
 }
 
 static void had_find_config(void)
 {
-	if(loadConfig(HAD_CONFIG_FILE))
-	{
-		g_message("Using config %s",HAD_CONFIG_FILE);
-	}
-	else if(loadConfig("had.conf"))
-	{
-		g_message("Using config %s","had.conf");
-	}
-	else
-		exit(EX_NOINPUT);
+    if(loadConfig(HAD_CONFIG_FILE))
+    {
+        g_message("Using config %s",HAD_CONFIG_FILE);
+    }
+    else if(loadConfig("had.conf"))
+    {
+        g_message("Using config %s","had.conf");
+    }
+    else
+        exit(EX_NOINPUT);
 }
 
 static void had_check_daemonize(void)
 {
-	pid_t pid;
-	FILE *pid_file;
-	
-//	freopen("/dev/null", "a", stderr);
+    pid_t pid;
+    FILE *pid_file;
+    
+//  freopen("/dev/null", "a", stderr);
 
-	if(config.daemonize)
-	{
-		if(fileExists(config.pid_file))
-		{
-			printf("%s exists. Maybe had is still running?\n",config.pid_file);
-			exit(EXIT_FAILURE);
-		}
+    if(config.daemonize)
+    {
+        if(fileExists(config.pid_file))
+        {
+            printf("%s exists. Maybe had is still running?\n",config.pid_file);
+            exit(EXIT_FAILURE);
+        }
 
-		if(( pid = fork() ) != 0 )
-			exit(EX_OSERR);
+        if(( pid = fork() ) != 0 )
+            exit(EX_OSERR);
 
-		if(setsid() < 0)
-			exit(EX_OSERR);
-		
-		signal(SIGHUP, SIG_IGN);
-		
-		if(( pid = fork() ) != 0 )
-			exit(EX_OSERR);
+        if(setsid() < 0)
+            exit(EX_OSERR);
+        
+        signal(SIGHUP, SIG_IGN);
+        
+        if(( pid = fork() ) != 0 )
+            exit(EX_OSERR);
 
-		umask(0);
-		
-		signal(SIGHUP, (void*)hadSignalHandler);
+        umask(0);
+        
+        signal(SIGHUP, (void*)hadSignalHandler);
 
-		pid_file = fopen(config.pid_file,"w");
-		if(!pid_file)
-		{
-			printf("Could not write %s\n",config.pid_file);
-			exit(EXIT_FAILURE);
-		}
-		fprintf(pid_file,"%d\n",(int)getpid());
-		fclose(pid_file);
+        pid_file = fopen(config.pid_file,"w");
+        if(!pid_file)
+        {
+            printf("Could not write %s\n",config.pid_file);
+            exit(EXIT_FAILURE);
+        }
+        fprintf(pid_file,"%d\n",(int)getpid());
+        fclose(pid_file);
 
-		freopen(config.logfile, "a", stdout);
-//		freopen("/dev/null", "a", stderr);
+        freopen(config.logfile, "a", stdout);
+//      freopen("/dev/null", "a", stderr);
 
-		/* write into file without buffer */
-		setvbuf(stdout, NULL, _IONBF, 0);
-		setvbuf(stderr, NULL, _IONBF, 0);
+        /* write into file without buffer */
+        setvbuf(stdout, NULL, _IONBF, 0);
+        setvbuf(stderr, NULL, _IONBF, 0);
 
-	}
+    }
 }
 
 static void had_print_version(void)
 {
 #ifdef VERSION
-	g_message("had %s started",VERSION);
+    g_message("had %s started",VERSION);
 #else
-	g_message("had started");
+    g_message("had started");
 #endif
 }
 
 static void had_load_state(void)
 {
-	if(loadStateFile(config.statefile))
-	{
-		g_debug("Statefile successfully read");
-		//relaisP.port = hadState.relais_state;
-	}
-	else
-	{
-		g_debug("Statefile could not be read, using default values");
-		memset(&hadState, 0, sizeof(hadState));
-//		memset(&relaisP, 0, sizeof(relaisP));
-		hadState.scrobbler_user_activated = config.scrobbler_activated;
-		hadState.ledmatrix_user_activated = config.led_matrix_activated;
-		hadState.beep_on_door_opened = 1;
-		hadState.beep_on_window_left_open = 1;
-	}
+    if(loadStateFile(config.statefile))
+    {
+        g_debug("Statefile successfully read");
+        //relaisP.port = hadState.relais_state;
+    }
+    else
+    {
+        g_debug("Statefile could not be read, using default values");
+        memset(&hadState, 0, sizeof(hadState));
+//      memset(&relaisP, 0, sizeof(relaisP));
+        hadState.scrobbler_user_activated = config.scrobbler_activated;
+        hadState.ledmatrix_user_activated = config.led_matrix_activated;
+        hadState.beep_on_door_opened = 1;
+        hadState.beep_on_window_left_open = 1;
+    }
 }
 
 static void had_init_hr20(void)
-{	
-	if(config.hr20_database_activated)
-	{
-		g_timeout_add_seconds(300, hr20update, NULL);
-	}
+{   
+    if(config.hr20_database_activated)
+    {
+        g_timeout_add_seconds(300, hr20update, NULL);
+    }
 }
 
 static void had_init_base_station(void)
 {
-	int celsius,decicelsius;
-	if(config.serial_activated)
-	{
-		if(base_station_init(config.tty)) {
-			if(config.daemonize) unlink(config.pid_file);
-			g_error("Error opening %s",config.tty);
-			exit(EXIT_FAILURE);
-		}
-		
-		glcdP.backlight = 1;
+    int celsius,decicelsius;
+    if(config.serial_activated)
+    {
+        if(base_station_init(config.tty)) {
+            if(config.daemonize) unlink(config.pid_file);
+            g_error("Error opening %s",config.tty);
+            exit(EXIT_FAILURE);
+        }
+        
+        glcdP.backlight = 1;
 
-		getLastTemperature(3,1,&celsius,&decicelsius);
-		lastTemperature[3][1][0] = (int16_t)celsius;
-		lastTemperature[3][1][1] = (int16_t)decicelsius;
+        getLastTemperature(3,1,&celsius,&decicelsius);
+        lastTemperature[3][1][0] = (int16_t)celsius;
+        lastTemperature[3][1][1] = (int16_t)decicelsius;
 
-		getLastTemperature(3,0,&celsius,&decicelsius);
-		lastTemperature[3][0][0] = (int16_t)celsius;
-		lastTemperature[3][0][1] = (int16_t)decicelsius;
+        getLastTemperature(3,0,&celsius,&decicelsius);
+        lastTemperature[3][0][0] = (int16_t)celsius;
+        lastTemperature[3][0][1] = (int16_t)decicelsius;
 
-		sendBaseLcdText("had wurde gestartet ... ");
+        sendBaseLcdText("had wurde gestartet ... ");
 
-	} // config.serial_activated
-	else
-	{
-		g_debug("Serial port deactivated");
-	}
+    } // config.serial_activated
+    else
+    {
+        g_debug("Serial port deactivated");
+    }
 }
 

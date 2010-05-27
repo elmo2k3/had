@@ -22,10 +22,10 @@
 
 #include <assert.h>
 
-#define CLIENT_TIMEOUT_DEFAULT			(60)
-#define CLIENT_MAX_CONNECTIONS_DEFAULT		(10)
-#define CLIENT_MAX_COMMAND_LIST_DEFAULT		(2048*1024)
-#define CLIENT_MAX_OUTPUT_BUFFER_SIZE_DEFAULT	(8192*1024)
+#define CLIENT_TIMEOUT_DEFAULT          (60)
+#define CLIENT_MAX_CONNECTIONS_DEFAULT      (10)
+#define CLIENT_MAX_COMMAND_LIST_DEFAULT     (2048*1024)
+#define CLIENT_MAX_OUTPUT_BUFFER_SIZE_DEFAULT   (8192*1024)
 
 /* set this to zero to indicate we have no possible clients */
 unsigned int client_max_connections;
@@ -35,31 +35,31 @@ size_t client_max_output_buffer_size;
 
 void client_manager_init(void)
 {
-	client_timeout = CLIENT_TIMEOUT_DEFAULT;
-	client_max_connections = CLIENT_MAX_CONNECTIONS_DEFAULT;
-	client_max_command_list_size = (CLIENT_MAX_COMMAND_LIST_DEFAULT / 1024)
-		* 1024;
+    client_timeout = CLIENT_TIMEOUT_DEFAULT;
+    client_max_connections = CLIENT_MAX_CONNECTIONS_DEFAULT;
+    client_max_command_list_size = (CLIENT_MAX_COMMAND_LIST_DEFAULT / 1024)
+        * 1024;
 
-	client_max_output_buffer_size = (CLIENT_MAX_OUTPUT_BUFFER_SIZE_DEFAULT / 1024)
-		* 1024;
+    client_max_output_buffer_size = (CLIENT_MAX_OUTPUT_BUFFER_SIZE_DEFAULT / 1024)
+        * 1024;
 }
 
 static void client_close_all(void)
 {
-	while (!client_list_is_empty()) {
-		struct client *client = client_list_get_first();
+    while (!client_list_is_empty()) {
+        struct client *client = client_list_get_first();
 
-		client_close(client);
-	}
+        client_close(client);
+    }
 
-	assert(client_list_is_empty());
+    assert(client_list_is_empty());
 }
 
 void client_manager_deinit(void)
 {
-	client_close_all();
+    client_close_all();
 
-	client_max_connections = 0;
+    client_max_connections = 0;
 
-	client_deinit_expire();
+    client_deinit_expire();
 }

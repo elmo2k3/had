@@ -18,9 +18,9 @@
  */
 
 /*!
- * \file	database.c
- * \brief	mysql database functions
- * \author	Bjoern Biesenbach <bjoern at bjoern-b dot de>
+ * \file    database.c
+ * \brief   mysql database functions
+ * \author  Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
 
 
@@ -38,215 +38,215 @@ static MYSQL *mysql_connection = NULL;
 
 static int initDatabase(void)
 {
-	my_bool reconnect = 1;
-	const char timeout = 2;
+    my_bool reconnect = 1;
+    const char timeout = 2;
 
-	mysql_connection = mysql_init(NULL);
-	mysql_options(mysql_connection, MYSQL_OPT_RECONNECT, &reconnect);
-	mysql_options(mysql_connection, MYSQL_OPT_WRITE_TIMEOUT, &timeout); // 2 sec
-	mysql_options(mysql_connection, MYSQL_OPT_READ_TIMEOUT, &timeout); // 2 sec
+    mysql_connection = mysql_init(NULL);
+    mysql_options(mysql_connection, MYSQL_OPT_RECONNECT, &reconnect);
+    mysql_options(mysql_connection, MYSQL_OPT_WRITE_TIMEOUT, &timeout); // 2 sec
+    mysql_options(mysql_connection, MYSQL_OPT_READ_TIMEOUT, &timeout); // 2 sec
 
-	if (!mysql_real_connect(mysql_connection, 
-				config.database_server, 
-				config.database_user,
-				config.database_password,
-				config.database_database, 0, NULL, 0))
-	{
-		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		mysql_close(mysql_connection);
-		mysql_connection = NULL;
-		return -1;
-	}
-	return 0;
+    if (!mysql_real_connect(mysql_connection, 
+                config.database_server, 
+                config.database_user,
+                config.database_password,
+                config.database_database, 0, NULL, 0))
+    {
+        fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+        mysql_close(mysql_connection);
+        mysql_connection = NULL;
+        return -1;
+    }
+    return 0;
 }
 
 static int transformY(float temperature, int max, int min)
 {
-	const float range = max - min; // hier muss noch was getan werden!
-	if(range != 0)
-		return ((temperature-min)/range)*40;
-	else
-		return 40;
+    const float range = max - min; // hier muss noch was getan werden!
+    if(range != 0)
+        return ((temperature-min)/range)*40;
+    else
+        return 40;
 }
 
 static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 {
-	char query[255];
+    char query[255];
 
-	MYSQL_RES *mysql_res;
-	MYSQL_ROW mysql_row;
+    MYSQL_RES *mysql_res;
+    MYSQL_ROW mysql_row;
 
-	*min = 0.0;
-	*max = 0.0;
+    *min = 0.0;
+    *max = 0.0;
 
-	if(!mysql_connection)
-	{
-		if(initDatabase())
-			return;
-	}
+    if(!mysql_connection)
+    {
+        if(initDatabase())
+            return;
+    }
 
-	sprintf(query,"SELECT MAX(value), MIN(value) FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
-	if(mysql_query(mysql_connection,query))
-	{
-		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		return;
-	}
+    sprintf(query,"SELECT MAX(value), MIN(value) FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
+    if(mysql_query(mysql_connection,query))
+    {
+        fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+        return;
+    }
 
-	mysql_res = mysql_use_result(mysql_connection);
-	mysql_row = mysql_fetch_row(mysql_res); // nur eine Zeile
+    mysql_res = mysql_use_result(mysql_connection);
+    mysql_row = mysql_fetch_row(mysql_res); // nur eine Zeile
 
-	if(!mysql_row[0])
-	{
-		mysql_free_result(mysql_res);
-		g_message("Keine Daten fuer den Graphen vorhanden!");
-		*max = -1000.0;
-		*min = -1000.0;
-		return;
-	}
-	*max = atof(mysql_row[0]);
-	*min = atof(mysql_row[1]);
+    if(!mysql_row[0])
+    {
+        mysql_free_result(mysql_res);
+        g_message("Keine Daten fuer den Graphen vorhanden!");
+        *max = -1000.0;
+        *min = -1000.0;
+        return;
+    }
+    *max = atof(mysql_row[0]);
+    *min = atof(mysql_row[1]);
 
-	mysql_free_result(mysql_res);
+    mysql_free_result(mysql_res);
 }
 
 
 void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 {
-	char query[255];
-	float x_div=0.0;
-	int y;
-	int temp_max,temp_min;
-	float sec;	
-	float min,max;
+    char query[255];
+    float x_div=0.0;
+    int y;
+    int temp_max,temp_min;
+    float sec;  
+    float min,max;
 
-	min = 0.0;
-	max = 0.0;
+    min = 0.0;
+    max = 0.0;
 
-	graph->numberOfPoints = 0;
-	
-	if(!mysql_connection)
-	{
-		if(initDatabase())
-			return;
-	}
-	
-	MYSQL_RES *mysql_res;
-	MYSQL_ROW mysql_row;
-	
-	getMinMaxTemp(modul, sensor, &max, &min);
+    graph->numberOfPoints = 0;
+    
+    if(!mysql_connection)
+    {
+        if(initDatabase())
+            return;
+    }
+    
+    MYSQL_RES *mysql_res;
+    MYSQL_ROW mysql_row;
+    
+    getMinMaxTemp(modul, sensor, &max, &min);
 
-	graph->max[0] = (int)max;
-	graph->max[1] = (max - (int)max)*10;
-	graph->min[0] = (int)min;
-	graph->min[1] = (min - (int)min)*10;
+    graph->max[0] = (int)max;
+    graph->max[1] = (max - (int)max)*10;
+    graph->min[0] = (int)min;
+    graph->min[1] = (min - (int)min)*10;
 
-	temp_max = ((int)((float)graph->max[0]/10)+1)*10;
-	temp_min = (int)((float)graph->min[0]/10)*10;
-	
-	sprintf(query,"SELECT TIME_TO_SEC(FROM_UNIXTIME(date)), value FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
-	if(mysql_query(mysql_connection,query))
-	{
-		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		return;
-	}
+    temp_max = ((int)((float)graph->max[0]/10)+1)*10;
+    temp_min = (int)((float)graph->min[0]/10)*10;
+    
+    sprintf(query,"SELECT TIME_TO_SEC(FROM_UNIXTIME(date)), value FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
+    if(mysql_query(mysql_connection,query))
+    {
+        fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+        return;
+    }
 
-	mysql_res = mysql_use_result(mysql_connection);
-	while((mysql_row = mysql_fetch_row(mysql_res)))
-	{
-		sec = atoi(mysql_row[0]);
-		x_div = ((float)sec/(60.0*60.0*24.0))*120.0;
-		y = transformY(atof(mysql_row[1]),temp_max,temp_min);
-		if(graph->temperature_history[(int)x_div] !=0)
-			graph->temperature_history[(int)x_div] = (graph->temperature_history[(int)x_div] + y ) / 2;
-		else
-			graph->temperature_history[(int)x_div] = y;
-		//printf("x_div = %d temp = %d\r\n",(int)x_div,temperature_history[(int)x_div]);
-		//temperature_history[i] = i;
-	}
-	graph->numberOfPoints = x_div; // Letzter Wert
-	
-	
-	g_debug("Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
-	
-	mysql_free_result(mysql_res);
+    mysql_res = mysql_use_result(mysql_connection);
+    while((mysql_row = mysql_fetch_row(mysql_res)))
+    {
+        sec = atoi(mysql_row[0]);
+        x_div = ((float)sec/(60.0*60.0*24.0))*120.0;
+        y = transformY(atof(mysql_row[1]),temp_max,temp_min);
+        if(graph->temperature_history[(int)x_div] !=0)
+            graph->temperature_history[(int)x_div] = (graph->temperature_history[(int)x_div] + y ) / 2;
+        else
+            graph->temperature_history[(int)x_div] = y;
+        //printf("x_div = %d temp = %d\r\n",(int)x_div,temperature_history[(int)x_div]);
+        //temperature_history[i] = i;
+    }
+    graph->numberOfPoints = x_div; // Letzter Wert
+    
+    
+    g_debug("Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
+    
+    mysql_free_result(mysql_res);
 }
 
 void databaseInsertDigitalValue
 (int modul, int sensor, int value, time_t timestamp)
 {
-	float fvalue = (float)value;
-	databaseInsertTemperature(modul, sensor, &fvalue, timestamp);
+    float fvalue = (float)value;
+    databaseInsertTemperature(modul, sensor, &fvalue, timestamp);
 }
 
 void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t timestamp)
 {
-	static char query[DATABASE_FIFO_SIZE][128];
-	static int fifo_low = 0, fifo_high = 0;
-	int status;
-	if(!mysql_connection)
-	{
-		if(initDatabase())
-			return;
-	}
+    static char query[DATABASE_FIFO_SIZE][128];
+    static int fifo_low = 0, fifo_high = 0;
+    int status;
+    if(!mysql_connection)
+    {
+        if(initDatabase())
+            return;
+    }
 
-	g_debug("fifo_low = %d, fifo_high = %d",fifo_low, fifo_high);
-	g_debug("temperature = %2.4f",*temperature);
-	sprintf(query[fifo_high],"INSERT INTO modul_%d (date,sensor,value) VALUES ('%ld','%d','%4.4f')",modul, timestamp, sensor, *temperature);
+    g_debug("fifo_low = %d, fifo_high = %d",fifo_low, fifo_high);
+    g_debug("temperature = %2.4f",*temperature);
+    sprintf(query[fifo_high],"INSERT INTO modul_%d (date,sensor,value) VALUES ('%ld','%d','%4.4f')",modul, timestamp, sensor, *temperature);
 
-	g_debug("query = %s",query[fifo_high]);
+    g_debug("query = %s",query[fifo_high]);
 
-	if(++fifo_high > (DATABASE_FIFO_SIZE -1)) fifo_high = 0;
+    if(++fifo_high > (DATABASE_FIFO_SIZE -1)) fifo_high = 0;
 
-	while( fifo_low != fifo_high )
-	{
-		if((status = mysql_query(mysql_connection,query[fifo_low]))) // not successfull
-		{
-			if(status == 2006 ) { //CR_SERVER_GONE_ERROR
-				mysql_close(mysql_connection);
-				if(initDatabase())
-					return;
-			}
-			break; // dont try further
-		}
-		else // query was successfull
-		{
-			if(++fifo_low > (DATABASE_FIFO_SIZE - 1)) fifo_low = 0;
-		}
+    while( fifo_low != fifo_high )
+    {
+        if((status = mysql_query(mysql_connection,query[fifo_low]))) // not successfull
+        {
+            if(status == 2006 ) { //CR_SERVER_GONE_ERROR
+                mysql_close(mysql_connection);
+                if(initDatabase())
+                    return;
+            }
+            break; // dont try further
+        }
+        else // query was successfull
+        {
+            if(++fifo_low > (DATABASE_FIFO_SIZE - 1)) fifo_low = 0;
+        }
 
-	}
+    }
 }
 
 void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
 {
-	char query[255];
+    char query[255];
 
-	MYSQL_RES *mysql_res;
-	MYSQL_ROW mysql_row;
+    MYSQL_RES *mysql_res;
+    MYSQL_ROW mysql_row;
 
-	*temp = 0;
-	*temp_deci = 0;
-	
-	if(!mysql_connection)
-	{
-		if(initDatabase())
-			return;
-	}
+    *temp = 0;
+    *temp_deci = 0;
+    
+    if(!mysql_connection)
+    {
+        if(initDatabase())
+            return;
+    }
 
-	sprintf(query,"SELECT value FROM modul_%d WHERE sensor=%d ORDER BY date DESC LIMIT 1",modul,sensor);
-	if(mysql_query(mysql_connection,query))
-	{
-		fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
-		return;
-	}
+    sprintf(query,"SELECT value FROM modul_%d WHERE sensor=%d ORDER BY date DESC LIMIT 1",modul,sensor);
+    if(mysql_query(mysql_connection,query))
+    {
+        fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+        return;
+    }
 
-	mysql_res = mysql_use_result(mysql_connection);
-	mysql_row = mysql_fetch_row(mysql_res);
-	if(mysql_row[0])
-	{
-		*temp = atoi(mysql_row[0]);
-		*temp_deci = (atof(mysql_row[0]) - *temp)*10;
-	}
-	
-	mysql_free_result(mysql_res);
+    mysql_res = mysql_use_result(mysql_connection);
+    mysql_row = mysql_fetch_row(mysql_res);
+    if(mysql_row[0])
+    {
+        *temp = atoi(mysql_row[0]);
+        *temp_deci = (atof(mysql_row[0]) - *temp)*10;
+    }
+    
+    mysql_free_result(mysql_res);
 }
 

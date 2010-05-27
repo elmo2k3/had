@@ -25,41 +25,41 @@ static guint expire_source_id;
 void
 client_set_expired(struct client *client)
 {
-	if (!client_is_expired(client))
-		client_schedule_expire();
+    if (!client_is_expired(client))
+        client_schedule_expire();
 
-	if (client->source_id != 0) {
-		g_source_remove(client->source_id);
-		client->source_id = 0;
-	}
+    if (client->source_id != 0) {
+        g_source_remove(client->source_id);
+        client->source_id = 0;
+    }
 
-	if (client->channel != NULL) {
-		g_io_channel_unref(client->channel);
-		client->channel = NULL;
-	}
+    if (client->channel != NULL) {
+        g_io_channel_unref(client->channel);
+        client->channel = NULL;
+    }
 }
 
 static void
 client_check_expired_callback(gpointer data, G_GNUC_UNUSED gpointer user_data)
 {
-	struct client *client = data;
+    struct client *client = data;
 
-	if (client_is_expired(client)) {
-		g_debug("[%u] expired", client->num);
-		client_close(client);
-	} else if (!client->idle_waiting && /* idle clients
-					       never expire */
-		   (int)g_timer_elapsed(client->last_activity, NULL) >
-		   client_timeout) {
-		g_debug("[%u] timeout", client->num);
-		client_close(client);
-	}
+    if (client_is_expired(client)) {
+        g_debug("[%u] expired", client->num);
+        client_close(client);
+    } else if (!client->idle_waiting && /* idle clients
+                           never expire */
+           (int)g_timer_elapsed(client->last_activity, NULL) >
+           client_timeout) {
+        g_debug("[%u] timeout", client->num);
+        client_close(client);
+    }
 }
 
 static void
 client_manager_expire(void)
 {
-	client_list_foreach(client_check_expired_callback, NULL);
+    client_list_foreach(client_check_expired_callback, NULL);
 }
 
 /**
@@ -68,23 +68,23 @@ client_manager_expire(void)
 static gboolean
 client_manager_expire_event(G_GNUC_UNUSED gpointer data)
 {
-	expire_source_id = 0;
-	client_manager_expire();
-	return false;
+    expire_source_id = 0;
+    client_manager_expire();
+    return false;
 }
 
 void
 client_schedule_expire(void)
 {
-	if (expire_source_id == 0)
-		/* delayed deletion */
-		expire_source_id = g_idle_add(client_manager_expire_event,
-					      NULL);
+    if (expire_source_id == 0)
+        /* delayed deletion */
+        expire_source_id = g_idle_add(client_manager_expire_event,
+                          NULL);
 }
 
 void
 client_deinit_expire(void)
 {
-	if (expire_source_id != 0)
-		g_source_remove(expire_source_id);
+    if (expire_source_id != 0)
+        g_source_remove(expire_source_id);
 }

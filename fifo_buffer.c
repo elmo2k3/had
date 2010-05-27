@@ -37,67 +37,67 @@
 #include <string.h>
 
 struct fifo_buffer {
-	size_t size, start, end;
-	unsigned char buffer[sizeof(size_t)];
+    size_t size, start, end;
+    unsigned char buffer[sizeof(size_t)];
 };
 
 struct fifo_buffer *
 fifo_buffer_new(size_t size)
 {
-	struct fifo_buffer *buffer;
+    struct fifo_buffer *buffer;
 
-	assert(size > 0);
+    assert(size > 0);
 
-	buffer = (struct fifo_buffer *)g_malloc(sizeof(*buffer) -
-						sizeof(buffer->buffer) + size);
+    buffer = (struct fifo_buffer *)g_malloc(sizeof(*buffer) -
+                        sizeof(buffer->buffer) + size);
 
-	buffer->size = size;
-	buffer->start = 0;
-	buffer->end = 0;
+    buffer->size = size;
+    buffer->start = 0;
+    buffer->end = 0;
 
-	return buffer;
+    return buffer;
 }
 
 void
 fifo_buffer_free(struct fifo_buffer *buffer)
 {
-	assert(buffer != NULL);
+    assert(buffer != NULL);
 
-	g_free(buffer);
+    g_free(buffer);
 }
 
 void
 fifo_buffer_clear(struct fifo_buffer *buffer)
 {
-	assert(buffer != NULL);
+    assert(buffer != NULL);
 
-	buffer->start = 0;
-	buffer->end = 0;
+    buffer->start = 0;
+    buffer->end = 0;
 }
 
 const void *
 fifo_buffer_read(const struct fifo_buffer *buffer, size_t *length_r)
 {
-	assert(buffer != NULL);
-	assert(buffer->end >= buffer->start);
-	assert(length_r != NULL);
+    assert(buffer != NULL);
+    assert(buffer->end >= buffer->start);
+    assert(length_r != NULL);
 
-	if (buffer->start == buffer->end)
-		/* the buffer is empty */
-		return NULL;
+    if (buffer->start == buffer->end)
+        /* the buffer is empty */
+        return NULL;
 
-	*length_r = buffer->end - buffer->start;
-	return buffer->buffer + buffer->start;
+    *length_r = buffer->end - buffer->start;
+    return buffer->buffer + buffer->start;
 }
 
 void
 fifo_buffer_consume(struct fifo_buffer *buffer, size_t length)
 {
-	assert(buffer != NULL);
-	assert(buffer->end >= buffer->start);
-	assert(buffer->start + length <= buffer->end);
+    assert(buffer != NULL);
+    assert(buffer->end >= buffer->start);
+    assert(buffer->start + length <= buffer->end);
 
-	buffer->start += length;
+    buffer->start += length;
 }
 
 /**
@@ -106,56 +106,56 @@ fifo_buffer_consume(struct fifo_buffer *buffer, size_t length)
 static void
 fifo_buffer_move(struct fifo_buffer *buffer)
 {
-	if (buffer->start == 0)
-		return;
+    if (buffer->start == 0)
+        return;
 
-	if (buffer->end > buffer->start)
-		memmove(buffer->buffer,
-			buffer->buffer + buffer->start,
-			buffer->end - buffer->start);
+    if (buffer->end > buffer->start)
+        memmove(buffer->buffer,
+            buffer->buffer + buffer->start,
+            buffer->end - buffer->start);
 
-	buffer->end -= buffer->start;
-	buffer->start = 0;
+    buffer->end -= buffer->start;
+    buffer->start = 0;
 }
 
 void *
 fifo_buffer_write(struct fifo_buffer *buffer, size_t *max_length_r)
 {
-	assert(buffer != NULL);
-	assert(buffer->end <= buffer->size);
-	assert(max_length_r != NULL);
+    assert(buffer != NULL);
+    assert(buffer->end <= buffer->size);
+    assert(max_length_r != NULL);
 
-	if (buffer->end == buffer->size) {
-		fifo_buffer_move(buffer);
-		if (buffer->end == buffer->size)
-			return NULL;
-	} else if (buffer->start > 0 && buffer->start == buffer->end) {
-		buffer->start = 0;
-		buffer->end = 0;
-	}
+    if (buffer->end == buffer->size) {
+        fifo_buffer_move(buffer);
+        if (buffer->end == buffer->size)
+            return NULL;
+    } else if (buffer->start > 0 && buffer->start == buffer->end) {
+        buffer->start = 0;
+        buffer->end = 0;
+    }
 
-	*max_length_r = buffer->size - buffer->end;
-	return buffer->buffer + buffer->end;
+    *max_length_r = buffer->size - buffer->end;
+    return buffer->buffer + buffer->end;
 }
 
 void
 fifo_buffer_append(struct fifo_buffer *buffer, size_t length)
 {
-	assert(buffer != NULL);
-	assert(buffer->end >= buffer->start);
-	assert(buffer->end + length <= buffer->size);
+    assert(buffer != NULL);
+    assert(buffer->end >= buffer->start);
+    assert(buffer->end + length <= buffer->size);
 
-	buffer->end += length;
+    buffer->end += length;
 }
 
 bool
 fifo_buffer_is_empty(struct fifo_buffer *buffer)
 {
-	return buffer->start == buffer->end;
+    return buffer->start == buffer->end;
 }
 
 bool
 fifo_buffer_is_full(struct fifo_buffer *buffer)
 {
-	return buffer->start == 0 && buffer->end == buffer->size;
+    return buffer->start == 0 && buffer->end == buffer->size;
 }
