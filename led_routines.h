@@ -70,36 +70,6 @@ extern void ledMatrixStart(void);
  */
 extern void ledMatrixStop(void);
 
-/** Allocate memory for a line
- *
- * Uses malloc so freeLedLine(..) has to be called later to avoid memory leaks
- *
- * @param *ledLine reference to the line
- * @param line_length IMPORTANT: by now, only use LINE_LENGTH
- */
-extern int allocateLedLine(struct _ledLine *ledLine, int line_length);
-
-/** Free memory for a line
- *
- * Beware, no checking here. If ledLine was freed yet you'll get a segfault
- *
- * @param ledLine line to be freed
- */
-extern void freeLedLine(struct _ledLine *ledLine);
-
-/** Append a string to line
- *
- * @param *string null-terminated string
- * @param *ledLine reference to the line
- */
-extern void putString(char *string, struct _ledLine *ledLine);
-
-/** Clear a line
- *
- * Clears everything in the line and set back all positions
- */
-extern void clearScreen(struct _ledLine *ledLine);
-
 /** 
  * Push a string onto the display stack
  *
@@ -118,6 +88,8 @@ extern void ledMatrixToggle(void);
 extern void ledMatrixInit(void);
 
 extern void ledMatrixSelectScreen(enum _screenToDraw screen);
+
+extern void ledMatrixSetText(enum _screenToDraw screen, char *text);
 
 #endif
 

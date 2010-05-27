@@ -80,12 +80,18 @@ static int running;
 GAsyncQueue *async_queue_shutdown;
 GAsyncQueue *async_queue_toggle_screen;
 GAsyncQueue *async_queue_select_screen;
+GAsyncQueue *async_queue_select_screen_back;
+GAsyncQueue *async_queue_set_text;
+GAsyncQueue *async_queue_set_text_back;
 
 void ledMatrixInit(void)
 {
 	async_queue_shutdown = g_async_queue_new();
 	async_queue_toggle_screen = g_async_queue_new();
 	async_queue_select_screen = g_async_queue_new();
+	async_queue_select_screen_back = g_async_queue_new();
+	async_queue_set_text = g_async_queue_new();
+	async_queue_set_text_back = g_async_queue_new();
 
 	mutex_is_running = g_mutex_new();
 	mutex_led_matrix = g_mutex_new();
@@ -287,7 +293,7 @@ static int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 	return 1;
 }
 
-void putString(char *string, struct _ledLine *ledLine)
+static void putString(char *string, struct _ledLine *ledLine)
 {
 	static int color = COLOR_RED;
 
@@ -309,7 +315,7 @@ void putString(char *string, struct _ledLine *ledLine)
 	}
 }
 
-void clearScreen(struct _ledLine *ledLine)
+static void clearScreen(struct _ledLine *ledLine)
 {
 	g_mutex_lock(mutex_led_matrix);
 	memset(ledLine->column_red,0,sizeof(uint16_t)*LINE_LENGTH);
@@ -410,7 +416,7 @@ void ledMatrixStop()
 	g_debug("LedMatrixThread gestoppt");
 }
 
-int allocateLedLine(struct _ledLine *ledLine, int line_length)
+static int allocateLedLine(struct _ledLine *ledLine, int line_length)
 {
 	ledLine->column_red = calloc(sizeof(uint16_t), line_length);
 	if(!ledLine->column_red)
@@ -435,7 +441,7 @@ int allocateLedLine(struct _ledLine *ledLine, int line_length)
 	return 1;
 }
 
-void freeLedLine(struct _ledLine *ledLine)
+static void freeLedLine(struct _ledLine *ledLine)
 {
 	if(!ledLine->column_red)
 		g_warning("ledLine.column_red was not allocated");
@@ -499,14 +505,16 @@ static gpointer ledMatrixStartThread(gpointer data)
 
 	struct _ledLine ledLineTime;
 	struct _ledLine ledLineVoid;
+	struct _ledLine ledLineMpd;
 	struct _ledLine *ledLineToDraw;
 	int shift_speed = 0;
 	time_t rawtime;
 	struct tm *ptm;
 	int last_mpd_state = 0;
 	char time_string[20];
-	GAsyncQueue *queue_shutdown, *queue_toggle, *queue_select_screen;
 	enum _screenToDraw screen_to_draw, *screen_switch;
+	static gboolean release_back;
+	char *text_to_set;
 
 	screen_to_draw = SCREEN_TIME;
 	
@@ -520,17 +528,36 @@ static gpointer ledMatrixStartThread(gpointer data)
 	
 	allocateLedLine(&ledLineTime, LINE_LENGTH);
 	allocateLedLine(&ledLineVoid, LINE_LENGTH);	
+	allocateLedLine(&ledLineMpd, LINE_LENGTH);
 	clearScreen(&ledLineVoid);
 	
-	queue_shutdown = g_async_queue_ref(async_queue_shutdown);
-	queue_toggle = g_async_queue_ref(async_queue_toggle_screen);
-	queue_select_screen = g_async_queue_ref(async_queue_select_screen);
+	g_async_queue_ref(async_queue_shutdown);
+	g_async_queue_ref(async_queue_toggle_screen);
+	g_async_queue_ref(async_queue_select_screen);
+	g_async_queue_ref(async_queue_select_screen_back);
+	g_async_queue_ref(async_queue_set_text);
+	g_async_queue_ref(async_queue_set_text_back);
 
 	ledLineToDraw = &ledLineTime;
 	
 	g_mutex_unlock(mutex_is_running);
 	while(1)
 	{
+		// check for incoming text
+		if((screen_switch = (enum _screenToDraw*)g_async_queue_try_pop(
+			async_queue_set_text)))
+		{
+			text_to_set = (char*)g_async_queue_pop(async_queue_set_text);
+			switch(screen_to_draw)
+			{
+				case SCREEN_MPD: 	clearScreen(&ledLineMpd); 
+									putString(text_to_set, &ledLineMpd); break;
+				default: break;
+			}
+			release_back = TRUE;
+			g_async_queue_push(async_queue_set_text_back, &release_back);
+		}
+
 		if(led_stack_size)
 		{
 			ledLineToDraw = &ledLineStack[led_stack_size-1];
@@ -547,7 +574,7 @@ static gpointer ledMatrixStartThread(gpointer data)
 		/* Important! else doesn't work here */
 		if(!led_stack_size)
 		{
-			if(g_async_queue_try_pop(queue_toggle) != NULL)
+			if(g_async_queue_try_pop(async_queue_toggle_screen) != NULL)
 			{
 				switch(screen_to_draw)
 				{
@@ -562,11 +589,14 @@ static gpointer ledMatrixStartThread(gpointer data)
 										break;
 				}
 			}
-			else if((screen_switch = (enum _screenToDraw*)g_async_queue_try_pop(queue_select_screen)) != NULL)
+			else if((screen_switch = (enum _screenToDraw*)g_async_queue_try_pop(
+				async_queue_select_screen)) != NULL)
 			{
+				release_back = TRUE;
+				g_async_queue_push(async_queue_select_screen_back, &release_back);
 				g_debug("switching screen");
 				screen_to_draw = *screen_switch;
-				g_debug("switch value = %d", screen_to_draw);
+				g_debug("switch value = %d", *screen_switch);
 				switch(screen_to_draw)
 				{
 					case SCREEN_TIME: g_debug("screen switched to SCREEN_TIME"); break;
@@ -634,7 +664,7 @@ static gpointer ledMatrixStartThread(gpointer data)
 			}
 			ledDisplayMain(ledLineToDraw, shift_speed);
 		}
-		if(g_async_queue_try_pop(queue_shutdown) != NULL)
+		if(g_async_queue_try_pop(async_queue_shutdown) != NULL)
 		{
 			break;
 		}
@@ -643,6 +673,9 @@ static gpointer ledMatrixStartThread(gpointer data)
 	g_async_queue_unref(async_queue_shutdown);
 	g_async_queue_unref(async_queue_toggle_screen);
 	g_async_queue_unref(async_queue_select_screen);
+	g_async_queue_unref(async_queue_select_screen_back);
+	g_async_queue_unref(async_queue_set_text);
+	g_async_queue_unref(async_queue_set_text_back);
 
 	freeLedLine(&ledLineTime);
 	freeLedLine(&ledLineVoid);
@@ -668,6 +701,16 @@ static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
 	}
 }
 
+void ledMatrixSetText(enum _screenToDraw screen, char *text)
+{
+	if(ledIsRunning())
+	{
+		g_async_queue_push(async_queue_set_text, &screen);
+		g_async_queue_push(async_queue_set_text, text);
+		g_async_queue_pop(async_queue_set_text_back);
+	}
+}
+
 void ledMatrixToggle(void)
 {
 	gboolean toggle = TRUE;
@@ -677,8 +720,11 @@ void ledMatrixToggle(void)
 
 void ledMatrixSelectScreen(enum _screenToDraw screen)
 {
-//	if(ledIsRunning())
-//		g_async_queue_push(async_queue_select_screen, &screen);
+	if(ledIsRunning())
+	{
+		g_async_queue_push(async_queue_select_screen, (gpointer)&screen);
+		g_async_queue_pop(async_queue_select_screen_back);
+	}
 }
 
 void ledMatrixStart(void)

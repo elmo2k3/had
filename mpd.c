@@ -42,8 +42,6 @@
 	
 static MpdObj *mpd;
 
-struct _ledLine ledLineMpd;
-
 static int isPlaying;
 static guint submit_source = 0;
 static guint now_playing_source = 0;
@@ -92,7 +90,6 @@ int mpdInit(void)
 		return 1;
 	}
 
-	allocateLedLine(&ledLineMpd, LINE_LENGTH);
 
 	mpd = mpd_new(config.mpd_server,
 			config.mpd_port,
@@ -118,6 +115,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 {
 	time_t current_time;
 	guint shortest_time;
+	char led_matrix_text[255];
 
 	isPlaying = mpd_player_get_state(mpd);
 
@@ -127,11 +125,9 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 		mpd_Song *song = mpd_playlist_get_current_song(mi);
 		if(song)
 		{
-			clearScreen(&ledLineMpd);
-			putString("\r",&ledLineMpd);
-			putString(song->artist,&ledLineMpd);
-			putString("\a - \b",&ledLineMpd);
-			putString(song->title,&ledLineMpd);
+			snprintf(led_matrix_text, sizeof(led_matrix_text),
+				"\r%s\a - \b%s", song->artist, song->title);
+			ledMatrixSetText(SCREEN_MPD,led_matrix_text);
 
 			if(song->artist)
 				strcpy(current_track.last_artist, song->artist);
