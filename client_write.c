@@ -148,6 +148,7 @@ static void client_write_direct(struct client *client,
 	assert(data != NULL);
 	assert(length > 0);
 	assert(g_queue_is_empty(client->deferred_send));
+	assert(client->channel);
 
 	status = g_io_channel_write_chars(client->channel, data, length,
 					  &bytes_written, &error);

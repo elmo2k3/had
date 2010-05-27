@@ -26,11 +26,7 @@
 
 #include <assert.h>
 #include <unistd.h>
-
-#ifdef HAVE_LIBWRAP
-#include <tcpd.h>
-#endif
-
+#include <sys/socket.h>
 
 #define LOG_LEVEL_SECURE G_LOG_LEVEL_INFO
 
@@ -112,7 +108,8 @@ void client_new(int fd, const struct sockaddr *sa, size_t sa_length, int uid)
 
 	client->send_buf_used = 0;
 
-	(void)write(fd, GREETING, sizeof(GREETING) - 1);
+//	(void)send(fd, GREETING, sizeof(GREETING) - 1,0);
+//	client_puts(client,GREETING);	
 
 	client_list_add(client);
 
