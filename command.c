@@ -619,6 +619,7 @@ static const struct command commands[] = {
     {"led_display_text",PERMISSION_ADMIN, 1,2, action_led_display_text},
     {"led_matrix",PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
     {"lm_select_screen",PERMISSION_ADMIN, 1,1, action_led_matrix_select_screen},
+    {"lm_toggle",PERMISSION_ADMIN, 0,0, action_led_matrix_toggle},
     {"open_door",PERMISSION_ADMIN, 0,1, action_open_door},
     {"quit",PERMISSION_ADMIN,  0, 0,          action_disconnect},
 	{"sent_graph",PERMISSION_ADMIN,0,0,action_sent_graph},
@@ -628,7 +629,6 @@ static const struct command commands[] = {
 	{"set_rgb_all",PERMISSION_ADMIN, 4,4, action_set_rgb_all},
 	{"set_sleep_light",PERMISSION_ADMIN,1,1,action_set_sleep_light},
 	{"sms",PERMISSION_ADMIN,1,2, action_sms},
-    {"toggle_lm",PERMISSION_ADMIN, 0,0, action_led_matrix_toggle},
 	{"uptime",PERMISSION_ADMIN,0,0,action_uptime}
 };
 
