@@ -35,5 +35,7 @@ had: had.o \
 	tokenizer.o \
 	security.o
 
+*.o:	had.h
+
 clean:
 	$(RM) *.o had

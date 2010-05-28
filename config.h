@@ -29,6 +29,8 @@
  */
 extern int loadConfig(char *conf);
 
+extern int saveConfig(char *conf);
+
 /* Default values */
 #define MYSQL_PORT 3306
 #define MPD_PORT 6600

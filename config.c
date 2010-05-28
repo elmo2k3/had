@@ -31,6 +31,9 @@
 #include "config.h"
 #include "had.h"
 
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "config"
+
 #define NUM_PARAMS 46
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
     "db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
@@ -43,6 +46,73 @@ static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_
     "digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security",
     "sms_on_main_door","time_to_active","time_before_alarm"};
 
+int saveConfig(char *conf)
+{
+    FILE *config_file = fopen(conf,"w");
+    if(!config_file)
+        return 0;
+    g_debug("saving config file %s",conf); 
+    fprintf(config_file,"logfile = %s\n",config.logfile);
+    fprintf(config_file,"verbosity = %d\n",config.verbosity);
+    fprintf(config_file,"daemonize = %d\n",config.daemonize);
+    fprintf(config_file,"statefile = %s\n",config.statefile);
+    fprintf(config_file,"pid_file = %s\n",config.pid_file);
+    fprintf(config_file,"password = %s\n",config.password);
+    fprintf(config_file,"\n");
+    
+    fprintf(config_file,"serial_activated = %d\n",config.serial_activated);
+    fprintf(config_file,"tty = %s\n",config.tty);
+    fprintf(config_file,"door_sensor_id = %d\n",config.door_sensor_id);
+    fprintf(config_file,"window_sensor_id = %d\n",config.window_sensor_id);
+    fprintf(config_file,"digital_input_module = %d\n",config.digital_input_module);
+    fprintf(config_file,"\n");
+    
+    fprintf(config_file,"led_matrix_activated = %d\n",config.led_matrix_activated);
+    fprintf(config_file,"led_matrix_ip = %s\n",config.led_matrix_ip);
+    fprintf(config_file,"led_matrix_port = %d\n",config.led_matrix_port);
+    fprintf(config_file,"led_matrix_shift_speed = %d\n",config.led_shift_speed);
+    fprintf(config_file,"\n");
+
+    fprintf(config_file,"db_db = %s\n",config.database_database);
+    fprintf(config_file,"db_server = %s\n",config.database_server);
+    fprintf(config_file,"db_pass = %s\n",config.database_password);
+    fprintf(config_file,"db_port = %d\n",config.database_port);
+    fprintf(config_file,"\n");
+
+    fprintf(config_file,"mpd_activated = %d\n",config.mpd_activated);
+    fprintf(config_file,"mpd_server = %s\n",config.mpd_server);
+    fprintf(config_file,"mpd_pass = %s\n",config.mpd_password);
+    fprintf(config_file,"mpd_port = %d\n",config.mpd_port);
+    fprintf(config_file,"\n");
+    
+    fprintf(config_file,"scrobbler_user = %s\n",config.scrobbler_user);
+    fprintf(config_file,"scrobbler_pass = %s\n",config.scrobbler_pass);
+    fprintf(config_file,"scrobbler_tmpfile = %s\n",config.scrobbler_tmpfile);
+    fprintf(config_file,"\n");
+    
+    fprintf(config_file,"sms_activated = %d\n",config.sms_activated);
+    fprintf(config_file,"sipgate_user = %s\n",config.sipgate_user);
+    fprintf(config_file,"sipgate_pass = %s\n",config.sipgate_pass);
+    fprintf(config_file,"cellphone = %s\n",config.cellphone);
+    fprintf(config_file,"\n");
+    
+    fprintf(config_file,"hr20_activated = %d\n",config.hr20_activated);
+    fprintf(config_file,"hr20_port = %s\n",config.hr20_port);
+    fprintf(config_file,"hr20_database_activated = %d\n",config.hr20_database_activated);
+    fprintf(config_file,"hr20_database_number = %d\n",config.hr20_database_number);
+    fprintf(config_file,"\n");
+    
+    fprintf(config_file,"rfid_activated = %d\n",config.rfid_activated);
+    fprintf(config_file,"rfid_port = %s\n",config.rfid_port);
+    fprintf(config_file,"switch_off_with_security = %d\n",config.switch_off_with_security);
+    fprintf(config_file,"sms_on_main_door = %d\n",config.sms_on_main_door);
+    fprintf(config_file,"time_to_activate = %d\n",config.security_time_to_active);
+    fprintf(config_file,"time_before_alarm = %d\n",config.security_time_before_alarm);
+    fprintf(config_file,"\n");
+    
+    fclose(config_file);
+    return 1;
+}
 
 int loadConfig(char *conf)
 {

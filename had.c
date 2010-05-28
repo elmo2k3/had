@@ -64,6 +64,8 @@ int16_t lastVoltage[9];
 
 time_t time_had_started;
 
+char had_used_config_file[1024];
+
 static int killDaemon(int signal);
 static void hadSignalHandler(int signal);
 static void had_check_parameters(int argc, char **argv);
@@ -118,6 +120,7 @@ int main(int argc, char* argv[])
 
     g_main_loop_run(had_main_loop);
 
+    saveConfig(had_used_config_file);
     listen_global_finish();
     return 0;
 }
@@ -139,7 +142,7 @@ static void hadSignalHandler(int signal)
         memcpy(&configTemp, &config, sizeof(config));
 
         g_message("Config reloaded");
-        loadConfig(HAD_CONFIG_FILE);
+        loadConfig(had_used_config_file);
     }
 }
 
@@ -193,10 +196,12 @@ static void had_find_config(void)
     if(loadConfig(HAD_CONFIG_FILE))
     {
         g_message("Using config %s",HAD_CONFIG_FILE);
+        strncpy(had_used_config_file, HAD_CONFIG_FILE,sizeof(had_used_config_file));
     }
     else if(loadConfig("had.conf"))
     {
         g_message("Using config %s","had.conf");
+        strncpy(had_used_config_file, "had.conf",sizeof(had_used_config_file));
     }
     else
         exit(EX_NOINPUT);
