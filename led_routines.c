@@ -53,7 +53,7 @@ static int charWidth(char c);
 static int stringWidth(char *string);
 static int shiftLeft(struct _ledLine *ledLine);
 static int initNetwork(void);
-static void ledPopFromStack(void);
+static void ledRemoveFromFifo(void);
 static gpointer ledMatrixStartThread(gpointer data);
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
 
@@ -63,16 +63,17 @@ static uint8_t *font = Arial_Bold_14;
 static uint16_t RED[4][16];
 static uint16_t GREEN[4][16];
 
-static struct _ledLine ledLineStack[LED_MAX_STACK];
+static struct _ledLine ledLineFifo[LED_FIFO_SIZE];
 
-int led_line_stack_time[LED_MAX_STACK];
-int led_line_stack_shift[LED_MAX_STACK];
+int led_line_fifo_time[LED_FIFO_SIZE];
+int led_line_fifo_shift[LED_FIFO_SIZE];
 
 static int client_sock;
 
-volatile int led_stack_size = 0;
+int led_fifo_top = 0;
+int led_fifo_bottom = 0;
+
 static GMutex *mutex_is_running = NULL;
-static GMutex *mutex_led_matrix = NULL;
 GThread *ledMatrixThread;
 static int shutting_down;
 static int running;
@@ -83,6 +84,8 @@ GAsyncQueue *async_queue_select_screen;
 GAsyncQueue *async_queue_select_screen_back;
 GAsyncQueue *async_queue_set_text;
 GAsyncQueue *async_queue_set_text_back;
+GAsyncQueue *async_queue_insert_fifo;
+GAsyncQueue *async_queue_insert_fifo_back;
 
 void ledMatrixInit(void)
 {
@@ -92,9 +95,10 @@ void ledMatrixInit(void)
     async_queue_select_screen_back = g_async_queue_new();
     async_queue_set_text = g_async_queue_new();
     async_queue_set_text_back = g_async_queue_new();
+    async_queue_insert_fifo = g_async_queue_new();
+    async_queue_insert_fifo_back = g_async_queue_new();
 
     mutex_is_running = g_mutex_new();
-    mutex_led_matrix = g_mutex_new();
     running = 0;
     shutting_down = 0;
 }
@@ -116,7 +120,6 @@ static void updateDisplay(struct _ledLine ledLine)
     memset(&RED,0,sizeof(RED));
     memset(&GREEN,0,sizeof(GREEN));
     
-    g_mutex_lock(mutex_led_matrix);
     for(m=0;m<4;m++) // for every module
     {
         for(i=0;i<16;i++) // for every row
@@ -152,7 +155,6 @@ static void updateDisplay(struct _ledLine ledLine)
             }
         }
     }
-    g_mutex_unlock(mutex_led_matrix);
     bytes_send = send(client_sock, &RED, sizeof(RED),0);
     bytes_send = send(client_sock, &GREEN, sizeof(GREEN),0);
 }
@@ -215,19 +217,16 @@ static int putChar(char c, uint8_t color, struct _ledLine *ledLine)
 
     uint8_t i;
 
-    g_mutex_lock(mutex_led_matrix);
     if(c == '\n')
     {
         ledLine->x = 0;
         ledLine->y = 8;
-        g_mutex_unlock(mutex_led_matrix);
         return 1;
     }
 
     /* if char is not in our font just leave */
     if(c < first_char || c > (first_char + char_count))
     {
-        g_mutex_unlock(mutex_led_matrix);
         return 1;
     }
     
@@ -242,13 +241,11 @@ static int putChar(char c, uint8_t color, struct _ledLine *ledLine)
     
     if((ledLine->x + char_width) >= LINE_LENGTH-50)
     {
-        g_mutex_unlock(mutex_led_matrix);
         return 0;
     }
 
     if(c == ' ')
     {
-        g_mutex_unlock(mutex_led_matrix);
         ledLine->x += 4;
         return 1;
     }
@@ -289,7 +286,6 @@ static int putChar(char c, uint8_t color, struct _ledLine *ledLine)
     }
 
     ledLine->x += char_width + 1;
-    g_mutex_unlock(mutex_led_matrix);
     return 1;
 }
 
@@ -317,7 +313,6 @@ static void putString(char *string, struct _ledLine *ledLine)
 
 static void clearScreen(struct _ledLine *ledLine)
 {
-    g_mutex_lock(mutex_led_matrix);
     memset(ledLine->column_red,0,sizeof(uint16_t)*LINE_LENGTH);
     memset(ledLine->column_green,0,sizeof(uint16_t)*LINE_LENGTH);
     
@@ -326,7 +321,6 @@ static void clearScreen(struct _ledLine *ledLine)
 
     ledLine->x = 0;
     ledLine->y = 1;
-    g_mutex_unlock(mutex_led_matrix);
 }
 
 
@@ -341,7 +335,6 @@ static int shiftLeft(struct _ledLine *ledLine)
     else
         scroll_length = ledLine->x + 11;
 
-    g_mutex_lock(mutex_led_matrix);
     for(counter=0;counter< scroll_length - 1  ;counter++)
     {
         if(ledLine->shift_position + counter > scroll_length - 1)
@@ -361,12 +354,10 @@ static int shiftLeft(struct _ledLine *ledLine)
     if(ledLine->shift_position > ledLine->x + 11)
     {
         ledLine->shift_position = 1;
-        g_mutex_unlock(mutex_led_matrix);
         return 0;
     }
     else
     {
-        g_mutex_unlock(mutex_led_matrix);
         return 1;
     }
 }
@@ -458,45 +449,51 @@ static void freeLedLine(struct _ledLine *ledLine)
     free(ledLine->column_green_output);
 }
 
-void ledPushToStack(char *string, int shift, int lifetime)
+void ledInsertFifo(char *string, int shift, int lifetime)
 {
-    if(!ledIsRunning())
-        return;
-    if(led_stack_size + 1 < LED_MAX_STACK)
+    if(ledIsRunning())
     {
-        int x;
-        if(!allocateLedLine(&ledLineStack[led_stack_size], LINE_LENGTH))
-        {
-            g_warning("Could not allocate memory!!");
-            return;
-        }
-        
-        g_debug("String pushed to stack: %s",string);
-        putString(string,&ledLineStack[led_stack_size]);
-        
-        x = ledLineStack[led_stack_size].x;
-
-        lifetime *= (x+11);
-        if(x > 64)
-            lifetime -= 64;
-        else
-            shift = 0;
-        led_line_stack_time[led_stack_size] = lifetime;
-        led_line_stack_shift[led_stack_size] = shift;
-        led_stack_size++;
-    }
-    else
-    {
-        g_warning("LED-Stack is full!!");
+        g_async_queue_push(async_queue_insert_fifo, (gpointer)string);
+        g_async_queue_push(async_queue_insert_fifo, (gpointer)&shift);
+        g_async_queue_push(async_queue_insert_fifo, (gpointer)&lifetime);
+        g_async_queue_pop(async_queue_insert_fifo_back);
     }
 }
 
-static void ledPopFromStack(void)
+static void ledInternalInsertFifo(char *string, int shift, int lifetime)
 {
-    g_debug("String popped from stack");
-    freeLedLine(&ledLineStack[led_stack_size-1]);
-    led_stack_size--;
+    if(!ledIsRunning())
+        return;
 
+    int x;
+    
+    if(!allocateLedLine(&ledLineFifo[led_fifo_top], LINE_LENGTH))
+    {
+        g_warning("Could not allocate memory!!");
+        return;
+    }
+    
+    g_debug("String pushed to stack: %s",string);
+    putString(string,&ledLineFifo[led_fifo_top]);
+    
+    x = ledLineFifo[led_fifo_top].x;
+
+    lifetime *= (x+11);
+    if(x > 64)
+        lifetime -= 64;
+    else
+        shift = 0;
+    led_line_fifo_time[led_fifo_top] = lifetime;
+    led_line_fifo_shift[led_fifo_top] = shift;
+
+    if(++led_fifo_top > (LED_FIFO_SIZE-1)) led_fifo_top = 0;
+}
+
+static void ledRemoveFromFifo(void)
+{
+    g_debug("String removed from fifo");
+    freeLedLine(&ledLineFifo[led_fifo_bottom]);
+    if(++led_fifo_bottom > (LED_FIFO_SIZE- 1)) led_fifo_bottom= 0;
 }
 
 static gpointer ledMatrixStartThread(gpointer data)
@@ -515,6 +512,8 @@ static gpointer ledMatrixStartThread(gpointer data)
     enum _screenToDraw screen_to_draw, *screen_switch;
     static gboolean release_back;
     char *text_to_set;
+    int shift;
+    int lifetime;
 
     screen_to_draw = SCREEN_TIME;
     
@@ -537,6 +536,8 @@ static gpointer ledMatrixStartThread(gpointer data)
     g_async_queue_ref(async_queue_select_screen_back);
     g_async_queue_ref(async_queue_set_text);
     g_async_queue_ref(async_queue_set_text_back);
+    g_async_queue_ref(async_queue_insert_fifo);
+    g_async_queue_ref(async_queue_insert_fifo_back);
 
     ledLineToDraw = &ledLineTime;
     
@@ -558,21 +559,33 @@ static gpointer ledMatrixStartThread(gpointer data)
             g_async_queue_push(async_queue_set_text_back, &release_back);
         }
 
-        if(led_stack_size)
+        // check for incoming fifo data
+        if((text_to_set = (char*)g_async_queue_try_pop(
+            async_queue_insert_fifo)))
         {
-            ledLineToDraw = &ledLineStack[led_stack_size-1];
-            led_line_stack_time[led_stack_size-1]--;
-            shift_speed = led_line_stack_shift[led_stack_size-1];
-            if(!led_line_stack_time[led_stack_size-1])
+            shift = *(int*)g_async_queue_pop(async_queue_insert_fifo);
+            lifetime = *(int*)g_async_queue_pop(async_queue_insert_fifo);
+            ledInternalInsertFifo(text_to_set, shift, lifetime);
+
+            release_back = TRUE;
+            g_async_queue_push(async_queue_insert_fifo_back, &release_back);
+        }
+
+        if(led_fifo_bottom != led_fifo_top)
+        {
+            ledLineToDraw = &ledLineFifo[led_fifo_bottom];
+            led_line_fifo_time[led_fifo_bottom]--;
+            shift_speed = led_line_fifo_shift[led_fifo_bottom];
+            if(!led_line_fifo_time[led_fifo_bottom])
             {
-                ledPopFromStack();
+                ledRemoveFromFifo();
             }
             else
                 ledDisplayMain(ledLineToDraw, shift_speed);
 
         }
         /* Important! else doesn't work here */
-        if(!led_stack_size)
+        if(led_fifo_bottom == led_fifo_top)
         {
             if(g_async_queue_try_pop(async_queue_toggle_screen) != NULL)
             {
@@ -593,7 +606,6 @@ static gpointer ledMatrixStartThread(gpointer data)
                 async_queue_select_screen)) != NULL)
             {
                 release_back = TRUE;
-                g_async_queue_push(async_queue_select_screen_back, &release_back);
                 g_debug("switching screen");
                 screen_to_draw = *screen_switch;
                 g_debug("switch value = %d", *screen_switch);
@@ -604,6 +616,7 @@ static gpointer ledMatrixStartThread(gpointer data)
                     case SCREEN_MPD: g_debug("screen switched to SCREEN_MPD"); break;
                     case SCREEN_TEMPERATURES: g_debug("screen switched to SCREEN_TEMPERATURES"); break;
                 }
+                g_async_queue_push(async_queue_select_screen_back, &release_back);
             }
             else if(mpdGetState() == MPD_PLAYER_PLAY && last_mpd_state == 0)
             {
@@ -676,6 +689,8 @@ static gpointer ledMatrixStartThread(gpointer data)
     g_async_queue_unref(async_queue_select_screen_back);
     g_async_queue_unref(async_queue_set_text);
     g_async_queue_unref(async_queue_set_text_back);
+    g_async_queue_unref(async_queue_insert_fifo);
+    g_async_queue_unref(async_queue_insert_fifo_back);
 
     freeLedLine(&ledLineTime);
     freeLedLine(&ledLineVoid);

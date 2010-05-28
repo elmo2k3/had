@@ -218,12 +218,12 @@ void mpdToggleRandom(void)
 {
     if(mpd_player_get_random(mpd))
     {
-        ledPushToStack("Random off", 2, 1);
+        ledInsertFifo("Random off", 2, 1);
         mpd_player_set_random(mpd, 0);
     }
     else
     {
-        ledPushToStack("Random on", 2, 1);
+        ledInsertFifo("Random on", 2, 1);
         mpd_player_set_random(mpd, 1);
     }
 }

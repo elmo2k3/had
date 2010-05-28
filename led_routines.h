@@ -34,7 +34,8 @@
 #define COLOR_AMBER 2
 
 #define LINE_LENGTH 512
-#define LED_MAX_STACK 30
+
+#define LED_FIFO_SIZE 30
 
 //#define LED_HEADFIRST
 
@@ -81,7 +82,7 @@ extern void ledMatrixStop(void);
  * @param shift currently ignored
  * @param lifetime num of cycled this string will be displayed
  */
-extern void ledPushToStack(char *string, int shift, int lifetime);
+extern void ledInsertFifo(char *string, int shift, int lifetime);
 
 extern void ledMatrixToggle(void);
 

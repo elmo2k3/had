@@ -133,7 +133,7 @@ static enum command_return action_led_display_text(struct client *client, int ar
         return COMMAND_RETURN_ERROR;
     if (!check_int(client, &count, argv[3], need_positive))
         return COMMAND_RETURN_ERROR;
-    ledPushToStack(argv[1],shift,count);
+    ledInsertFifo(argv[1],shift,count);
 
     return COMMAND_RETURN_OK;
 }
@@ -440,7 +440,7 @@ action_open_door(struct client *client, int argc, char **argv)
         g_debug("Opening door for %s",argv[1]);
         snprintf(led_string,1024,"Tuer geoeffnet fuer %s", argv[1]);
         security_main_door_opening(argv[1]);
-        ledPushToStack(led_string,1,2);
+        ledInsertFifo(led_string,1,2);
     }
     else
     {
@@ -605,7 +605,6 @@ action_led_matrix_select_screen(struct client *client,
  */
 static const struct command commands[] = {
     {"all_off",PERMISSION_ADMIN, 0,0,action_all_off},
-    {"base_lcd_backlight",PERMISSION_ADMIN,1,1, action_toggle_base_lcd_backlight},
     {"beep",PERMISSION_ADMIN,0,3,action_beep},
     {"blink",PERMISSION_ADMIN,0,0, action_rgb_blink},
     {"commands",PERMISSION_ADMIN,  0, 0,      action_commands},
@@ -616,13 +615,14 @@ static const struct command commands[] = {
     {"get_temperature",PERMISSION_ADMIN, 2,2, action_get_temperature},
     {"get_voltage",PERMISSION_ADMIN, 1,1, action_get_voltage},
     {"hifi_on",PERMISSION_ADMIN, 0,0, action_hifi_on_music_on},
-    {"led_display_text",PERMISSION_ADMIN, 1,2, action_led_display_text},
-    {"led_matrix",PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
+    {"lm",PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
     {"lm_select_screen",PERMISSION_ADMIN, 1,1, action_led_matrix_select_screen},
+    {"lm_text",PERMISSION_ADMIN, 3,3, action_led_display_text},
     {"lm_toggle",PERMISSION_ADMIN, 0,0, action_led_matrix_toggle},
     {"open_door",PERMISSION_ADMIN, 0,1, action_open_door},
     {"quit",PERMISSION_ADMIN,  0, 0,          action_disconnect},
     {"sent_graph",PERMISSION_ADMIN,0,0,action_sent_graph},
+    {"set_backlight",PERMISSION_ADMIN,1,1, action_toggle_base_lcd_backlight},
     {"set_hifi",PERMISSION_ADMIN,1,1, action_set_hifi},
     {"set_printer",PERMISSION_ADMIN,1,1,action_set_printer},
     {"set_rgb",PERMISSION_ADMIN, 5,5, action_set_rgb},
