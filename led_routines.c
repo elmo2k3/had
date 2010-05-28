@@ -487,6 +487,7 @@ static void ledInternalInsertFifo(char *string, int shift, int lifetime)
     led_line_fifo_shift[led_fifo_top] = shift;
 
     if(++led_fifo_top > (LED_FIFO_SIZE-1)) led_fifo_top = 0;
+    g_debug("led_fifo_top: %d led_fifo_bottom: %d",led_fifo_top, led_fifo_bottom);
 }
 
 static void ledRemoveFromFifo(void)
@@ -494,6 +495,7 @@ static void ledRemoveFromFifo(void)
     g_debug("String removed from fifo");
     freeLedLine(&ledLineFifo[led_fifo_bottom]);
     if(++led_fifo_bottom > (LED_FIFO_SIZE- 1)) led_fifo_bottom= 0;
+    g_debug("led_fifo_top: %d led_fifo_bottom: %d",led_fifo_top, led_fifo_bottom);
 }
 
 static gpointer ledMatrixStartThread(gpointer data)

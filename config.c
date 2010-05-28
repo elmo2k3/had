@@ -87,6 +87,7 @@ int writeConfig()
     fprintf(config_file,"mpd_port = %d\n",config.mpd_port);
     fprintf(config_file,"\n");
     
+    fprintf(config_file,"scrobbler_activated = %d\n",config.scrobbler_activated);
     fprintf(config_file,"scrobbler_user = %s\n",config.scrobbler_user);
     fprintf(config_file,"scrobbler_pass = %s\n",config.scrobbler_pass);
     fprintf(config_file,"scrobbler_tmpfile = %s\n",config.scrobbler_tmpfile);
