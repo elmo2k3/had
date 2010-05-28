@@ -37,6 +37,7 @@
 #include "tokenizer.h"
 #include "string.h"
 #include "security.h"
+#include "config.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "command"
@@ -598,6 +599,22 @@ action_led_matrix_select_screen(struct client *client,
     return COMMAND_RETURN_OK;
 }
 
+static enum command_return
+action_config_load(struct client *client,
+        int argc, char *argv[])
+{
+    readConfig();
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_config_save(struct client *client,
+        int argc, char *argv[])
+{
+    writeConfig();
+    return COMMAND_RETURN_OK;
+}
+
 /**
  * The command registry.
  *
@@ -608,6 +625,8 @@ static const struct command commands[] = {
     {"beep",PERMISSION_ADMIN,0,3,action_beep},
     {"blink",PERMISSION_ADMIN,0,0, action_rgb_blink},
     {"commands",PERMISSION_ADMIN,  0, 0,      action_commands},
+    {"config_load",PERMISSION_ADMIN,  0, 0,      action_config_load},
+    {"config_save",PERMISSION_ADMIN,  0, 0,      action_config_save},
     {"get_hifi",PERMISSION_ADMIN,0,0,action_get_hifi},
     {"get_printer",PERMISSION_ADMIN,0,0,action_get_printer},
     {"get_security",PERMISSION_ADMIN,0,0,action_get_security},

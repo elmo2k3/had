@@ -64,12 +64,9 @@ int16_t lastVoltage[9];
 
 time_t time_had_started;
 
-char had_used_config_file[1024];
-
 static int killDaemon(int signal);
 static void hadSignalHandler(int signal);
 static void had_check_parameters(int argc, char **argv);
-static void had_find_config(void);
 static void had_check_daemonize(void);
 static void had_print_version(void);
 static void had_load_state(void);
@@ -88,7 +85,7 @@ int main(int argc, char* argv[])
     time_had_started = time(NULL);
 
     ledMatrixInit();
-    had_find_config();
+    readConfig();
     had_check_parameters(argc,argv);
     had_check_daemonize();
     g_log_set_default_handler(had_log_handler, NULL);
@@ -120,7 +117,7 @@ int main(int argc, char* argv[])
 
     g_main_loop_run(had_main_loop);
 
-    saveConfig(had_used_config_file);
+    writeConfig();
     listen_global_finish();
     return 0;
 }
@@ -142,7 +139,7 @@ static void hadSignalHandler(int signal)
         memcpy(&configTemp, &config, sizeof(config));
 
         g_message("Config reloaded");
-        loadConfig(had_used_config_file);
+        readConfig();
     }
 }
 
@@ -189,22 +186,6 @@ static void had_check_parameters(int argc, char **argv)
         if(!strcmp(argv[1],"-r"))
             exit(killDaemon(SIGHUP));
     }
-}
-
-static void had_find_config(void)
-{
-    if(loadConfig(HAD_CONFIG_FILE))
-    {
-        g_message("Using config %s",HAD_CONFIG_FILE);
-        strncpy(had_used_config_file, HAD_CONFIG_FILE,sizeof(had_used_config_file));
-    }
-    else if(loadConfig("had.conf"))
-    {
-        g_message("Using config %s","had.conf");
-        strncpy(had_used_config_file, "had.conf",sizeof(had_used_config_file));
-    }
-    else
-        exit(EX_NOINPUT);
 }
 
 static void had_check_daemonize(void)

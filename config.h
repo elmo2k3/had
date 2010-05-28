@@ -27,9 +27,8 @@
  * @param *conf config file to load
  * @return 0 on failure, 1 on success
  */
-extern int loadConfig(char *conf);
-
-extern int saveConfig(char *conf);
+extern void readConfig(void);
+extern int writeConfig(void);
 
 /* Default values */
 #define MYSQL_PORT 3306

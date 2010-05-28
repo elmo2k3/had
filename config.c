@@ -34,6 +34,8 @@
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "config"
 
+static char *had_used_config_file = NULL;
+
 #define NUM_PARAMS 46
 static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_pass",
     "db_port", "mpd_server", "mpd_pass", "mpd_port", "scrobbler_user", 
@@ -46,12 +48,12 @@ static char *config_params[NUM_PARAMS] = { "db_db", "db_server", "db_user", "db_
     "digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security",
     "sms_on_main_door","time_to_active","time_before_alarm"};
 
-int saveConfig(char *conf)
+int writeConfig()
 {
-    FILE *config_file = fopen(conf,"w");
+    FILE *config_file = fopen(had_used_config_file,"w");
     if(!config_file)
         return 0;
-    g_debug("saving config file %s",conf); 
+    g_debug("saving config file %s",had_used_config_file); 
     fprintf(config_file,"logfile = %s\n",config.logfile);
     fprintf(config_file,"verbosity = %d\n",config.verbosity);
     fprintf(config_file,"daemonize = %d\n",config.daemonize);
@@ -114,19 +116,13 @@ int saveConfig(char *conf)
     return 1;
 }
 
-int loadConfig(char *conf)
+static int loadConfig(char *conf)
 {
     FILE *config_file;
     char line[120];
     char value[100];
     char *lpos;
     int param;
-
-    config_file = fopen(conf,"r");
-    if(!config_file)
-    {
-        return 0;
-    }
 
     /* set everything to zero */
     memset(&config, 0, sizeof(config));
@@ -170,6 +166,12 @@ int loadConfig(char *conf)
 
     config.security_time_to_active = 60;
     config.security_time_before_alarm = 60;
+    
+    config_file = fopen(conf,"r");
+    if(!config_file)
+    {
+        return 0;
+    }
 
     /* step through every line */
     while(fgets(line, sizeof(line), config_file) != NULL)
@@ -347,5 +349,36 @@ int loadConfig(char *conf)
 
     fclose(config_file);
     return 1;
+}
+
+void readConfig(void)
+{
+    if(had_used_config_file == NULL)
+    {
+        had_used_config_file = (char*)malloc(1024);
+        if(loadConfig(HAD_CONFIG_FILE))
+        {
+            g_message("Using config %s",HAD_CONFIG_FILE);
+            strncpy(had_used_config_file, HAD_CONFIG_FILE,1024);
+        }
+        else
+        {
+            if(loadConfig("had.conf"))
+            {
+                g_message("Using config %s","had.conf");
+                strncpy(had_used_config_file, "had.conf",1024);
+            }
+            else
+            {
+                g_message("Creating new default config %s","had.conf");
+                strncpy(had_used_config_file, "had.conf",1024);
+                writeConfig();
+            }
+        }
+    }
+    else
+    {
+        loadConfig(had_used_config_file);
+    }
 }
 
