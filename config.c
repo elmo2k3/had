@@ -77,6 +77,7 @@ int writeConfig()
 
     fprintf(config_file,"db_db = %s\n",config.database_database);
     fprintf(config_file,"db_server = %s\n",config.database_server);
+    fprintf(config_file,"db_user = %s\n",config.database_user);
     fprintf(config_file,"db_pass = %s\n",config.database_password);
     fprintf(config_file,"db_port = %d\n",config.database_port);
     fprintf(config_file,"\n");

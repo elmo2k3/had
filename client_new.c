@@ -114,8 +114,7 @@ void client_new(int fd, const struct sockaddr *sa, size_t sa_length, int uid)
     client_list_add(client);
 
     remote = sockaddr_to_string(sa, sa_length, NULL);
-    g_log(G_LOG_DOMAIN, LOG_LEVEL_SECURE,
-          "[%u] opened from %s", client->num, remote);
+    g_debug("[%u] opened from %s", client->num, remote);
     g_free(remote);
 }
 
@@ -145,7 +144,6 @@ client_close(struct client *client)
 
     fifo_buffer_free(client->input);
 
-    g_log(G_LOG_DOMAIN, LOG_LEVEL_SECURE,
-          "[%u] closed", client->num);
+    g_debug("[%u] closed", client->num);
     g_free(client);
 }
