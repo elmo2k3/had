@@ -98,7 +98,7 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
     if(!mysql_row[0])
     {
         mysql_free_result(mysql_res);
-        g_message("Keine Daten fuer den Graphen vorhanden!");
+        g_debug("Keine Daten fuer den Graphen vorhanden!");
         *max = -1000.0;
         *min = -1000.0;
         return;
