@@ -29,6 +29,8 @@
  */
 extern void readConfig(void);
 extern int writeConfig(void);
+extern void printConfig(void (*func)(void*,...), void *dest);
+extern int setConfigValueByName(char *name, char *value);
 
 /* Default values */
 #define MYSQL_PORT 3306

@@ -47,73 +47,95 @@ static char *config_params[] = { "db_db", "db_server", "db_user", "db_pass",
     "digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security",
     "sms_on_main_door","time_to_active","time_before_alarm"};
 
+static int setConfigValue(int param, char *value);
+
+void printConfig(void (*func)(void*,...), void *dest)
+{
+    func(dest,"logfile = %s\n",config.logfile);
+    func(dest,"verbosity = %d\n",config.verbosity);
+    func(dest,"daemonize = %d\n",config.daemonize);
+    func(dest,"statefile = %s\n",config.statefile);
+    func(dest,"pid_file = %s\n",config.pid_file);
+    func(dest,"password = %s\n",config.password);
+    func(dest,"\n");
+    
+    func(dest,"serial_activated = %d\n",config.serial_activated);
+    func(dest,"tty = %s\n",config.tty);
+    func(dest,"door_sensor_id = %d\n",config.door_sensor_id);
+    func(dest,"window_sensor_id = %d\n",config.window_sensor_id);
+    func(dest,"digital_input_module = %d\n",config.digital_input_module);
+    func(dest,"\n");
+    
+    func(dest,"led_matrix_activated = %d\n",config.led_matrix_activated);
+    func(dest,"led_matrix_ip = %s\n",config.led_matrix_ip);
+    func(dest,"led_matrix_port = %d\n",config.led_matrix_port);
+    func(dest,"led_matrix_shift_speed = %d\n",config.led_shift_speed);
+    func(dest,"\n");
+
+    func(dest,"db_db = %s\n",config.database_database);
+    func(dest,"db_server = %s\n",config.database_server);
+    func(dest,"db_user = %s\n",config.database_user);
+    func(dest,"db_pass = %s\n",config.database_password);
+    func(dest,"db_port = %d\n",config.database_port);
+    func(dest,"\n");
+
+    func(dest,"mpd_activated = %d\n",config.mpd_activated);
+    func(dest,"mpd_server = %s\n",config.mpd_server);
+    func(dest,"mpd_pass = %s\n",config.mpd_password);
+    func(dest,"mpd_port = %d\n",config.mpd_port);
+    func(dest,"\n");
+    
+    func(dest,"scrobbler_activated = %d\n",config.scrobbler_activated);
+    func(dest,"scrobbler_user = %s\n",config.scrobbler_user);
+    func(dest,"scrobbler_pass = %s\n",config.scrobbler_pass);
+    func(dest,"scrobbler_tmpfile = %s\n",config.scrobbler_tmpfile);
+    func(dest,"\n");
+    
+    func(dest,"sms_activated = %d\n",config.sms_activated);
+    func(dest,"sipgate_user = %s\n",config.sipgate_user);
+    func(dest,"sipgate_pass = %s\n",config.sipgate_pass);
+    func(dest,"cellphone = %s\n",config.cellphone);
+    func(dest,"\n");
+    
+    func(dest,"hr20_activated = %d\n",config.hr20_activated);
+    func(dest,"hr20_port = %s\n",config.hr20_port);
+    func(dest,"hr20_database_activated = %d\n",config.hr20_database_activated);
+    func(dest,"hr20_database_number = %d\n",config.hr20_database_number);
+    func(dest,"\n");
+    
+    func(dest,"rfid_activated = %d\n",config.rfid_activated);
+    func(dest,"rfid_port = %s\n",config.rfid_port);
+    func(dest,"switch_off_with_security = %d\n",config.switch_off_with_security);
+    func(dest,"sms_on_main_door = %d\n",config.sms_on_main_door);
+    func(dest,"time_to_activate = %d\n",config.security_time_to_active);
+    func(dest,"time_before_alarm = %d\n",config.security_time_before_alarm);
+    func(dest,"\n");
+}
+
 int writeConfig()
 {
     FILE *config_file = fopen(had_used_config_file,"w");
     if(!config_file)
         return 0;
-    g_debug("saving config file %s",had_used_config_file); 
-    fprintf(config_file,"logfile = %s\n",config.logfile);
-    fprintf(config_file,"verbosity = %d\n",config.verbosity);
-    fprintf(config_file,"daemonize = %d\n",config.daemonize);
-    fprintf(config_file,"statefile = %s\n",config.statefile);
-    fprintf(config_file,"pid_file = %s\n",config.pid_file);
-    fprintf(config_file,"password = %s\n",config.password);
-    fprintf(config_file,"\n");
-    
-    fprintf(config_file,"serial_activated = %d\n",config.serial_activated);
-    fprintf(config_file,"tty = %s\n",config.tty);
-    fprintf(config_file,"door_sensor_id = %d\n",config.door_sensor_id);
-    fprintf(config_file,"window_sensor_id = %d\n",config.window_sensor_id);
-    fprintf(config_file,"digital_input_module = %d\n",config.digital_input_module);
-    fprintf(config_file,"\n");
-    
-    fprintf(config_file,"led_matrix_activated = %d\n",config.led_matrix_activated);
-    fprintf(config_file,"led_matrix_ip = %s\n",config.led_matrix_ip);
-    fprintf(config_file,"led_matrix_port = %d\n",config.led_matrix_port);
-    fprintf(config_file,"led_matrix_shift_speed = %d\n",config.led_shift_speed);
-    fprintf(config_file,"\n");
+    g_debug("saving config file %s",had_used_config_file);
 
-    fprintf(config_file,"db_db = %s\n",config.database_database);
-    fprintf(config_file,"db_server = %s\n",config.database_server);
-    fprintf(config_file,"db_user = %s\n",config.database_user);
-    fprintf(config_file,"db_pass = %s\n",config.database_password);
-    fprintf(config_file,"db_port = %d\n",config.database_port);
-    fprintf(config_file,"\n");
-
-    fprintf(config_file,"mpd_activated = %d\n",config.mpd_activated);
-    fprintf(config_file,"mpd_server = %s\n",config.mpd_server);
-    fprintf(config_file,"mpd_pass = %s\n",config.mpd_password);
-    fprintf(config_file,"mpd_port = %d\n",config.mpd_port);
-    fprintf(config_file,"\n");
-    
-    fprintf(config_file,"scrobbler_activated = %d\n",config.scrobbler_activated);
-    fprintf(config_file,"scrobbler_user = %s\n",config.scrobbler_user);
-    fprintf(config_file,"scrobbler_pass = %s\n",config.scrobbler_pass);
-    fprintf(config_file,"scrobbler_tmpfile = %s\n",config.scrobbler_tmpfile);
-    fprintf(config_file,"\n");
-    
-    fprintf(config_file,"sms_activated = %d\n",config.sms_activated);
-    fprintf(config_file,"sipgate_user = %s\n",config.sipgate_user);
-    fprintf(config_file,"sipgate_pass = %s\n",config.sipgate_pass);
-    fprintf(config_file,"cellphone = %s\n",config.cellphone);
-    fprintf(config_file,"\n");
-    
-    fprintf(config_file,"hr20_activated = %d\n",config.hr20_activated);
-    fprintf(config_file,"hr20_port = %s\n",config.hr20_port);
-    fprintf(config_file,"hr20_database_activated = %d\n",config.hr20_database_activated);
-    fprintf(config_file,"hr20_database_number = %d\n",config.hr20_database_number);
-    fprintf(config_file,"\n");
-    
-    fprintf(config_file,"rfid_activated = %d\n",config.rfid_activated);
-    fprintf(config_file,"rfid_port = %s\n",config.rfid_port);
-    fprintf(config_file,"switch_off_with_security = %d\n",config.switch_off_with_security);
-    fprintf(config_file,"sms_on_main_door = %d\n",config.sms_on_main_door);
-    fprintf(config_file,"time_to_activate = %d\n",config.security_time_to_active);
-    fprintf(config_file,"time_before_alarm = %d\n",config.security_time_before_alarm);
-    fprintf(config_file,"\n");
+    printConfig((void*)fprintf,(void*)config_file);
     
     fclose(config_file);
+    return 1;
+}
+
+int setConfigValueByName(char *name, char *value)
+{
+    int param;
+    for(param = 0; param < (sizeof(config_params)/sizeof(char*)); param++)
+    {
+        if(strstr(config_params[param],name))
+        {
+            setConfigValue(param, value);
+            return 0;
+        }
+    }
     return 1;
 }
 

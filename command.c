@@ -615,6 +615,23 @@ action_config_save(struct client *client,
     return COMMAND_RETURN_OK;
 }
 
+static enum command_return
+action_config_set(struct client *client,
+        int argc, char *argv[])
+{
+    if(setConfigValueByName(argv[1],argv[2]) != 0)
+        return COMMAND_RETURN_ERROR;
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_config_get(struct client *client,
+        int argc, char *argv[])
+{
+    printConfig((void*)client_printf,(void*)client);
+    return COMMAND_RETURN_OK;
+}
+
 /**
  * The command registry.
  *
@@ -625,8 +642,10 @@ static const struct command commands[] = {
     {"beep",            PERMISSION_ADMIN, 0,3, action_beep},
     {"blink",           PERMISSION_ADMIN, 0,0, action_rgb_blink},
     {"commands",        PERMISSION_ADMIN, 0,0, action_commands},
+    {"config_get",      PERMISSION_ADMIN, 0,0, action_config_get},
     {"config_load",     PERMISSION_ADMIN, 0,0, action_config_load},
     {"config_save",     PERMISSION_ADMIN, 0,0, action_config_save},
+    {"config_set",      PERMISSION_ADMIN, 2,2, action_config_set},
     {"get_hifi",        PERMISSION_ADMIN, 0,0, action_get_hifi},
     {"get_printer",     PERMISSION_ADMIN, 0,0, action_get_printer},
     {"get_security",    PERMISSION_ADMIN, 0,0, action_get_security},
