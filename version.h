@@ -1,1 +1,1 @@
-#define VERSION "v0.3.0-18-g0f27020"
+#define VERSION "v0.3.0-19-g1fc8d53"

@@ -33,6 +33,18 @@
 
 const int local_daylight[12] = {16,17,18,19,20,20,20,21,20,18,17,16};
 
+time_t system_uptime()
+{
+    FILE *uptime_file = fopen("/proc/uptime","r");
+    float seconds_up, seconds_idle;
+    
+    if(!uptime_file)
+        return 0;
+    fscanf(uptime_file,"%f %f",&seconds_up, &seconds_idle);
+    fclose(uptime_file);
+    return (time_t)seconds_up;
+}
+
 int is_daylight(void)
 {
     struct tm *ptm;

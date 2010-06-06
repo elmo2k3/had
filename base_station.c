@@ -69,7 +69,7 @@ gboolean cycle_base_lcd(gpointer data)
 #define SECONDS_PER_MINUTE 60
 #define SECONDS_PER_HOUR (SECONDS_PER_MINUTE*60)
 #define SECONDS_PER_DAY (24*SECONDS_PER_HOUR)
-    time_t diff_time = time(NULL) - time_had_started;
+    time_t uptime;
     time_t days, hours, minutes, seconds;
     static int state = 0;
     char buf[64];
@@ -91,18 +91,34 @@ gboolean cycle_base_lcd(gpointer data)
             ptm->tm_mday, ptm->tm_mon+1, ptm->tm_year +1900);
     }
     else if (state == 2) {
-        days = diff_time / SECONDS_PER_DAY;
-        diff_time -= days*SECONDS_PER_DAY;
-        hours = diff_time / SECONDS_PER_HOUR;
-        diff_time -= hours*SECONDS_PER_HOUR;
-        minutes = diff_time / SECONDS_PER_MINUTE;
-        diff_time -= minutes*SECONDS_PER_MINUTE;
-        seconds = diff_time;
+        uptime = time(NULL) - time_had_started;
 
-        sprintf(buf, "     uptime      %3d days, %02d:%02d\n",
+        days = uptime / SECONDS_PER_DAY;
+        uptime -= days*SECONDS_PER_DAY;
+        hours = uptime / SECONDS_PER_HOUR;
+        uptime -= hours*SECONDS_PER_HOUR;
+        minutes = uptime / SECONDS_PER_MINUTE;
+        uptime -= minutes*SECONDS_PER_MINUTE;
+        seconds = uptime;
+
+        sprintf(buf, "   had uptime    %3d days, %02d:%02d\n",
             (int)days,(int)hours,(int)minutes);
     }
-    if (++state > 2)
+    else if (state == 3) {
+        uptime = system_uptime();
+
+        days = uptime / SECONDS_PER_DAY;
+        uptime -= days*SECONDS_PER_DAY;
+        hours = uptime / SECONDS_PER_HOUR;
+        uptime -= hours*SECONDS_PER_HOUR;
+        minutes = uptime / SECONDS_PER_MINUTE;
+        uptime -= minutes*SECONDS_PER_MINUTE;
+        seconds = uptime;
+
+        sprintf(buf, "   sys uptime    %3d days, %02d:%02d\n",
+            (int)days,(int)hours,(int)minutes);
+    }
+    if (++state > 3)
         state = 0;
 
     sendBaseLcdText(buf);
@@ -681,7 +697,7 @@ int base_station_init(char *serial_device)
 
     getRelaisState();
     
-    g_timeout_add_seconds(5, cycle_base_lcd, NULL);
+    g_timeout_add_seconds(2, cycle_base_lcd, NULL);
     return 0;
 }
 
