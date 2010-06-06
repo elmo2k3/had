@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <glib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "string.h"
 #include "misc.h"
 #include "had.h"
@@ -31,7 +33,18 @@
                 printf(args); \
     }
 
+#define DSL_UP_FILE "/var/run/pppoe-wan.pid"
+
 const int local_daylight[12] = {16,17,18,19,20,20,20,21,20,18,17,16};
+
+time_t dsl_uptime()
+{
+    struct stat filestat;
+
+    if(stat(DSL_UP_FILE,&filestat) != 0)
+        return 0;
+    return filestat.st_mtime;
+}
 
 time_t system_uptime()
 {

@@ -29,6 +29,7 @@ extern void had_log_handler
     gpointer user_data);
 extern int is_daylight(void);
 extern time_t system_uptime();
+extern time_t dsl_uptime();
 
 #endif
 

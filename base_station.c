@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <glib.h>
+#include <time.h>
 
 #include "base_station.h"
 #include "had.h"
@@ -118,7 +119,14 @@ gboolean cycle_base_lcd(gpointer data)
         sprintf(buf, "   sys uptime    %3d days, %02d:%02d\n",
             (int)days,(int)hours,(int)minutes);
     }
-    if (++state > 3)
+    else if (state == 4) {
+        rawtime = dsl_uptime();
+        ptm = localtime(&rawtime);
+        sprintf(buf,"  DSL up since  %02d:%02d %02d.%02d.%d",
+            ptm->tm_hour, ptm->tm_min,
+            ptm->tm_mday, ptm->tm_mon+1, ptm->tm_year +1900);
+    }
+    if (++state > 4)
         state = 0;
 
     sendBaseLcdText(buf);
