@@ -632,6 +632,22 @@ action_config_get(struct client *client,
     return COMMAND_RETURN_OK;
 }
 
+static enum command_return
+action_get_log(struct client *client,
+        int argc, char *argv[])
+{
+    FILE *logfile = fopen(config.logfile,"r");
+    char linebuf[1024];
+
+    if(!logfile)
+        return COMMAND_RETURN_ERROR;
+    while(fgets(linebuf, sizeof(linebuf), logfile))
+    {
+        client_printf(client,"%s",linebuf);
+    }
+    return COMMAND_RETURN_OK;
+}
+
 /**
  * The command registry.
  *
@@ -653,6 +669,7 @@ static const struct command commands[] = {
     {"get_temperature", PERMISSION_ADMIN, 2,2, action_get_temperature},
     {"get_voltage",     PERMISSION_ADMIN, 1,1, action_get_voltage},
     {"hifi_on",         PERMISSION_ADMIN, 0,0, action_hifi_on_music_on},
+    {"get_log",         PERMISSION_ADMIN, 0,0, action_get_log},
     {"lm",              PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
     {"lm_select_screen",PERMISSION_ADMIN, 1,1, action_led_matrix_select_screen},
     {"lm_text",         PERMISSION_ADMIN, 3,3, action_led_display_text},
