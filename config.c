@@ -45,7 +45,7 @@ static char *config_params[] = { "db_db", "db_server", "db_user", "db_pass",
     "mpd_activated","usbtemp_activated","usbtemp_device_id","usbtemp_device_module","usbtemp_device_sensor",
     "hr20_database_activated","hr20_database_number","door_sensor_id","window_sensor_id",
     "digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security",
-    "sms_on_main_door","time_to_active","time_before_alarm"};
+    "sms_on_main_door","time_to_active","time_before_alarm","beep_on_window_open"};
 
 static int setConfigValue(int param, char *value);
 
@@ -64,6 +64,7 @@ void printConfig(void (*func)(void*,...), void *dest)
     func(dest,"door_sensor_id = %d\n",config.door_sensor_id);
     func(dest,"window_sensor_id = %d\n",config.window_sensor_id);
     func(dest,"digital_input_module = %d\n",config.digital_input_module);
+    func(dest,"beep_on_window_open = %d\n",config.beep_on_window_open);
     func(dest,"\n");
     
     func(dest,"led_matrix_activated = %d\n",config.led_matrix_activated);
@@ -282,6 +283,9 @@ static int setConfigValue(int param, char *value)
             break;
         /* time until sms is send when door was opened */
         case 45: config.security_time_before_alarm = atoi(value);
+            break;
+        /* beep on open window */
+        case 46: config.beep_on_window_open = atoi(value);
             break;
     }
     return 0;

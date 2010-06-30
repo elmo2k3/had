@@ -529,7 +529,7 @@ void process_base_station(gchar **strings, int argc)
             if(hadState.input_state & 8)
             {
                 g_debug("Window and door open at the same time! BEEEEP");
-                if(hadState.beep_on_window_left_open)
+                if(config.beep_on_window_open)
                 {
                     base_station_beep(3,100,100);
                 }

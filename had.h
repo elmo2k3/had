@@ -149,6 +149,7 @@ struct _config
     int sms_on_main_door;
     int security_time_to_active;
     int security_time_before_alarm;
+    int beep_on_window_open;
 
     struct _remote_control_keys rkeys;
 }config;

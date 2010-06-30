@@ -201,7 +201,7 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
     {
         if((status = mysql_query(mysql_connection,query[fifo_low]))) // not successfull
         {
-            if(status == 2006 ) { //CR_SERVER_GONE_ERROR
+            if(status != 0 ) {
                 mysql_close(mysql_connection);
                 if(initDatabase())
                     return;
