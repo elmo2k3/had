@@ -587,15 +587,7 @@ action_led_matrix_select_screen(struct client *client,
 
     if (!check_int(client, &screen_num, argv[1], need_positive))
         return COMMAND_RETURN_ERROR;
-    switch(screen_num)
-    {
-        case 0: screen = SCREEN_TIME; break;
-        case 1: screen = SCREEN_MPD; break;
-        case 2: screen = SCREEN_TEMPERATURES; break;
-        case 3: screen = SCREEN_VOID; break;
-        default: screen = SCREEN_VOID; break;
-    }
-    ledMatrixSelectScreen(screen);
+    ledMatrixSelectScreen(screen_num);
     return COMMAND_RETURN_OK;
 }
 
@@ -648,6 +640,15 @@ action_get_log(struct client *client,
     return COMMAND_RETURN_OK;
 }
 
+static enum command_return
+action_led_matrix_get_screen(struct client *client,
+        int argc, char *argv[])
+{
+    client_printf(client, "current screen: %d\r\n",
+        ledMatrixCurrentScreen());
+    return COMMAND_RETURN_OK;
+}
+
 /**
  * The command registry.
  *
@@ -663,14 +664,15 @@ static const struct command commands[] = {
     {"config_save",     PERMISSION_ADMIN, 0,0, action_config_save},
     {"config_set",      PERMISSION_ADMIN, 2,2, action_config_set},
     {"get_hifi",        PERMISSION_ADMIN, 0,0, action_get_hifi},
+    {"get_log",         PERMISSION_ADMIN, 0,0, action_get_log},
     {"get_printer",     PERMISSION_ADMIN, 0,0, action_get_printer},
     {"get_security",    PERMISSION_ADMIN, 0,0, action_get_security},
     {"get_sleep_light", PERMISSION_ADMIN, 0,0, action_get_sleep_light},
     {"get_temperature", PERMISSION_ADMIN, 2,2, action_get_temperature},
     {"get_voltage",     PERMISSION_ADMIN, 1,1, action_get_voltage},
     {"hifi_on",         PERMISSION_ADMIN, 0,0, action_hifi_on_music_on},
-    {"get_log",         PERMISSION_ADMIN, 0,0, action_get_log},
     {"lm",              PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
+    {"lm_get_screen",   PERMISSION_ADMIN, 0,0, action_led_matrix_get_screen},
     {"lm_select_screen",PERMISSION_ADMIN, 1,1, action_led_matrix_select_screen},
     {"lm_text",         PERMISSION_ADMIN, 3,3, action_led_display_text},
     {"lm_toggle",       PERMISSION_ADMIN, 0,0, action_led_matrix_toggle},

@@ -112,22 +112,19 @@ int mpdInit(void)
 
 static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 {
-    time_t current_time;
     guint shortest_time;
-    char led_matrix_text[255];
-
+    static char led_matrix_text[255];
+    
+    mpd_Song *song = mpd_playlist_get_current_song(mi);
     isPlaying = mpd_player_get_state(mpd);
 
     if(what & MPD_CST_SONGID)
     {
-        time(&current_time);
-        mpd_Song *song = mpd_playlist_get_current_song(mi);
         if(song)
         {
             snprintf(led_matrix_text, sizeof(led_matrix_text),
                 "\r%s\a - \b%s", song->artist, song->title);
             ledMatrixSetText(SCREEN_MPD,led_matrix_text);
-
             if(song->artist)
                 strcpy(current_track.last_artist, song->artist);
             if(song->album)
@@ -174,8 +171,6 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
             }
 
             sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
-        //  sendPacket(&mpdP,MPD_PACKET);
-    //      sendBaseLcdText(mpdP.currentSong);
         }
     }
 }

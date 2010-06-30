@@ -92,5 +92,7 @@ extern void ledMatrixSelectScreen(enum _screenToDraw screen);
 
 extern void ledMatrixSetText(enum _screenToDraw screen, char *text);
 
+extern enum _screenToDraw ledMatrixCurrentScreen(void);
+
 #endif
 
