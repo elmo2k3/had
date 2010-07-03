@@ -124,7 +124,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
         {
             snprintf(led_matrix_text, sizeof(led_matrix_text),
                 "\r%s\a - \b%s", song->artist, song->title);
-            ledMatrixSetText(SCREEN_MPD,led_matrix_text);
+            ledMatrixSetMpdText(led_matrix_text);
             if(song->artist)
                 strcpy(current_track.last_artist, song->artist);
             if(song->album)

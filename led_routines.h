@@ -58,7 +58,8 @@ enum _screenToDraw
     SCREEN_VOID,
     SCREEN_TIME,
     SCREEN_MPD,
-    SCREEN_TEMPERATURES
+    SCREEN_TEMPERATURES,
+    SCREEN_STATIC_TEXT
 };
 
 /** Start main thread for the led-matrix-display
@@ -83,15 +84,11 @@ extern void ledMatrixStop(void);
  * @param lifetime num of cycled this string will be displayed
  */
 extern void ledInsertFifo(char *string, int shift, int lifetime);
-
 extern void ledMatrixToggle(void);
-
 extern void ledMatrixInit(void);
-
 extern void ledMatrixSelectScreen(enum _screenToDraw screen);
-
-extern void ledMatrixSetText(enum _screenToDraw screen, char *text);
-
+extern void ledMatrixSetMpdText(char *text);
+extern void ledMatrixSetStaticText(char *text);
 extern enum _screenToDraw ledMatrixCurrentScreen(void);
 
 #endif
