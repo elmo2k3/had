@@ -88,21 +88,6 @@ GAsyncQueue *async_queue_set_mpd_text;
 GAsyncQueue *async_queue_insert_fifo;
 GAsyncQueue *async_queue_set_static_text;
 
-void ledMatrixInit(void)
-{
-    async_queue_shutdown = g_async_queue_new();
-    async_queue_toggle_screen = g_async_queue_new();
-    async_queue_select_screen = g_async_queue_new();
-    async_queue_set_mpd_text = g_async_queue_new();
-    async_queue_insert_fifo = g_async_queue_new();
-    async_queue_set_static_text = g_async_queue_new();
-
-    mutex_is_running = g_mutex_new();
-    current_screen_mutex = g_mutex_new();
-    running = 0;
-    shutting_down = 0;
-}
-
 static int ledIsRunning(void)
 {
     int is_running;
@@ -413,22 +398,6 @@ static int initNetwork(void)
     return 0;
 }
 
-void ledMatrixStop()
-{
-    gboolean shutdown = TRUE;
-
-    if(!ledIsRunning()) // something went terribly wrong
-    {
-        g_debug("LedMatrixThread not running");
-        return;
-    }
-    g_debug("LedMatrixThread stopping");
-    g_async_queue_push(async_queue_shutdown, &shutdown);
-    g_debug("LedMatrixThread joining");
-    g_thread_join(ledMatrixThread);
-    g_debug("LedMatrixThread gestoppt");
-}
-
 static int allocateLedLine(struct _ledLine *ledLine, int line_length)
 {
     ledLine->column_red = calloc(sizeof(uint16_t), line_length);
@@ -469,16 +438,6 @@ static void freeLedLine(struct _ledLine *ledLine)
     
     free(ledLine->column_red_output);
     free(ledLine->column_green_output);
-}
-
-void ledInsertFifo(char *string, int shift, int lifetime)
-{
-    if(ledIsRunning())
-    {
-        g_async_queue_push(async_queue_insert_fifo, (gpointer)string);
-        g_async_queue_push(async_queue_insert_fifo, (gpointer)&shift);
-        g_async_queue_push(async_queue_insert_fifo, (gpointer)&lifetime);
-    }
 }
 
 static void ledInternalInsertFifo(char *string, int shift, int lifetime)
@@ -569,6 +528,7 @@ static gpointer ledMatrixStartThread(gpointer data)
         {
             clearScreen(&ledLineMpd); 
             putString(text_to_set, &ledLineMpd);
+            free(text_to_set);
         }
         
         if((text_to_set = (char*)g_async_queue_try_pop(
@@ -576,6 +536,7 @@ static gpointer ledMatrixStartThread(gpointer data)
         {
             clearScreen(&ledLineStatic); 
             putString(text_to_set, &ledLineStatic);
+            free(text_to_set);
         }
 
         // check for incoming fifo data
@@ -585,6 +546,7 @@ static gpointer ledMatrixStartThread(gpointer data)
             shift = *(int*)g_async_queue_pop(async_queue_insert_fifo);
             lifetime = *(int*)g_async_queue_pop(async_queue_insert_fifo);
             ledInternalInsertFifo(text_to_set, shift, lifetime);
+            free(text_to_set);
         }
 
         if(led_fifo_bottom != led_fifo_top)
@@ -729,15 +691,6 @@ static gpointer ledMatrixStartThread(gpointer data)
     return NULL;
 }
 
-enum _screenToDraw ledMatrixCurrentScreen()
-{
-    enum _screenToDraw screen;
-    g_mutex_lock(current_screen_mutex);
-    screen = current_screen;
-    g_mutex_unlock(current_screen_mutex);
-    return screen;
-}
-
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
 {
     if(shift_speed)
@@ -753,19 +706,52 @@ static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
     }
 }
 
+void ledMatrixInit(void)
+{
+    async_queue_shutdown = g_async_queue_new();
+    async_queue_toggle_screen = g_async_queue_new();
+    async_queue_select_screen = g_async_queue_new();
+    async_queue_set_mpd_text = g_async_queue_new();
+    async_queue_insert_fifo = g_async_queue_new();
+    async_queue_set_static_text = g_async_queue_new();
+
+    mutex_is_running = g_mutex_new();
+    current_screen_mutex = g_mutex_new();
+    running = 0;
+    shutting_down = 0;
+}
+
+
+enum _screenToDraw ledMatrixCurrentScreen()
+{
+    enum _screenToDraw screen;
+    g_mutex_lock(current_screen_mutex);
+    screen = current_screen;
+    g_mutex_unlock(current_screen_mutex);
+    return screen;
+}
+
 void ledMatrixSetMpdText(char *text)
 {
-    g_async_queue_push(async_queue_set_mpd_text, (gpointer)text);
+    char *stext = strdup(text);
+    if(ledIsRunning())
+    {
+        g_async_queue_push(async_queue_set_mpd_text, (gpointer)stext);
+    }
 }
 
 void ledMatrixSetStaticText(char *text)
 {
-    g_async_queue_push(async_queue_set_static_text, (gpointer)text);
+    char *stext = strdup(text);
+    if(ledIsRunning())
+    {
+        g_async_queue_push(async_queue_set_static_text, (gpointer)stext);
+    }
 }
 
 void ledMatrixToggle(void)
 {
-    gboolean toggle = TRUE;
+    static gboolean toggle = TRUE;
     if(ledIsRunning())
     {
         g_async_queue_push(async_queue_toggle_screen, &toggle);
@@ -774,9 +760,11 @@ void ledMatrixToggle(void)
 
 void ledMatrixSelectScreen(enum _screenToDraw screen)
 {
+    static enum _screenToDraw sscreen;
+    sscreen = screen;
     if(ledIsRunning())
     {
-        g_async_queue_push(async_queue_select_screen, (gpointer)&screen);
+        g_async_queue_push(async_queue_select_screen, (gpointer)&sscreen);
     }
 }
 
@@ -788,5 +776,35 @@ void ledMatrixStart(void)
         running = 1;
         ledMatrixThread = g_thread_create(ledMatrixStartThread, NULL, TRUE, NULL);
     }
+}
+
+void ledInsertFifo(char *string, int shift, int lifetime)
+{
+    static int sshift, slifetime;
+    sshift = shift;
+    slifetime = lifetime;
+    char *sstring = strdup(string);
+    if(ledIsRunning())
+    {
+        g_async_queue_push(async_queue_insert_fifo, (gpointer)sstring);
+        g_async_queue_push(async_queue_insert_fifo, (gpointer)&sshift);
+        g_async_queue_push(async_queue_insert_fifo, (gpointer)&slifetime);
+    }
+}
+
+void ledMatrixStop()
+{
+    static gboolean shutdown = TRUE;
+
+    if(!ledIsRunning()) // something went terribly wrong
+    {
+        g_debug("LedMatrixThread not running");
+        return;
+    }
+    g_debug("LedMatrixThread stopping");
+    g_async_queue_push(async_queue_shutdown, &shutdown);
+    g_debug("LedMatrixThread joining");
+    g_thread_join(ledMatrixThread);
+    g_debug("LedMatrixThread gestoppt");
 }
 

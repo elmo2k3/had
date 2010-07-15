@@ -224,7 +224,7 @@ void process_remote(gchar **strings, int argc)
     
     g_debug("Processing remote packet");
 
-    if(strings[1])
+    if(strings[1] && config.remote_activated)
     {
         command = atoi(strings[1]);
         if(command == config.rkeys.mpd_random)

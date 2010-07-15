@@ -150,6 +150,7 @@ struct _config
     int security_time_to_active;
     int security_time_before_alarm;
     int beep_on_window_open;
+    int remote_activated;
 
     struct _remote_control_keys rkeys;
 }config;
