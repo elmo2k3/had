@@ -583,8 +583,6 @@ action_led_matrix_select_screen(struct client *client,
         int argc, char *argv[])
 {
     int screen_num;
-    enum _screenToDraw screen;
-
     if (!check_int(client, &screen_num, argv[1], need_positive))
         return COMMAND_RETURN_ERROR;
     ledMatrixSelectScreen(screen_num);

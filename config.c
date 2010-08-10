@@ -45,7 +45,8 @@ static char *config_params[] = { "db_db", "db_server", "db_user", "db_pass",
     "mpd_activated","usbtemp_activated","usbtemp_device_id","usbtemp_device_module","usbtemp_device_sensor",
     "hr20_database_activated","hr20_database_number","door_sensor_id","window_sensor_id",
     "digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security",
-    "sms_on_main_door","time_to_active","time_before_alarm","beep_on_window_open","remote_activated"};
+    "sms_on_main_door","time_to_active","time_before_alarm","beep_on_window_open","remote_activated",
+    "mpd_fifo_file","mpd_fifo_activated"};
 
 static int setConfigValue(int param, char *value);
 
@@ -85,6 +86,8 @@ void printConfig(void (*func)(void*,...), void *dest)
     func(dest,"mpd_server = %s\n",config.mpd_server);
     func(dest,"mpd_pass = %s\n",config.mpd_password);
     func(dest,"mpd_port = %d\n",config.mpd_port);
+    func(dest,"mpd_fifo_activated = %d\n",config.mpd_fifo_activated);
+    func(dest,"mpd_fifo_file = %s\n",config.mpd_fifo_file);
     func(dest,"\n");
     
     func(dest,"scrobbler_activated = %d\n",config.scrobbler_activated);
@@ -290,6 +293,12 @@ static int setConfigValue(int param, char *value)
             break;
         /* remote activated */
         case 47: config.remote_activated = atoi(value);
+            break;
+        /* mpd fifo file */
+        case 48: strcpy(config.mpd_fifo_file, value);
+             break;
+        /* mpd fifo activated */
+        case 49: config.mpd_fifo_activated = atoi(value);
             break;
     }
     return 0;

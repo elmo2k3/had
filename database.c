@@ -118,12 +118,13 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
     int temp_max,temp_min;
     float sec;  
     float min,max;
+    int i;
 
     min = 0.0;
     max = 0.0;
 
-    graph->numberOfPoints = 0;
-    
+    memset(graph, 0, sizeof(struct graphPacket));
+
     if(!mysql_connection)
     {
         if(initDatabase())

@@ -103,6 +103,8 @@ struct _config
     char mpd_server[50]; /**< mpd server, hostname or ip */
     char mpd_password[30]; /**< mpd password */
     int mpd_port; /**< mpd port, default 6600 */
+    char mpd_fifo_file[1024];
+    int mpd_fifo_activated;
 
     char scrobbler_user[20]; /**< audioscrobbler user */
     char scrobbler_pass[34]; /**< audioscrobbler password hash, see audioscrobbler docu */
