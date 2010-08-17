@@ -45,7 +45,8 @@ static char *config_params[] = { "db_db", "db_server", "db_user", "db_pass",
     "mpd_activated","usbtemp_activated","usbtemp_device_id","usbtemp_device_module","usbtemp_device_sensor",
     "hr20_database_activated","hr20_database_number","door_sensor_id","window_sensor_id",
     "digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security",
-    "sms_on_main_door","time_to_active","time_before_alarm","beep_on_window_open","remote_activated"};
+    "sms_on_main_door","time_to_active","time_before_alarm","beep_on_window_open","remote_activated",
+    "db_ws2000"};
 
 static int setConfigValue(int param, char *value);
 
@@ -75,6 +76,7 @@ void printConfig(void (*func)(void*,...), void *dest)
     func(dest,"\n");
 
     func(dest,"db_db = %s\n",config.database_database);
+    func(dest,"db_ws2000 = %s\n",config.database_database_ws2000);
     func(dest,"db_server = %s\n",config.database_server);
     func(dest,"db_user = %s\n",config.database_user);
     func(dest,"db_pass = %s\n",config.database_password);
@@ -290,6 +292,8 @@ static int setConfigValue(int param, char *value)
             break;
         /* remote activated */
         case 47: config.remote_activated = atoi(value);
+            break;
+        case 48: strcpy(config.database_database_ws2000, value);
             break;
     }
     return 0;
