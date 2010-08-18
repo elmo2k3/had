@@ -97,6 +97,7 @@ struct _config
     char database_user[20]; /**< mysql user */
     char database_password[30]; /**< mysql password */
     char database_database[20]; /**< database name */
+    char database_database_ws2000[20]; /**< database name for old style weather station*/
     int database_port; /**< database port. default 3306 */
     
     int mpd_activated; /**< mpd activated */

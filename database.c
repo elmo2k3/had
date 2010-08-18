@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "had.h"
@@ -73,6 +74,8 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 {
     char query[255];
 
+    MYSQL *mysql_ws2000_connection;
+    MYSQL *mysql_local_connection;
     MYSQL_RES *mysql_res;
     MYSQL_ROW mysql_row;
 
@@ -84,15 +87,39 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
         if(initDatabase())
             return;
     }
-
-    sprintf(query,"SELECT MAX(value), MIN(value) FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
-    if(mysql_query(mysql_connection,query))
+    if(modul == 4) //erkenschwick
     {
-        fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+        mysql_ws2000_connection = mysql_init(NULL);
+        if (!mysql_real_connect(mysql_ws2000_connection, 
+                    config.database_server, 
+                    config.database_user,
+                    config.database_password,
+                    config.database_database_ws2000, 0, NULL, 0))
+        {
+            fprintf(stderr, "%s\r\n", mysql_error(mysql_ws2000_connection));
+            mysql_close(mysql_ws2000_connection);
+            return;
+        }
+        if(sensor == 0)
+            sprintf(query,"SELECT MAX(T_1), MIN(T_1) FROM sensor_1_8 WHERE date=CURDATE()");
+        else if(sensor == 1)
+            sprintf(query,"SELECT MAX(T_i), MIN(T_i) FROM inside WHERE date=CURDATE()");
+        mysql_local_connection = mysql_ws2000_connection;
+    }
+    else
+    {
+        mysql_local_connection = mysql_connection;
+        sprintf(query,"SELECT MAX(value), MIN(value) FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
+    }
+    if(mysql_query(mysql_local_connection,query))
+    {
+        fprintf(stderr, "%s\r\n", mysql_error(mysql_local_connection));
+        if(modul == 4)
+            mysql_close(mysql_local_connection);
         return;
     }
 
-    mysql_res = mysql_use_result(mysql_connection);
+    mysql_res = mysql_use_result(mysql_local_connection);
     mysql_row = mysql_fetch_row(mysql_res); // nur eine Zeile
 
     if(!mysql_row[0])
@@ -101,17 +128,23 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
         g_debug("Keine Daten fuer den Graphen vorhanden!");
         *max = -1000.0;
         *min = -1000.0;
+        if(modul == 4)
+            mysql_close(mysql_local_connection);
         return;
     }
     *max = atof(mysql_row[0]);
     *min = atof(mysql_row[1]);
 
     mysql_free_result(mysql_res);
+    if(modul == 4)
+        mysql_close(mysql_local_connection);
 }
 
 
 void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 {
+    MYSQL *mysql_local_connection;
+    MYSQL *mysql_ws2000_connection;
     char query[255];
     float x_div=0.0;
     int y;
@@ -144,14 +177,39 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
     temp_max = ((int)((float)graph->max[0]/10)+1)*10;
     temp_min = (int)((float)graph->min[0]/10)*10;
     
-    sprintf(query,"SELECT TIME_TO_SEC(FROM_UNIXTIME(date)), value FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
-    if(mysql_query(mysql_connection,query))
+    if(modul == 4) //erkenschwick
     {
-        fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+        mysql_ws2000_connection = mysql_init(NULL);
+        if (!mysql_real_connect(mysql_ws2000_connection, 
+                    config.database_server, 
+                    config.database_user,
+                    config.database_password,
+                    config.database_database_ws2000, 0, NULL, 0))
+        {
+            fprintf(stderr, "%s\r\n", mysql_error(mysql_ws2000_connection));
+            mysql_close(mysql_ws2000_connection);
+            return;
+        }
+        if(sensor == 0)
+            sprintf(query,"SELECT TIME_TO_SEC(CONCAT(date,\" \",time)), T_1 FROM sensor_1_8 WHERE date=CURDATE()");
+        else if(sensor == 1)
+            sprintf(query,"SELECT TIME_TO_SEC(CONCAT(date,\" \",time)), T_i FROM inside WHERE date=CURDATE()");
+        mysql_local_connection = mysql_ws2000_connection;
+    }
+    else
+    {
+        sprintf(query,"SELECT TIME_TO_SEC(FROM_UNIXTIME(date)), value FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
+        mysql_local_connection = mysql_connection;
+    }
+    if(mysql_query(mysql_local_connection,query))
+    {
+        fprintf(stderr, "%s\r\n", mysql_error(mysql_local_connection));
+        if(modul == 4)
+            mysql_close(mysql_local_connection);
         return;
     }
 
-    mysql_res = mysql_use_result(mysql_connection);
+    mysql_res = mysql_use_result(mysql_local_connection);
     while((mysql_row = mysql_fetch_row(mysql_res)))
     {
         sec = atoi(mysql_row[0]);
@@ -170,6 +228,8 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
     g_debug("Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
     
     mysql_free_result(mysql_res);
+    if(modul == 4)
+        mysql_close(mysql_local_connection);
 }
 
 void databaseInsertDigitalValue
