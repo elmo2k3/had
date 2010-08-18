@@ -38,6 +38,7 @@
 #include <fcntl.h>
 #include <math.h>
 
+#include "base_station.h"
 #include "led_routines.h"
 #include "fonts/arial_bold_14.h"
 #include "fonts/Comic_8.h"
@@ -567,6 +568,7 @@ static gpointer ledMatrixStartThread(gpointer data)
     char *text_to_set;
     int shift;
     int lifetime;
+    int red_on = 0;
 
     screen_to_draw = SCREEN_TIME;
     
@@ -736,42 +738,67 @@ static gpointer ledMatrixStartThread(gpointer data)
             int i;
             for(i=0;i<64;i++)
             {
-                uint8_t value = (uint8_t)(col_magnitude[i]/100000.0*16.0/5.0);
+                uint8_t value = (uint8_t)(col_magnitude[i]/100000.0*16.0/30.0*(i+1));
 //                uint8_t value = (uint8_t)((double)col_magnitude[i]/(double)col_magnitude_max*16.0);
-                if(value == 0)
+                if(value == 0) {
                     ledLineStatic.column_red[i] = 0;
-                else if(value == 1)
-                    ledLineStatic.column_red[i] = 1;
-                else if(value == 2)
-                    ledLineStatic.column_red[i] = 3;
-                else if(value == 3)
-                    ledLineStatic.column_red[i] = 7;
-                else if(value == 4)
-                    ledLineStatic.column_red[i] = 15;
-                else if(value == 5)
-                    ledLineStatic.column_red[i] = 31;
-                else if(value == 6)
-                    ledLineStatic.column_red[i] = 63;
-                else if(value == 7)
-                    ledLineStatic.column_red[i] = 127;
-                else if(value == 8)
-                    ledLineStatic.column_red[i] = 255;
-                else if(value == 9)
-                    ledLineStatic.column_red[i] = 511;
-                else if(value == 10)
-                    ledLineStatic.column_red[i] = 1023;
-                else if(value == 11)
-                    ledLineStatic.column_red[i] = 2047;
-                else if(value == 12)
-                    ledLineStatic.column_red[i] = 4095;
-                else if(value == 13)
-                    ledLineStatic.column_red[i] = 8191;
-                else if(value == 14)
-                    ledLineStatic.column_red[i] = 16383;
-                else if(value == 15)
-                    ledLineStatic.column_red[i] = 32767;
-                else if(value >= 16)
-                    ledLineStatic.column_red[i] = 65535;
+                    ledLineStatic.column_green[i] = 0;
+                } else if(value == 1){
+                    ledLineStatic.column_red[i] = 0;
+                    ledLineStatic.column_green[i] = 0x8000;
+                } else if(value == 2){
+                    ledLineStatic.column_red[i] = 0;
+                    ledLineStatic.column_green[i] = 0xC000;
+                } else if(value == 3){
+                    ledLineStatic.column_red[i] = 0;
+                    ledLineStatic.column_green[i] = 0xE000;
+                } else if(value == 4){
+                    ledLineStatic.column_red[i] = 0;
+                    ledLineStatic.column_green[i] = 0xF000;
+                } else if(value == 5){
+                    ledLineStatic.column_red[i] = 0;
+                    ledLineStatic.column_green[i] = 0xF800;
+                } else if(value == 6){
+                    ledLineStatic.column_red[i] = 0;
+                    ledLineStatic.column_green[i] = 0xFC00;
+                } else if(value == 7){
+                    ledLineStatic.column_red[i] = 0xFE00 - 0xFC00;
+                    ledLineStatic.column_green[i] = 0xFE00;
+                } else if(value == 8){
+                    ledLineStatic.column_red[i] = 0xFF00 - 0xFC00;
+                    ledLineStatic.column_green[i] = 0xFF00;
+                } else if(value == 9){
+                    ledLineStatic.column_red[i] = 0xFF80 - 0xFC00;
+                    ledLineStatic.column_green[i] = 0xFF80;
+                } else if(value == 10){
+                    ledLineStatic.column_red[i] = 0xFFC0 - 0xFC00;
+                    ledLineStatic.column_green[i] = 0xFFC0;
+                } else if(value == 11){
+                    ledLineStatic.column_red[i] = 0xFFE0 - 0xFC00;
+                    ledLineStatic.column_green[i] = 0xFFC0;
+                } else if(value == 12){
+                    ledLineStatic.column_red[i] = 0xFFF0 - 0xFC00;
+                    ledLineStatic.column_green[i] = 0xFFC0;
+                } else if(value == 13){
+                    ledLineStatic.column_red[i] = 0xFFF8 - 0xFC00;
+                    ledLineStatic.column_green[i] = 0xFFC0;
+                } else if(value == 14){
+                    ledLineStatic.column_red[i] = 0xFFFC - 0xFC00;
+                    ledLineStatic.column_green[i] = 0xFFC0;
+                } else if(value >= 15){
+                    if(i<5 && !red_on)
+                    {
+//                        sendRgbPacket(16,255,0,0,0);
+                        red_on = 1;
+                    }
+                    ledLineStatic.column_red[i] = 0xFFFE - 0xFC00;
+                    ledLineStatic.column_green[i] = 0xFFC0;
+                }
+                if(value <15 && i < 5 && red_on)
+                {
+//                    sendRgbPacket(16,0,0,0,0);
+                    red_on = 0;
+                }
             }
 //            g_mutex_lock(current_screen_mutex);
 //            current_screen = screen_to_draw;
