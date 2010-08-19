@@ -121,6 +121,7 @@ static int fifoInit(void)
 static void fifoUpdate(void)
 {
     static int16_t buf[SAMPLES*2];
+    static int toggler = 0;
     ssize_t num;
     int i,p;
 
@@ -804,7 +805,7 @@ static gpointer ledMatrixStartThread(gpointer data)
 //            current_screen = screen_to_draw;
 //            g_mutex_unlock(current_screen_mutex);
             ledDisplayMain(ledLineToDraw, shift_speed);
-            g_usleep(10000);
+            g_usleep(1000);
 //        }
 //        if(g_async_queue_try_pop(async_queue_shutdown) != NULL)
 //        {
@@ -840,7 +841,7 @@ static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
     else
     {
         updateDisplay(*ledLineToDraw);
-        g_usleep(1000);
+//        g_usleep(1000);
     }
 }
 
