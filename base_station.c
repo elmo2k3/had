@@ -597,6 +597,7 @@ void process_command(struct BaseStation *base_station)
     {
         switch(strings[0][0])
         {
+            case '0':
             case '3':   process_temperature_module(strings,i); break;
             case '7':   process_glcd_remote(strings,i); break;
             case '8':   process_remote(strings,i);break;
