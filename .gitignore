@@ -1,4 +1,5 @@
 had
+had.conf
 *.o
 *.swp
 build
