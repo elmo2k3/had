@@ -170,11 +170,17 @@ static int ledIsRunning(void)
     return is_running;
 }
 
+void endian_swap(uint16_t *x)
+{
+    *x = (*x>>8) | 
+                (*x<<8);
+}
+
+
 static void updateDisplay(struct _ledLine ledLine)
 {
     int bytes_send;
     int i,p,m;
-    int inverted = 0;
 
     memset(&RED,0,sizeof(RED));
     memset(&GREEN,0,sizeof(GREEN));
@@ -203,33 +209,36 @@ static void updateDisplay(struct _ledLine ledLine)
                     GREEN[3-m][15-i] |= ((ledLine.column_green[15-p+m*16] & (1<<i))>>(i)<<p);
                 }
 #else
+#ifdef MIPSEB
+#warning building for BIG ENDIAN // I'M THE DIRTIEST HACKER EVER BORN
                 /* was there a shift yet? if no, print the unshifted arrays */
-                if(inverted)
+                if(p<8)
                 {
                     if(ledLine.shift_position)
                     {
-                        RED[m][i] &= ~((ledLine.column_red_output[p+m*16] & (1<<i))>>(i)<<p);
-                        GREEN[m][i] &= ~((ledLine.column_green_output[p+m*16] & (1<<i))>>(i)<<p);
+                        RED[m][i] |= ((ledLine.column_red_output[p+8+m*16] & (1<<i))>>(i)<<p);
+                        GREEN[m][i] |= ((ledLine.column_green_output[p+8+m*16] & (1<<i))>>(i)<<p);
                     }
                     else
                     {
-                        RED[m][i] &= ~((ledLine.column_red[p+m*16] & (1<<i))>>(i)<<p);
-                        GREEN[m][i] &= ~((ledLine.column_green[p+m*16] & (1<<i))>>(i)<<p);
+                        RED[m][i] |= ((ledLine.column_red[p+8+m*16] & (1<<i))>>(i)<<p);
+                        GREEN[m][i] |= ((ledLine.column_green[p+8+m*16] & (1<<i))>>(i)<<p);
                     }
                 }
                 else
                 {
                     if(ledLine.shift_position)
                     {
-                        RED[m][i] |= ((ledLine.column_red_output[p+m*16] & (1<<i))>>(i)<<p);
-                        GREEN[m][i] |= ((ledLine.column_green_output[p+m*16] & (1<<i))>>(i)<<p);
+                        RED[m][i] |= ((ledLine.column_red_output[p-8+m*16] & (1<<i))>>(i)<<p);
+                        GREEN[m][i] |= ((ledLine.column_green_output[p-8+m*16] & (1<<i))>>(i)<<p);
                     }
                     else
                     {
-                        RED[m][i] |= ((ledLine.column_red[p+m*16] & (1<<i))>>(i)<<p);
-                        GREEN[m][i] |= ((ledLine.column_green[p+m*16] & (1<<i))>>(i)<<p);
+                        RED[m][i] |= ((ledLine.column_red[p-8+m*16] & (1<<i))>>(i)<<p);
+                        GREEN[m][i] |= ((ledLine.column_green[p-8+m*16] & (1<<i))>>(i)<<p);
                     }
                 }
+#endif
 #endif
 
             }
@@ -909,6 +918,7 @@ void ledMatrixSelectScreen(enum _screenToDraw screen)
 
 void ledMatrixStart(void)
 {
+    g_usleep(1000000);
     if(config.led_matrix_activated && !ledIsRunning())
     {
         g_mutex_lock(mutex_is_running);

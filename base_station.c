@@ -42,7 +42,7 @@
 #define RELAIS_LIGHT 32
 
 #define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd /etc/mpd.conf > /dev/null 2>&1"
-#define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1 && sleep 1 && sdparm -q -C stop /dev/discs/disc0/generic"
+#define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1 && sleep 1 && sdparm -q -C stop /dev/sda"
 
 /**
  * struct for transmitting the setting for the relais port
@@ -597,6 +597,7 @@ void process_command(struct BaseStation *base_station)
     {
         switch(strings[0][0])
         {
+            case '0':
             case '3':   process_temperature_module(strings,i); break;
             case '7':   process_glcd_remote(strings,i); break;
             case '8':   process_remote(strings,i);break;
