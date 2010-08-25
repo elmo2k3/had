@@ -170,12 +170,6 @@ static int ledIsRunning(void)
     return is_running;
 }
 
-void endian_swap(uint16_t *x)
-{
-    *x = (*x>>8) | 
-                (*x<<8);
-}
-
 
 static void updateDisplay(struct _ledLine ledLine)
 {
@@ -238,6 +232,17 @@ static void updateDisplay(struct _ledLine ledLine)
                         GREEN[m][i] |= ((ledLine.column_green[p-8+m*16] & (1<<i))>>(i)<<p);
                     }
                 }
+#else
+                    if(ledLine.shift_position)
+                    {
+                        RED[m][i] |= ((ledLine.column_red_output[p+m*16] & (1<<i))>>(i)<<p);
+                        GREEN[m][i] |= ((ledLine.column_green_output[p+m*16] & (1<<i))>>(i)<<p);
+                    }
+                    else
+                    {
+                        RED[m][i] |= ((ledLine.column_red[p+m*16] & (1<<i))>>(i)<<p);
+                        GREEN[m][i] |= ((ledLine.column_green[p+m*16] & (1<<i))>>(i)<<p);
+                    }
 #endif
 #endif
 

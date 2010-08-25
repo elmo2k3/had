@@ -117,7 +117,6 @@ int main(int argc, char* argv[])
 
     g_main_loop_run(had_main_loop);
 
-    writeConfig();
     listen_global_finish();
     return 0;
 }
