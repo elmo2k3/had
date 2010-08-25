@@ -63,7 +63,7 @@ static gpointer ledMatrixStartThread(gpointer data);
 #define SAMPLES 256
 #define RESULTS (SAMPLES/2+1)
 #define FREQ_PER_COL (RESULTS/64*4/5)
-static int mpd_fifo_fd;
+static int mpd_fifo_fd = 0;
 static double *fft_input;
 static fftw_complex *fft_output;
 static fftw_plan fft_plan;
@@ -107,6 +107,8 @@ static int fifoInit(void)
 {
     if(!config.mpd_fifo_activated)
         return 1;
+    if(mpd_fifo_fd > 0)
+        return 2;
     g_debug("fifo file = %s",config.mpd_fifo_file);
     mpd_fifo_fd = open(config.mpd_fifo_file,O_RDONLY | O_NONBLOCK);
     if(mpd_fifo_fd < 0)
@@ -118,12 +120,23 @@ static int fifoInit(void)
     return 0;
 }
 
+static void fifoClose(void)
+{
+    if(mpd_fifo_fd <= 0)
+        return;
+    close(mpd_fifo_fd);
+    mpd_fifo_fd = 0;
+}
+
 static void fifoUpdate(void)
 {
     static int16_t buf[SAMPLES*2];
     static int toggler = 0;
     ssize_t num;
     int i,p;
+
+    if(mpd_fifo_fd <= 0)
+        return;
 
     num = read(mpd_fifo_fd, buf, sizeof(buf));
     if(num < 0)
@@ -574,6 +587,7 @@ static gpointer ledMatrixStartThread(gpointer data)
     struct _ledLine ledLineMpd;
     struct _ledLine *ledLineToDraw;
     struct _ledLine ledLineStatic;
+    struct _ledLine ledLineScope;
     int shift_speed = 0;
     time_t rawtime;
     struct tm *ptm;
@@ -596,6 +610,10 @@ static gpointer ledMatrixStartThread(gpointer data)
     }
     
     allocateLedLine(&ledLineStatic, LINE_LENGTH);
+    allocateLedLine(&ledLineMpd, LINE_LENGTH);
+    allocateLedLine(&ledLineTime, LINE_LENGTH);
+    allocateLedLine(&ledLineVoid, LINE_LENGTH);
+    allocateLedLine(&ledLineScope, LINE_LENGTH);
     
     g_async_queue_ref(async_queue_shutdown);
     g_async_queue_ref(async_queue_toggle_screen);
@@ -608,223 +626,218 @@ static gpointer ledMatrixStartThread(gpointer data)
     fifoInit();
     while(1)
     {
-        fifoUpdate();
-//        if((text_to_set = (char*)g_async_queue_try_pop(
-//            async_queue_set_mpd_text)))
-//        {
-//            clearScreen(&ledLineMpd); 
-//            putString(text_to_set, &ledLineMpd);
-//            free(text_to_set);
-//        }
-//        
-//        if((text_to_set = (char*)g_async_queue_try_pop(
-//            async_queue_set_static_text)))
-//        {
-//            clearScreen(&ledLineStatic); 
-//            putString(text_to_set, &ledLineStatic);
-//            free(text_to_set);
-//        }
-//
-//        // check for incoming fifo data
-//        if((text_to_set = (char*)g_async_queue_try_pop(
-//            async_queue_insert_fifo)))
-//        {
-//            shift = *(int*)g_async_queue_pop(async_queue_insert_fifo);
-//            lifetime = *(int*)g_async_queue_pop(async_queue_insert_fifo);
-//            ledInternalInsertFifo(text_to_set, shift, lifetime);
-//            free(text_to_set);
-//        }
-//
-//        if(led_fifo_bottom != led_fifo_top)
-//        {
-//            ledLineToDraw = &ledLineFifo[led_fifo_bottom];
-//            led_line_fifo_time[led_fifo_bottom]--;
-//            shift_speed = led_line_fifo_shift[led_fifo_bottom];
-//            if(!led_line_fifo_time[led_fifo_bottom])
-//            {
-//                ledRemoveFromFifo();
-//            }
-//            else
-//                ledDisplayMain(ledLineToDraw, shift_speed);
-//
-//        }
-//        /* Important! else doesn't work here */
-//        if(led_fifo_bottom == led_fifo_top)
-//        {
-//            if(g_async_queue_try_pop(async_queue_toggle_screen) != NULL)
-//            {
-//                switch(screen_to_draw)
-//                {
-//                    case SCREEN_MPD: screen_to_draw = SCREEN_TIME;
-//                                        break;
-//                    case SCREEN_TIME: screen_to_draw = SCREEN_TEMPERATURES; 
-//                                        break;
-//                    case SCREEN_TEMPERATURES: screen_to_draw = SCREEN_STATIC_TEXT;
-//               //                         break;
-//                    case SCREEN_STATIC_TEXT: screen_to_draw = SCREEN_VOID;
-//                                        break;
-//                    case SCREEN_VOID: if(mpdGetState() == MPD_PLAYER_PLAY) screen_to_draw = SCREEN_MPD;
-//                                        else screen_to_draw = SCREEN_TIME;
-//                                        break;
-//                }
-//            }
-//            else if((screen_switch = (enum _screenToDraw*)g_async_queue_try_pop(
-//                async_queue_select_screen)) != NULL)
-//            {
-//                g_debug("switching screen");
-//                g_debug("switch value = %d", *screen_switch);
-//                switch(*screen_switch)
-//                {
-//                    case SCREEN_TIME: screen_to_draw = SCREEN_TIME;
-//                                      g_debug("screen switched to SCREEN_TIME"); break;
-//                    case SCREEN_MPD:  screen_to_draw = SCREEN_MPD;
-//                                      g_debug("screen switched to SCREEN_MPD"); break;
-//                    case SCREEN_TEMPERATURES: screen_to_draw = SCREEN_TEMPERATURES;
-//                                      g_debug("screen switched to SCREEN_TEMPERATURES"); break;
-//                    case SCREEN_STATIC_TEXT: screen_to_draw = SCREEN_STATIC_TEXT;
-//                                      g_debug("screen switched to SCREEN_STATIC_TEXT"); break;
-//                    case SCREEN_VOID: screen_to_draw = SCREEN_VOID;
-//                                      g_debug("screen switched to SCREEN_VOID"); break;
-//                    default: break;
-//                }
-//            }
-//            else if(mpdGetState() == MPD_PLAYER_PLAY && last_mpd_state == 0)
-//            {
-//                last_mpd_state = 1;
-//                screen_to_draw = SCREEN_MPD;
-//            }
-//            else if(mpdGetState() != MPD_PLAYER_PLAY && last_mpd_state == 1)
-//            {
-//                last_mpd_state = 0;
-//                screen_to_draw = SCREEN_TIME;
-//            }
-//            else if(screen_to_draw == SCREEN_MPD)
-//            {
-//                ledLineToDraw = &ledLineMpd;
-//                if(ledLineMpd.x >= 63)
-//                    shift_speed = 2;
-//                else
-//                    shift_speed = 0;
-//            }
-//            else if(screen_to_draw == SCREEN_TIME)
-//            {
-//                time(&rawtime);
-//                ptm = localtime(&rawtime);
-//                sprintf(time_string,"\r%02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
-//                clearScreen(&ledLineTime);
-//                ledLineTime.x = (64-stringWidth(time_string))/2;
-//                ledLineTime.y = 2;
-//                putString(time_string,&ledLineTime);
-//                ledLineToDraw = &ledLineTime;
-//                shift_speed = 0;
-//            }
-//            else if(screen_to_draw == SCREEN_TEMPERATURES)
-//            {
-//                font = Comic_10;
-//                sprintf(time_string,"\r%2d.%02d\bC \r%2d.%02d\bC",
-//                    lastTemperature[3][1][0],
-//                    lastTemperature[3][1][1]/100,
-//                    lastTemperature[3][0][0],
-//                    lastTemperature[3][0][1]/100
-//                    );
-//                clearScreen(&ledLineTime);
-//                ledLineTime.x = (64-stringWidth(time_string))/2;
-//                ledLineTime.y = 0;
-//                putString(time_string,&ledLineTime);
-//                
-//                font = Comic_8;
-//                ledLineTime.x = (64-stringWidth(time_string))/2;
-//                ledLineTime.y = 8;
-//                putString("\a Out   Wohn",&ledLineTime);
-//                ledLineToDraw = &ledLineTime;
-//                shift_speed = 0;
-//                font = Arial_Bold_14;
-//            }
-//            else if(screen_to_draw == SCREEN_VOID)
-//            {
-//                ledLineToDraw = &ledLineVoid;
-//                shift_speed = 0;
-//            }
-//            else if(screen_to_draw == SCREEN_STATIC_TEXT)
-//            {
-//                ledLineToDraw = &ledLineStatic;
-//            }
-            ledLineToDraw = &ledLineStatic;
-            int i;
-            for(i=0;i<64;i++)
+        if((text_to_set = (char*)g_async_queue_try_pop(
+            async_queue_set_mpd_text)))
+        {
+            clearScreen(&ledLineMpd); 
+            putString(text_to_set, &ledLineMpd);
+            free(text_to_set);
+        }
+        
+        if((text_to_set = (char*)g_async_queue_try_pop(
+            async_queue_set_static_text)))
+        {
+            clearScreen(&ledLineStatic); 
+            putString(text_to_set, &ledLineStatic);
+            free(text_to_set);
+        }
+
+        // check for incoming fifo data
+        if((text_to_set = (char*)g_async_queue_try_pop(
+            async_queue_insert_fifo)))
+        {
+            shift = *(int*)g_async_queue_pop(async_queue_insert_fifo);
+            lifetime = *(int*)g_async_queue_pop(async_queue_insert_fifo);
+            ledInternalInsertFifo(text_to_set, shift, lifetime);
+            free(text_to_set);
+        }
+
+        if(led_fifo_bottom != led_fifo_top)
+        {
+            ledLineToDraw = &ledLineFifo[led_fifo_bottom];
+            led_line_fifo_time[led_fifo_bottom]--;
+            shift_speed = led_line_fifo_shift[led_fifo_bottom];
+            if(!led_line_fifo_time[led_fifo_bottom])
             {
-                uint8_t value = (uint8_t)(col_magnitude[i]/100000.0*7.0/30.0*(i+1));
-//                uint8_t value = (uint8_t)((double)col_magnitude[i]/(double)col_magnitude_max*16.0);
-                if(value == 0) {
-                    ledLineStatic.column_red[i] = 0;
-                    ledLineStatic.column_green[i] = 0;
-                } else if(value == 1){
-                    ledLineStatic.column_red[i] = 0;
-                    ledLineStatic.column_green[i] = 0x8000;
-                } else if(value == 2){
-                    ledLineStatic.column_red[i] = 0;
-                    ledLineStatic.column_green[i] = 0xC000;
-                } else if(value == 3){
-                    ledLineStatic.column_red[i] = 0;
-                    ledLineStatic.column_green[i] = 0xE000;
-                } else if(value == 4){
-                    ledLineStatic.column_red[i] = 0;
-                    ledLineStatic.column_green[i] = 0xF000;
-                } else if(value == 5){
-                    ledLineStatic.column_red[i] = 0;
-                    ledLineStatic.column_green[i] = 0xF800;
-                } else if(value == 6){
-                    ledLineStatic.column_red[i] = 0;
-                    ledLineStatic.column_green[i] = 0xFC00;
-                } else if(value == 7){
-                    ledLineStatic.column_red[i] = 0xFE00 - 0xFC00;
-                    ledLineStatic.column_green[i] = 0xFE00;
-                } else if(value == 8){
-                    ledLineStatic.column_red[i] = 0xFF00 - 0xFC00;
-                    ledLineStatic.column_green[i] = 0xFF00;
-                } else if(value == 9){
-                    ledLineStatic.column_red[i] = 0xFF80 - 0xFC00;
-                    ledLineStatic.column_green[i] = 0xFF80;
-                } else if(value == 10){
-                    ledLineStatic.column_red[i] = 0xFFC0 - 0xFC00;
-                    ledLineStatic.column_green[i] = 0xFFC0;
-                } else if(value == 11){
-                    ledLineStatic.column_red[i] = 0xFFE0 - 0xFC00;
-                    ledLineStatic.column_green[i] = 0xFFC0;
-                } else if(value == 12){
-                    ledLineStatic.column_red[i] = 0xFFF0 - 0xFC00;
-                    ledLineStatic.column_green[i] = 0xFFC0;
-                } else if(value == 13){
-                    ledLineStatic.column_red[i] = 0xFFF8 - 0xFC00;
-                    ledLineStatic.column_green[i] = 0xFFC0;
-                } else if(value == 14){
-                    ledLineStatic.column_red[i] = 0xFFFC - 0xFC00;
-                    ledLineStatic.column_green[i] = 0xFFC0;
-                } else if(value >= 15){
-                    if(i<5 && !red_on)
-                    {
-//                        sendRgbPacket(16,255,0,0,0);
-                        red_on = 1;
-                    }
-                    ledLineStatic.column_red[i] = 0xFFFE - 0xFC00;
-                    ledLineStatic.column_green[i] = 0xFFC0;
-                }
-                if(value <15 && i < 5 && red_on)
+                ledRemoveFromFifo();
+            }
+            else
+                ledDisplayMain(ledLineToDraw, shift_speed);
+
+        }
+        /* Important! else doesn't work here */
+        if(led_fifo_bottom == led_fifo_top)
+        {
+            if(g_async_queue_try_pop(async_queue_toggle_screen) != NULL)
+            {
+                switch(screen_to_draw)
                 {
-//                    sendRgbPacket(16,0,0,0,0);
-                    red_on = 0;
+                    case SCREEN_MPD: screen_to_draw = SCREEN_TIME;
+                                        break;
+                    case SCREEN_TIME: screen_to_draw = SCREEN_TEMPERATURES; 
+                                        break;
+                    case SCREEN_TEMPERATURES: screen_to_draw = SCREEN_STATIC_TEXT;
+                    case SCREEN_STATIC_TEXT: screen_to_draw = SCREEN_SCOPE;
+                                        break;
+                    case SCREEN_SCOPE: screen_to_draw = SCREEN_VOID;
+                                        break;
+                    case SCREEN_VOID: if(mpdGetState() == MPD_PLAYER_PLAY) screen_to_draw = SCREEN_MPD;
+                                        else screen_to_draw = SCREEN_TIME;
+                                        break;
                 }
             }
-//            g_mutex_lock(current_screen_mutex);
-//            current_screen = screen_to_draw;
-//            g_mutex_unlock(current_screen_mutex);
+            else if((screen_switch = (enum _screenToDraw*)g_async_queue_try_pop(
+                async_queue_select_screen)) != NULL)
+            {
+                g_debug("switching screen");
+                g_debug("switch value = %d", *screen_switch);
+                switch(*screen_switch)
+                {
+                    case SCREEN_TIME: screen_to_draw = SCREEN_TIME;
+                                      g_debug("screen switched to SCREEN_TIME"); break;
+                    case SCREEN_MPD:  screen_to_draw = SCREEN_MPD;
+                                      g_debug("screen switched to SCREEN_MPD"); break;
+                    case SCREEN_TEMPERATURES: screen_to_draw = SCREEN_TEMPERATURES;
+                                      g_debug("screen switched to SCREEN_TEMPERATURES"); break;
+                    case SCREEN_STATIC_TEXT: screen_to_draw = SCREEN_STATIC_TEXT;
+                                      g_debug("screen switched to SCREEN_STATIC_TEXT"); break;
+                    case SCREEN_SCOPE: screen_to_draw = SCREEN_SCOPE;
+                                      g_debug("screen switched to SCREEN_SCOPE"); break;
+                    case SCREEN_VOID: screen_to_draw = SCREEN_VOID;
+                                      g_debug("screen switched to SCREEN_VOID"); break;
+                    default: break;
+                }
+            }
+            else if(mpdGetState() == MPD_PLAYER_PLAY && last_mpd_state == 0)
+            {
+                last_mpd_state = 1;
+                screen_to_draw = SCREEN_MPD;
+            }
+            else if(mpdGetState() != MPD_PLAYER_PLAY && last_mpd_state == 1)
+            {
+                last_mpd_state = 0;
+                screen_to_draw = SCREEN_TIME;
+            }
+            else if(screen_to_draw == SCREEN_MPD)
+            {
+                ledLineToDraw = &ledLineMpd;
+                if(ledLineMpd.x >= 63)
+                    shift_speed = 2;
+                else
+                    shift_speed = 0;
+            }
+            else if(screen_to_draw == SCREEN_TIME)
+            {
+                time(&rawtime);
+                ptm = localtime(&rawtime);
+                sprintf(time_string,"\r%02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
+                clearScreen(&ledLineTime);
+                ledLineTime.x = (64-stringWidth(time_string))/2;
+                ledLineTime.y = 2;
+                putString(time_string,&ledLineTime);
+                ledLineToDraw = &ledLineTime;
+                shift_speed = 0;
+            }
+            else if(screen_to_draw == SCREEN_TEMPERATURES)
+            {
+                font = Comic_10;
+                sprintf(time_string,"\r%2d.%02d\bC \r%2d.%02d\bC",
+                    lastTemperature[3][1][0],
+                    lastTemperature[3][1][1]/100,
+                    lastTemperature[3][0][0],
+                    lastTemperature[3][0][1]/100
+                    );
+                clearScreen(&ledLineTime);
+                ledLineTime.x = (64-stringWidth(time_string))/2;
+                ledLineTime.y = 0;
+                putString(time_string,&ledLineTime);
+                
+                font = Comic_8;
+                ledLineTime.x = (64-stringWidth(time_string))/2;
+                ledLineTime.y = 8;
+                putString("\a Out   Wohn",&ledLineTime);
+                ledLineToDraw = &ledLineTime;
+                shift_speed = 0;
+                font = Arial_Bold_14;
+            }
+            else if(screen_to_draw == SCREEN_VOID)
+            {
+                ledLineToDraw = &ledLineVoid;
+                shift_speed = 0;
+            }
+            else if(screen_to_draw == SCREEN_STATIC_TEXT)
+            {
+                ledLineToDraw = &ledLineStatic;
+            }
+            else if(screen_to_draw == SCREEN_SCOPE)
+            {
+                ledLineToDraw = &ledLineScope;
+                fifoUpdate();
+                int i;
+                for(i=0;i<64;i++)
+                {
+                    uint8_t value = (uint8_t)(col_magnitude[i]/100000.0*7.0/30.0*(i+1));
+                    if(value == 0) {
+                        ledLineScope.column_red[i] = 0;
+                        ledLineScope.column_green[i] = 0;
+                    } else if(value == 1){
+                        ledLineScope.column_red[i] = 0;
+                        ledLineScope.column_green[i] = 0x8000;
+                    } else if(value == 2){
+                        ledLineScope.column_red[i] = 0;
+                        ledLineScope.column_green[i] = 0xC000;
+                    } else if(value == 3){
+                        ledLineScope.column_red[i] = 0;
+                        ledLineScope.column_green[i] = 0xE000;
+                    } else if(value == 4){
+                        ledLineScope.column_red[i] = 0;
+                        ledLineScope.column_green[i] = 0xF000;
+                    } else if(value == 5){
+                        ledLineScope.column_red[i] = 0;
+                        ledLineScope.column_green[i] = 0xF800;
+                    } else if(value == 6){
+                        ledLineScope.column_red[i] = 0;
+                        ledLineScope.column_green[i] = 0xFC00;
+                    } else if(value == 7){
+                        ledLineScope.column_red[i] = 0xFE00 - 0xFC00;
+                        ledLineScope.column_green[i] = 0xFE00;
+                    } else if(value == 8){
+                        ledLineScope.column_red[i] = 0xFF00 - 0xFC00;
+                        ledLineScope.column_green[i] = 0xFF00;
+                    } else if(value == 9){
+                        ledLineScope.column_red[i] = 0xFF80 - 0xFC00;
+                        ledLineScope.column_green[i] = 0xFF80;
+                    } else if(value == 10){
+                        ledLineScope.column_red[i] = 0xFFC0 - 0xFC00;
+                        ledLineScope.column_green[i] = 0xFFC0;
+                    } else if(value == 11){
+                        ledLineScope.column_red[i] = 0xFFE0 - 0xFC00;
+                        ledLineScope.column_green[i] = 0xFFC0;
+                    } else if(value == 12){
+                        ledLineScope.column_red[i] = 0xFFF0 - 0xFC00;
+                        ledLineScope.column_green[i] = 0xFFC0;
+                    } else if(value == 13){
+                        ledLineScope.column_red[i] = 0xFFF8 - 0xFC00;
+                        ledLineScope.column_green[i] = 0xFFC0;
+                    } else if(value == 14){
+                        ledLineScope.column_red[i] = 0xFFFC - 0xFC00;
+                        ledLineScope.column_green[i] = 0xFFC0;
+                    } else if(value >= 15){
+                        ledLineScope.column_red[i] = 0xFFFE - 0xFC00;
+                        ledLineScope.column_green[i] = 0xFFC0;
+                    }
+                }
+            }
+            g_mutex_lock(current_screen_mutex);
+            current_screen = screen_to_draw;
+            g_mutex_unlock(current_screen_mutex);
             ledDisplayMain(ledLineToDraw, shift_speed);
             g_usleep(1000);
-//        }
-//        if(g_async_queue_try_pop(async_queue_shutdown) != NULL)
-//        {
-//            break;
-//        }
+        }
+        if(g_async_queue_try_pop(async_queue_shutdown) != NULL)
+        {
+            break;
+        }
     }
     
     g_async_queue_unref(async_queue_shutdown);
@@ -834,6 +847,7 @@ static gpointer ledMatrixStartThread(gpointer data)
     g_async_queue_unref(async_queue_insert_fifo);
     g_async_queue_unref(async_queue_set_static_text);
 
+    fifoClose();
     freeLedLine(&ledLineTime);
     freeLedLine(&ledLineVoid);
     freeLedLine(&ledLineMpd);
