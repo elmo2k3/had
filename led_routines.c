@@ -126,6 +126,8 @@ static void fifoClose(void)
         return;
     close(mpd_fifo_fd);
     mpd_fifo_fd = 0;
+    fftw_free(fft_input);
+    fftw_free(fft_output);
 }
 
 static void fifoUpdate(void)
@@ -773,6 +775,7 @@ static gpointer ledMatrixStartThread(gpointer data)
             {
                 ledLineToDraw = &ledLineScope;
                 fifoUpdate();
+                shift_speed = 0;
                 int i;
                 for(i=0;i<64;i++)
                 {
