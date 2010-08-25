@@ -103,13 +103,12 @@ GAsyncQueue *async_queue_set_mpd_text;
 GAsyncQueue *async_queue_insert_fifo;
 GAsyncQueue *async_queue_set_static_text;
 
-static int fifoInit(void)
+static int mpdFifoInit(void)
 {
     if(!config.mpd_fifo_activated)
         return 1;
     if(mpd_fifo_fd > 0)
         return 2;
-    g_debug("fifo file = %s",config.mpd_fifo_file);
     mpd_fifo_fd = open(config.mpd_fifo_file,O_RDONLY | O_NONBLOCK);
     if(mpd_fifo_fd < 0)
         return 1;
@@ -120,7 +119,7 @@ static int fifoInit(void)
     return 0;
 }
 
-static void fifoClose(void)
+static void mpdFifoClose(void)
 {
     if(mpd_fifo_fd <= 0)
         return;
@@ -130,7 +129,7 @@ static void fifoClose(void)
     fftw_free(fft_output);
 }
 
-static void fifoUpdate(void)
+static void mpdFifoUpdate(void)
 {
     static int16_t buf[SAMPLES*2];
     static int toggler = 0;
@@ -625,7 +624,7 @@ static gpointer ledMatrixStartThread(gpointer data)
     g_async_queue_ref(async_queue_set_static_text);
 
     g_mutex_unlock(mutex_is_running);
-    fifoInit();
+    mpdFifoInit();
     while(1)
     {
         if((text_to_set = (char*)g_async_queue_try_pop(
@@ -773,13 +772,14 @@ static gpointer ledMatrixStartThread(gpointer data)
             }
             else if(screen_to_draw == SCREEN_SCOPE)
             {
+                mpdFifoInit();
                 ledLineToDraw = &ledLineScope;
-                fifoUpdate();
+                mpdFifoUpdate();
                 shift_speed = 0;
                 int i;
                 for(i=0;i<64;i++)
                 {
-                    uint8_t value = (uint8_t)(col_magnitude[i]/100000.0*7.0/30.0*(i+1));
+                    uint8_t value = (uint8_t)(col_magnitude[i]/430000*(i+1));
                     if(value == 0) {
                         ledLineScope.column_red[i] = 0;
                         ledLineScope.column_green[i] = 0;
@@ -835,7 +835,8 @@ static gpointer ledMatrixStartThread(gpointer data)
             current_screen = screen_to_draw;
             g_mutex_unlock(current_screen_mutex);
             ledDisplayMain(ledLineToDraw, shift_speed);
-            g_usleep(1000);
+            if(screen_to_draw != SCREEN_SCOPE)
+                g_usleep(1000);
         }
         if(g_async_queue_try_pop(async_queue_shutdown) != NULL)
         {
@@ -849,8 +850,8 @@ static gpointer ledMatrixStartThread(gpointer data)
     g_async_queue_unref(async_queue_set_mpd_text);
     g_async_queue_unref(async_queue_insert_fifo);
     g_async_queue_unref(async_queue_set_static_text);
-
-    fifoClose();
+    
+    mpdFifoClose();
     freeLedLine(&ledLineTime);
     freeLedLine(&ledLineVoid);
     freeLedLine(&ledLineMpd);

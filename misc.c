@@ -33,7 +33,7 @@
                 printf(args); \
     }
 
-#define DSL_UP_FILE "/var/run/pppoe-wan.pid"
+#define DSL_UP_FILE "/var/run/ppp-wan.pid"
 
 const int local_daylight[12] = {16,17,18,19,20,20,20,21,20,18,17,16};
 
