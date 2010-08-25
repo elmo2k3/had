@@ -44,6 +44,12 @@
 #define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd /etc/mpd.conf > /dev/null 2>&1"
 #define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1 && sleep 1 && sdparm -q -C stop /dev/sda"
 
+void endian_swap(uint16_t *x)
+{
+    *x = (*x>>8) |
+                (*x<<8);
+}
+
 /**
  * struct for transmitting the setting for the relais port
  */
@@ -721,12 +727,19 @@ void sendPacket(void *packet, int type)
     {
         if(type == GP_PACKET)
         {
+            struct glcdMainPacket *ptr = packet;
             headP->address = GLCD_ADDRESS;
             headP->command = GP_PACKET;
             headP->count = 18;
+
+#ifdef MIPSEB
+            endian_swap(&ptr->temperature[0]);
+            endian_swap(&ptr->temperature[1]);
+            endian_swap(&ptr->temperature[2]);
+            endian_swap(&ptr->temperature[3]);
+#endif
             g_io_channel_write_chars(base_station.channel, packet, sizeof(glcdP),
                 &bytes_written, &error);
-            //write(fd,packet,sizeof(glcdP));
         }
         else if(type == MPD_PACKET)
         {
@@ -735,7 +748,6 @@ void sendPacket(void *packet, int type)
             headP->count = 32;
             g_io_channel_write_chars(base_station.channel, packet, sizeof(mpdP),
                 &bytes_written, &error);
-            //write(fd,packet,sizeof(mpdP));
         }
         else if(type == GRAPH_PACKET)
         {
@@ -752,7 +764,6 @@ void sendPacket(void *packet, int type)
             headP->count = 5;
             g_io_channel_write_chars(base_station.channel, packet, sizeof(rgbP),
                 &bytes_written, &error);
-            //write(fd,packet,sizeof(rgbP));
         }       
         else if(type == RELAIS_PACKET)
         {
