@@ -59,7 +59,8 @@ enum _screenToDraw
     SCREEN_TIME,
     SCREEN_MPD,
     SCREEN_TEMPERATURES,
-    SCREEN_STATIC_TEXT
+    SCREEN_STATIC_TEXT,
+    SCREEN_SCOPE
 };
 
 /** Start main thread for the led-matrix-display

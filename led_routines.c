@@ -60,7 +60,7 @@ static int initNetwork(void);
 static void ledRemoveFromFifo(void);
 static gpointer ledMatrixStartThread(gpointer data);
 
-#define SAMPLES 512
+#define SAMPLES 256
 #define RESULTS (SAMPLES/2+1)
 #define FREQ_PER_COL (RESULTS/64*4/5)
 static int mpd_fifo_fd;
@@ -748,7 +748,7 @@ static gpointer ledMatrixStartThread(gpointer data)
             int i;
             for(i=0;i<64;i++)
             {
-                uint8_t value = (uint8_t)(col_magnitude[i]/100000.0*16.0/30.0*(i+1));
+                uint8_t value = (uint8_t)(col_magnitude[i]/100000.0*7.0/30.0*(i+1));
 //                uint8_t value = (uint8_t)((double)col_magnitude[i]/(double)col_magnitude_max*16.0);
                 if(value == 0) {
                     ledLineStatic.column_red[i] = 0;
