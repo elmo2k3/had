@@ -152,6 +152,8 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
     float sec;  
     float min,max;
     int i;
+    float temperature[120];
+    int num_values[120];
 
     min = 0.0;
     max = 0.0;
@@ -210,20 +212,32 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
     }
 
     mysql_res = mysql_use_result(mysql_local_connection);
+
+    for(i=0;i<120;i++)
+    {
+        num_values[i] = 0;
+        temperature[i] = 0.0;
+    }
     while((mysql_row = mysql_fetch_row(mysql_res)))
     {
         sec = atoi(mysql_row[0]);
-        x_div = ((float)sec/(60.0*60.0*24.0))*120.0;
-        y = transformY(atof(mysql_row[1]),temp_max,temp_min);
-        if(graph->temperature_history[(int)x_div] !=0)
-            graph->temperature_history[(int)x_div] = (graph->temperature_history[(int)x_div] + y ) / 2;
-        else
-            graph->temperature_history[(int)x_div] = y;
-        //printf("x_div = %d temp = %d\r\n",(int)x_div,temperature_history[(int)x_div]);
-        //temperature_history[i] = i;
+        x_div = (float)sec/(60.0*60.0*24.0)*120.0;
+        num_values[(int)x_div]++;
+        temperature[(int)x_div] += atof(mysql_row[1]);
     }
     graph->numberOfPoints = x_div; // Letzter Wert
-    
+    for(i=0;i<(int)x_div;i++)
+    {
+        if(num_values[i] > 0)
+        {
+            graph->temperature_history[i] = transformY(
+                temperature[i]/((float)num_values[i]), temp_max, temp_min);
+        }
+        else if(i > 0)
+        {
+            graph->temperature_history[i] = graph->temperature_history[i-1];
+        }
+    }
     
     g_debug("Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
     
