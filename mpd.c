@@ -144,8 +144,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
             /* Auf PIN4 liegt die Stereoanlage
              * Nur wenn diese an ist zu last.fm submitten!
              */
-            if(base_station_hifi_is_on() && config.scrobbler_activated
-                && hadState.scrobbler_user_activated)
+            if(base_station_hifi_is_on() && config.scrobbler_activated)
             {
                 /* check if the track ran at least 2:40 or half of its runtime */
                 if(song->artist && song->title)
