@@ -624,7 +624,6 @@ static gpointer ledMatrixStartThread(gpointer data)
     g_async_queue_ref(async_queue_set_static_text);
 
     g_mutex_unlock(mutex_is_running);
-    mpdFifoInit();
     while(1)
     {
         if((text_to_set = (char*)g_async_queue_try_pop(
