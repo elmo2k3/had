@@ -246,8 +246,7 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
     int status;
     if(!mysql_connection)
     {
-        if(initDatabase())
-            return;
+        initDatabase();
     }
 
     g_debug("fifo_low = %d, fifo_high = %d",fifo_low, fifo_high);
@@ -257,16 +256,16 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
     g_debug("query = %s",query[fifo_high]);
 
     if(++fifo_high > (DATABASE_FIFO_SIZE -1)) fifo_high = 0;
+    
+    if(!mysql_connection)
+        return;
 
     while( fifo_low != fifo_high )
     {
         if((status = mysql_query(mysql_connection,query[fifo_low]))) // not successfull
         {
-            if(status != 0 ) {
-                mysql_close(mysql_connection);
-                if(initDatabase())
-                    return;
-            }
+            mysql_close(mysql_connection);
+            mysql_connection = NULL;
             break; // dont try further
         }
         else // query was successfull
