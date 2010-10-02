@@ -42,7 +42,7 @@ struct _hr20info
 /** read the status information 
  * \param *hr20info struct where the data will be stored
  */
-extern int hr20GetStatus(struct _hr20info *hr20info);
+extern struct _hr20info *hr20GetStatus();
 
 /** set wanted temperature
  * \param temperature wanted temperature

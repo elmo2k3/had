@@ -47,6 +47,8 @@ static int hr20SerialCommand(char *command, char *buffer);
 static int16_t hexCharToInt(char c);
 static int16_t hr20GetAutoTemperature(int slot);
 
+static struct _hr20info hr20info;
+
 static int hr20InitSerial(char *device) 
 {
     struct termios newtio;
@@ -256,7 +258,7 @@ static void hr20GetStatusLine(char *line)
     }
 }
 
-int hr20GetStatus(struct _hr20info *hr20info)
+struct _hr20info *hr20GetStatus()
 {
     /* example line as we receive it:
       D: d6 10.01.09 22:19:14 M V: 54 I: 1975 S: 2000 B: 3171 Is: 00b9 X
@@ -277,20 +279,20 @@ int hr20GetStatus(struct _hr20info *hr20info)
 //      verbose_printf(0,"hr20.c: length of line = %d\n",length);
 //      verbose_printf(0,"hr20.c: read line was %s\n",line);
         close(fd);
-        return 0;
+        return NULL;
     }
 
     char *trenner = (char*)strtok(line," ");
     if(!trenner)
     {
         close(fd);
-        return 0;
+        return NULL;
     }
 
     if(trenner[0] != 'D')
     {
         close(fd);
-        return 0;
+        return NULL;
     }
     
     trenner = (char*)strtok(NULL," ");
@@ -298,53 +300,53 @@ int hr20GetStatus(struct _hr20info *hr20info)
     trenner = (char*)strtok(NULL," ");
     trenner = (char*)strtok(NULL," ");
     if(trenner[0] == 'M')
-        hr20info->mode = 1;
+        hr20info.mode = 1;
     else if(trenner[0] == 'A')
-        hr20info->mode = 2;
+        hr20info.mode = 2;
     trenner = (char*)strtok(NULL," ");
     trenner = (char*)strtok(NULL," ");
     if(trenner)
-        hr20info->valve = atoi(trenner);
+        hr20info.valve = atoi(trenner);
 
     trenner = (char*)strtok(NULL," ");
     trenner = (char*)strtok(NULL," ");
     if(trenner)
-        hr20info->tempis = atoi(trenner);
+        hr20info.tempis = atoi(trenner);
 
     trenner = (char*)strtok(NULL," ");
     trenner = (char*)strtok(NULL," ");
     if(trenner)
-        hr20info->tempset = atoi(trenner);
+        hr20info.tempset = atoi(trenner);
 
     trenner = (char*)strtok(NULL," ");
     trenner = (char*)strtok(NULL," ");
     if(trenner)
-        hr20info->voltage = atoi(trenner);
+        hr20info.voltage = atoi(trenner);
     for(i=0;i<4;i++)
     {
-        hr20info->auto_temperature[i] = hr20GetAutoTemperature(i);
+        hr20info.auto_temperature[i] = hr20GetAutoTemperature(i);
     }
     close(fd);
 
-    return 1;
+    return &hr20info;
 }
 
-static int hr20checkPlausibility(struct _hr20info *hr20info)
+static int hr20checkPlausibility()
 {
     int i;
-    if(hr20info->mode < 1 || hr20info->mode > 2)
+    if(hr20info.mode < 1 || hr20info.mode > 2)
         return 0;
-    if(hr20info->tempis < 500 || hr20info->tempis > 4000)
+    if(hr20info.tempis < 500 || hr20info.tempis > 4000)
         return 0;
-    if(hr20info->tempset < 500 || hr20info->tempset > 3000)
+    if(hr20info.tempset < 500 || hr20info.tempset > 3000)
         return 0;
-    if(hr20info->valve < 0 || hr20info->valve > 100)
+    if(hr20info.valve < 0 || hr20info.valve > 100)
         return 0;
-    if(hr20info->voltage < 2000 || hr20info->voltage > 4000)
+    if(hr20info.voltage < 2000 || hr20info.voltage > 4000)
         return 0;
     for(i=0;i<4;i++)
     {
-        if(hr20info->auto_temperature[i] < 500 || hr20info->auto_temperature[i] > 3000)
+        if(hr20info.auto_temperature[i] < 500 || hr20info.auto_temperature[i] > 3000)
             return 0;
     }
     return 1;
@@ -387,9 +389,9 @@ static int16_t hexCharToInt(char c)
 gboolean hr20update()
 {
     time_t rawtime;
-    struct _hr20info hr20info;
     int decicelsius;
     int celsius;
+    float temperature;
     
     hr20GetStatus(&hr20info);
     if(hr20checkPlausibility(&hr20info) && config.hr20_database_number != 0)
@@ -397,14 +399,18 @@ gboolean hr20update()
         time(&rawtime);
         celsius = hr20info.tempis / 100;
         decicelsius = (hr20info.tempis - (celsius*100))*100;
-        //databaseInsertTemperature(config.hr20_database_number,0, celsius, decicelsius, rawtime);
+        temperature = celsius + (float)decicelsius/10000.0;
+        databaseInsertTemperature(config.hr20_database_number,0, &temperature, rawtime);
         celsius = hr20info.tempset / 100;
         decicelsius = (hr20info.tempset - (celsius*100))*100;
-        //databaseInsertTemperature(config.hr20_database_number,1, celsius, decicelsius, rawtime);
-        //databaseInsertTemperature(config.hr20_database_number,2, hr20info.valve, 0, rawtime);
+        temperature = celsius + (float)decicelsius/10000.0;
+        databaseInsertTemperature(config.hr20_database_number,1, &temperature, rawtime);
+        temperature = (float)hr20info.valve;
+        databaseInsertTemperature(config.hr20_database_number,2, &temperature, rawtime);
         celsius = hr20info.voltage / 1000;
         decicelsius = (hr20info.voltage - (celsius*1000))*10;
-        //databaseInsertTemperature(config.hr20_database_number,3, celsius, decicelsius, rawtime);
+        temperature = celsius + (float)decicelsius/10000.0;
+        databaseInsertTemperature(config.hr20_database_number,3, &temperature, rawtime);
         g_debug("hr20 read successfull");
     }
     else
