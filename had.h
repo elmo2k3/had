@@ -234,6 +234,12 @@ struct __attribute__((packed)) glcdMainPacket
     int16_t temperature[4];
     unsigned char backlight;
     unsigned char wecker;
+    uint8_t hr20_celsius_is;
+    uint8_t hr20_decicelsius_is;
+    uint8_t hr20_celsius_set;
+    uint8_t hr20_decicelsius_set;
+    uint8_t hr20_valve;
+    uint8_t hr20_mode;
 }glcdP;
 
 /**

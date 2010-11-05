@@ -30,6 +30,7 @@
 #include "led_routines.h"
 #include "database.h"
 #include "security.h"
+#include "hr20.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "base_station"
@@ -404,7 +405,7 @@ static void init_relais_state(unsigned char port)
     }
 }
 
-void process_glcd_remote(gchar **strings, int argc)
+static void process_glcd(gchar **strings, int argc)
 {
     int command;
     
@@ -423,6 +424,18 @@ void process_glcd_remote(gchar **strings, int argc)
                 getDailyGraph(atoi(strings[2]),atoi(strings[3]),&graphP);
                 sendPacket(&graphP, GRAPH_PACKET);
                 g_debug("GraphLCD Graph Paket gesendet\r");
+            }
+        }
+        else if(command ==4) //set hr20 temperature
+        {
+            if(strings[2] && strings[3] && strings[4])
+            {
+                hr20SetTemperature(atoi(strings[2]) + atoi(strings[3]));
+                g_usleep(100000);
+                if(atoi(strings[4]) == 2)
+                    hr20SetModeAuto();
+                else if(atoi(strings[4]) == 1)
+                    hr20SetModeManu();
             }
         }
     //  else { // old remote address
@@ -605,7 +618,7 @@ void process_command(struct BaseStation *base_station)
         {
             case '0':
             case '3':   process_temperature_module(strings,i); break;
-            case '7':   process_glcd_remote(strings,i); break;
+            case '7':   process_glcd(strings,i); break;
             case '8':   process_remote(strings,i);break;
             case '1':   if(strings[0][1] == '0') process_base_station(strings,i); break;
             default:    
@@ -630,7 +643,7 @@ static gboolean serialReceive
     
     if(condition != G_IO_IN)
     {
-        g_warning("base_station: error in serialReceive");
+        g_warning("error in serialReceive");
     }
     status = g_io_channel_read_chars(channel, buf, sizeof(buf), &bytes_read, &error);
     if( status != G_IO_STATUS_NORMAL && status != G_IO_STATUS_AGAIN)
@@ -727,17 +740,17 @@ void sendPacket(void *packet, int type)
     {
         if(type == GP_PACKET)
         {
-            struct glcdMainPacket *ptr = packet;
-            headP->address = GLCD_ADDRESS;
-            headP->command = GP_PACKET;
-            headP->count = 18;
-
 #ifdef MIPSEB
+            struct glcdMainPacket *ptr = packet;
             endian_swap(&ptr->temperature[0]);
             endian_swap(&ptr->temperature[1]);
             endian_swap(&ptr->temperature[2]);
             endian_swap(&ptr->temperature[3]);
 #endif
+            headP->address = GLCD_ADDRESS;
+            headP->command = GP_PACKET;
+            headP->count = 24;
+
             g_io_channel_write_chars(base_station.channel, packet, sizeof(glcdP),
                 &bytes_written, &error);
         }
@@ -934,6 +947,7 @@ void updateGlcd()
 {
     struct tm *ptm;
     time_t rawtime;
+    uint8_t celsius, decicelsius;
     
     time(&rawtime);
     ptm = localtime(&rawtime);
@@ -949,6 +963,19 @@ void updateGlcd()
     glcdP.temperature[1] = lastTemperature[3][1][1]; 
     glcdP.temperature[2] = lastTemperature[3][0][0]; // schlaf
     glcdP.temperature[3] = lastTemperature[3][0][1];
+
+    celsius = (uint8_t)hr20GetTemperatureIs();
+    decicelsius = (uint8_t)((hr20GetTemperatureIs() - (float)celsius)*10.0);
+    g_debug("celsius = %d, decicelsius = %d",celsius, decicelsius);
+    glcdP.hr20_celsius_is = celsius;
+    glcdP.hr20_decicelsius_is = decicelsius;
+    
+    celsius = (uint8_t)hr20GetTemperatureSet();
+    decicelsius = (uint8_t)((hr20GetTemperatureSet() - (float)celsius)*10.0);
+    glcdP.hr20_celsius_set = celsius;
+    glcdP.hr20_decicelsius_set = decicelsius;
+    glcdP.hr20_valve = hr20GetValve();
+    glcdP.hr20_mode = hr20GetMode();
     
     glcdP.wecker = 0;
     sendPacket(&glcdP,GP_PACKET);

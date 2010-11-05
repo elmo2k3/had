@@ -268,6 +268,7 @@ static void had_init_hr20(void)
 {   
     if(config.hr20_database_activated)
     {
+        hr20Init();
         g_timeout_add_seconds(300, hr20update, NULL);
     }
 }

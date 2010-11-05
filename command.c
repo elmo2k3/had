@@ -647,6 +647,66 @@ action_led_matrix_get_screen(struct client *client,
     return COMMAND_RETURN_OK;
 }
 
+static enum command_return
+action_hr20_get_info(struct client *client,
+        int argc, char *argv[])
+{
+    client_printf(client, "tempset: %2.2fC\r\n", hr20GetTemperatureSet());
+    client_printf(client, "tempis:  %2.2fC\r\n", hr20GetTemperatureIs());
+    client_printf(client, "valve:   %d\r\n", hr20GetValve());
+    client_printf(client, "voltage: %1.3fV\r\n", hr20GetVoltage());
+    if(hr20GetMode() == 1)
+    {
+        client_printf(client, "mode:    manual\r\n");
+    }
+    else
+    {
+        client_printf(client, "mode:    automatic\r\n");
+    }
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_hr20_set_temperature(struct client *client,
+        int argc, char *argv[])
+{
+    int temperature;
+    if (!check_int(client, &temperature, argv[1], need_positive))
+        return COMMAND_RETURN_ERROR;
+    if(temperature < 50 || temperature > 300 || temperature % 5)
+    {
+        client_printf(client, "temperature must be between 50 and 300 in 5 steps\r\n");
+        return COMMAND_RETURN_ERROR;
+    }
+    hr20SetTemperature(temperature);
+
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_hr20_set_mode_manual(struct client *client,
+        int argc, char *argv[])
+{
+    hr20SetModeManu();
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_hr20_set_mode_auto(struct client *client,
+        int argc, char *argv[])
+{
+    hr20SetModeAuto();
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_hr20_update_date(struct client *client,
+        int argc, char *argv[])
+{
+    hr20SetDateAndTime();
+    return COMMAND_RETURN_OK;
+}
+
 /**
  * The command registry.
  *
@@ -669,6 +729,11 @@ static const struct command commands[] = {
     {"get_temperature", PERMISSION_ADMIN, 2,2, action_get_temperature},
     {"get_voltage",     PERMISSION_ADMIN, 1,1, action_get_voltage},
     {"hifi_on",         PERMISSION_ADMIN, 0,0, action_hifi_on_music_on},
+    {"hr20_get",        PERMISSION_ADMIN, 0,0, action_hr20_get_info},
+    {"hr20_set_auto",   PERMISSION_ADMIN, 0,0, action_hr20_set_mode_auto},
+    {"hr20_set_manual", PERMISSION_ADMIN, 0,0, action_hr20_set_mode_manual},
+    {"hr20_set_t",      PERMISSION_ADMIN, 1,1, action_hr20_set_temperature},
+    {"hr20_update",     PERMISSION_ADMIN, 1,1, action_hr20_update_date},
     {"lm",              PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
     {"lm_get_screen",   PERMISSION_ADMIN, 0,0, action_led_matrix_get_screen},
     {"lm_select_screen",PERMISSION_ADMIN, 1,1, action_led_matrix_select_screen},

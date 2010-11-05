@@ -28,37 +28,29 @@
 
 #include <glib.h>
 
-/** struct holding complete status information from the hr20 device */
-struct _hr20info
-{
-    int16_t tempis; /**< current temperature */
-    int16_t tempset; /**< user set temperature */
-    int8_t valve; /**< how open is the valve? in percent */
-    int16_t voltage; /**< voltage of the batteries */
-    int8_t mode; /**< mode, 1 for manual, 2 for automatic control */
-    int16_t auto_temperature[4];
-};
+int hr20Init();
+gboolean hr20update();
 
-/** read the status information 
- * \param *hr20info struct where the data will be stored
- */
-extern struct _hr20info *hr20GetStatus();
+float hr20GetTemperatureIs();
+float hr20GetTemperatureSet();
+float hr20GetVoltage();
+int   hr20GetValve();
+int   hr20GetMode();
 
 /** set wanted temperature
  * \param temperature wanted temperature
  */
-extern int hr20SetTemperature(int temperature);
+int hr20SetTemperature(int temperature);
 
 /** set current date and time on hr20 device */
-extern int hr20SetDateAndTime();
+int hr20SetDateAndTime();
 
 /** set mode to manual control */
-extern void hr20SetModeManu();
+void hr20SetModeManu();
 
 /** set mode to automatic control */
-extern void hr20SetModeAuto();
+void hr20SetModeAuto();
 
-gboolean hr20update();
 
 #endif
 
