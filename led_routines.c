@@ -34,7 +34,6 @@
 #include <string.h>
 #include <time.h>
 #include <glib.h>
-#include <fftw3.h>
 #include <fcntl.h>
 #include <math.h>
 
@@ -48,6 +47,12 @@
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "led_routines"
+
+#ifndef _NO_FFTW3_
+#include <fftw3.h>
+static fftw_complex *fft_output;
+static fftw_plan fft_plan;
+#endif
 
 static uint16_t charGetStart(char c);
 static int initNetwork(void);
@@ -65,8 +70,6 @@ static gpointer ledMatrixStartThread(gpointer data);
 #define FREQ_PER_COL (RESULTS/64*4/5)
 static int mpd_fifo_fd = 0;
 static double *fft_input;
-static fftw_complex *fft_output;
-static fftw_plan fft_plan;
 static unsigned int fft_magnitude[RESULTS];
 static unsigned int col_magnitude_max;
 static double col_magnitude[64];
@@ -112,10 +115,12 @@ static int mpdFifoInit(void)
     mpd_fifo_fd = open(config.mpd_fifo_file,O_RDONLY | O_NONBLOCK);
     if(mpd_fifo_fd < 0)
         return 1;
-
+    
+#ifndef _NO_FFTW3_
     fft_input = (double*)fftw_malloc(sizeof(double)*SAMPLES);
     fft_output = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*RESULTS);
     fft_plan = fftw_plan_dft_r2c_1d(SAMPLES, fft_input, fft_output, FFTW_ESTIMATE);
+#endif
     return 0;
 }
 
@@ -125,8 +130,10 @@ static void mpdFifoClose(void)
         return;
     close(mpd_fifo_fd);
     mpd_fifo_fd = 0;
+#ifndef _NO_FFTW3_
     fftw_free(fft_input);
     fftw_free(fft_output);
+#endif
 }
 
 static void mpdFifoUpdate(void)
@@ -153,6 +160,7 @@ static void mpdFifoUpdate(void)
         fft_input[i] = buf[i];
     }
     
+#ifndef _NO_FFTW3_
     fftw_execute(fft_plan);
 
     for(i=0;i<RESULTS;i++)
@@ -171,6 +179,7 @@ static void mpdFifoUpdate(void)
         if(col_magnitude[i] > col_magnitude_max)
             col_magnitude_max = col_magnitude[i];
     }
+#endif
 
 }
 

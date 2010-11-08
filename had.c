@@ -286,15 +286,22 @@ static void had_init_base_station(void)
         }
         
         glcdP.backlight = 1;
-
+#ifdef _NO_FFTW3_
+        getLastTemperature(4,0,&celsius,&decicelsius);
+#else
         getLastTemperature(3,1,&celsius,&decicelsius);
+#endif
         lastTemperature[3][1][0] = (int16_t)celsius;
         lastTemperature[3][1][1] = (int16_t)decicelsius;
 
+#ifdef _NO_FFTW3_
+        getLastTemperature(4,1,&celsius,&decicelsius);
+#else
         getLastTemperature(3,0,&celsius,&decicelsius);
+#endif
         lastTemperature[3][0][0] = (int16_t)celsius;
         lastTemperature[3][0][1] = (int16_t)decicelsius;
-
+        
         sendBaseLcdText("had wurde gestartet ... ");
 
     } // config.serial_activated
