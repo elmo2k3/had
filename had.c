@@ -93,6 +93,7 @@ int main(int argc, char* argv[])
     had_load_state();
     client_manager_init();
     listen_global_init(&error);
+
     if(error) {
         if(config.daemonize) unlink(config.pid_file);
         g_error("%s",error->message);

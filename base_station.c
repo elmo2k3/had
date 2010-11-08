@@ -438,10 +438,6 @@ static void process_glcd(gchar **strings, int argc)
                     hr20SetModeManu();
             }
         }
-    //  else { // old remote address
-    //      g_debug("Processing old remote\r");
-    //      process_remote(strings, argc);
-    //  }
     }
 }
 

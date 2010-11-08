@@ -172,7 +172,7 @@ CMAKE_CACHE_MAJOR_VERSION:INTERNAL=2
 //Minor version of cmake used to create the current loaded cache
 CMAKE_CACHE_MINOR_VERSION:INTERNAL=8
 //Patch version of cmake used to create the current loaded cache
-CMAKE_CACHE_PATCH_VERSION:INTERNAL=0
+CMAKE_CACHE_PATCH_VERSION:INTERNAL=2
 //Major version of cmake used to create the current loaded cache
 CMAKE_CACHE_RELEASE_VERSION:INTERNAL=patch 4
 //ADVANCED property for variable: CMAKE_COLOR_MAKEFILE

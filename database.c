@@ -147,7 +147,6 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
     MYSQL *mysql_ws2000_connection;
     char query[255];
     float x_div=0.0;
-    int y;
     int temp_max,temp_min;
     float sec;  
     float min,max;
