@@ -289,37 +289,73 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
     }
 }
 
-void getLastTemperature(int modul, int sensor, int *temp, int *temp_deci)
+void getLastTemperature(int modul, int sensor, int16_t *temp, int16_t *temp_deci)
 {
     char query[255];
 
+    MYSQL *mysql_ws2000_connection;
+    MYSQL *mysql_local_connection;
     MYSQL_RES *mysql_res;
     MYSQL_ROW mysql_row;
 
-    *temp = 0;
-    *temp_deci = 0;
-    
+    float temperature;
+
     if(!mysql_connection)
     {
         if(initDatabase())
             return;
     }
-
-    sprintf(query,"SELECT value FROM modul_%d WHERE sensor=%d ORDER BY date DESC LIMIT 1",modul,sensor);
-    if(mysql_query(mysql_connection,query))
+    if(modul == 4) //erkenschwick
     {
-        fprintf(stderr, "%s\r\n", mysql_error(mysql_connection));
+        mysql_ws2000_connection = mysql_init(NULL);
+        if (!mysql_real_connect(mysql_ws2000_connection, 
+                    config.database_server, 
+                    config.database_user,
+                    config.database_password,
+                    config.database_database_ws2000, 0, NULL, 0))
+        {
+            fprintf(stderr, "%s\r\n", mysql_error(mysql_ws2000_connection));
+            mysql_close(mysql_ws2000_connection);
+            return;
+        }
+        if(sensor == 0)
+            sprintf(query,"SELECT T_1 FROM sensor_1_8 ORDER BY date DESC LIMIT 1");
+        else if(sensor == 1)
+            sprintf(query,"SELECT T_i FROM inside ORDER BY date DESC LIMIT 1");
+        mysql_local_connection = mysql_ws2000_connection;
+    }
+    else
+    {
+        mysql_local_connection = mysql_connection;
+        sprintf(query,"SELECT value FROM modul_%d WHERE sensor='%d' ORDER BY date DESC LIMIT 1",modul,sensor);
+    }
+    if(mysql_query(mysql_local_connection,query))
+    {
+        fprintf(stderr, "%s\r\n", mysql_error(mysql_local_connection));
+        if(modul == 4)
+            mysql_close(mysql_local_connection);
         return;
     }
 
-    mysql_res = mysql_use_result(mysql_connection);
-    mysql_row = mysql_fetch_row(mysql_res);
-    if(mysql_row[0])
+    mysql_res = mysql_use_result(mysql_local_connection);
+    mysql_row = mysql_fetch_row(mysql_res); // nur eine Zeile
+
+    if(!mysql_row[0])
     {
-        *temp = atoi(mysql_row[0]);
-        *temp_deci = (atof(mysql_row[0]) - *temp)*10;
+        mysql_free_result(mysql_res);
+        *temp= 0;
+        *temp_deci = 0;
+        if(modul == 4)
+            mysql_close(mysql_local_connection);
+        return;
     }
-    
+    temperature = atof(mysql_row[0]);
+    *temp = (int16_t)temperature;
+    *temp_deci = (int16_t)((temperature - (float)(*temp))*10.0);
+    g_debug("temperature = %f temp = %d temp_deci = %d",temperature, *temp, *temp_deci);
+
     mysql_free_result(mysql_res);
+    if(modul == 4)
+        mysql_close(mysql_local_connection);
 }
 

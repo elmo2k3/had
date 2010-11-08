@@ -276,7 +276,7 @@ static void had_init_hr20(void)
 
 static void had_init_base_station(void)
 {
-    int celsius,decicelsius;
+    int16_t celsius,decicelsius;
     if(config.serial_activated)
     {
         if(base_station_init(config.tty)) {

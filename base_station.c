@@ -955,11 +955,22 @@ void updateGlcd()
     glcdP.month = ptm->tm_mon+1;
     glcdP.year = ptm->tm_year;
     glcdP.weekday = 0;
+
+#ifdef _OE_
+    //alternative
+    getLastTemperature(4,0,&glcdP.temperature[0], &glcdP.temperature[1]);
+    glcdP.temperature[1] *= 100;
+    getLastTemperature(4,1,&glcdP.temperature[2], &glcdP.temperature[3]);
+    glcdP.temperature[3] *= 100;
+#else
     glcdP.temperature[0] = lastTemperature[3][1][0]; // draussen
     glcdP.temperature[1] = lastTemperature[3][1][1]; 
     glcdP.temperature[2] = lastTemperature[3][0][0]; // schlaf
     glcdP.temperature[3] = lastTemperature[3][0][1];
-
+#endif
+    
+    g_debug("last 1: %d,%d last 2: %d,%d",glcdP.temperature[0],
+        glcdP.temperature[1], glcdP.temperature[2], glcdP.temperature[3]);
     celsius = (uint8_t)hr20GetTemperatureIs();
     decicelsius = (uint8_t)((hr20GetTemperatureIs() - (float)celsius)*10.0);
     g_debug("celsius = %d, decicelsius = %d",celsius, decicelsius);
