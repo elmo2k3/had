@@ -28,7 +28,7 @@
 
 #include <glib.h>
 
-int hr20Init();
+void hr20Init(void);
 gboolean hr20update();
 
 float hr20GetTemperatureIs();

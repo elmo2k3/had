@@ -45,6 +45,7 @@ static int hr20InitSerial(char *device);
 static int16_t hexCharToInt(char c);
 static int16_t hr20GetAutoTemperature(int slot);
 static gboolean serialReceive (GIOChannel *channel, GIOCondition condition, gpointer data);
+static int fd;
 
 static int hr20_is_initiated = 0; 
 
@@ -66,12 +67,12 @@ struct _hr20status
     GIOChannel *channel;
 }hr20status;
 
-
-int hr20Init() 
+static gboolean hr20TryInit(gpointer data)
 {
     struct termios newtio;
-    GError *error = NULL;
-    int fd;
+
+    if(hr20_is_initiated)
+        return FALSE;
 
     memset(&hr20status, 0, sizeof(hr20status));
     
@@ -79,7 +80,7 @@ int hr20Init()
     fd = open(config.hr20_port, O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd <0) 
     {
-        return -1;
+        return TRUE;
     }
     
     memset(&newtio,0, sizeof(newtio)); /* clear struct for new port settings */
@@ -89,7 +90,7 @@ int hr20Init()
     tcflush(fd, TCIFLUSH);
     if(tcsetattr(fd,TCSANOW,&newtio) < 0)
     {
-        return -1;
+        return TRUE;
     }
 
     GIOChannel *serial_device_chan = g_io_channel_unix_new(fd);
@@ -99,12 +100,17 @@ int hr20Init()
     hr20status.channel = serial_device_chan;
 
     hr20_is_initiated = 1;
-    return 0;
+    return FALSE;
+}
+
+void hr20Init()
+{
+    if(!hr20_is_initiated)
+        g_timeout_add_seconds(1, hr20TryInit, NULL);
 }
 
 static int hr20checkPlausibility(struct _hr20status *hr20status)
 {
-    int i;
     if(hr20status->mode < 1 || hr20status->mode > 2)
         return 0;
     if(hr20status->tempis < 500 || hr20status->tempis > 4000)
@@ -214,18 +220,14 @@ static gboolean serialReceive
     GIOStatus status;
     gint i;
     
-    if(condition != G_IO_IN)
-    {
-        g_warning("error in serialReceive");
-    }
     status = g_io_channel_read_chars(channel, buf, sizeof(buf), &bytes_read, &error);
     if( status != G_IO_STATUS_NORMAL && status != G_IO_STATUS_AGAIN)
     {
-        if(error)
-        {
-            g_warning("error = %s",error->message);
-            g_error_free(error);
-        }
+        g_warning("removed");
+        hr20_is_initiated = 0;
+        g_io_channel_shutdown(channel, 0, NULL);
+        close(fd);
+        hr20Init();
         return FALSE;
     }
     if(bytes_read > 2048)
@@ -276,8 +278,6 @@ static int hr20SerialCommand(char *buffer)
 int hr20SetTemperature(int temperature)
 {
     char buffer[255];
-    char response[255];
-
 
     if(!hr20_is_initiated)
         return -1;
