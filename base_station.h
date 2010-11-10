@@ -21,7 +21,7 @@
 
 #include <glib.h>
 
-extern int base_station_init(char *serial_device);
+extern void base_station_init(void);
 
 /** Send a packet
  *

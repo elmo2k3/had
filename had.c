@@ -279,11 +279,7 @@ static void had_init_base_station(void)
     int16_t celsius,decicelsius;
     if(config.serial_activated)
     {
-        if(base_station_init(config.tty)) {
-            if(config.daemonize) unlink(config.pid_file);
-            g_error("Error opening %s",config.tty);
-            exit(EXIT_FAILURE);
-        }
+        base_station_init();
         
         glcdP.backlight = 1;
 #ifdef _NO_FFTW3_

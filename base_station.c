@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <glib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "base_station.h"
 #include "had.h"
@@ -44,6 +45,11 @@
 
 #define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd /etc/mpd.conf > /dev/null 2>&1"
 #define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1 && sleep 1 && sdparm -q -C stop /dev/sda"
+
+static int base_station_is_initiated = 0;
+static int fd;
+
+static gboolean base_station_try_init(gpointer data);
 
 void endian_swap(uint16_t *x)
 {
@@ -637,19 +643,14 @@ static gboolean serialReceive
     GIOStatus status;
     gint i;
     
-    if(condition != G_IO_IN)
-    {
-        g_warning("error in serialReceive");
-    }
     status = g_io_channel_read_chars(channel, buf, sizeof(buf), &bytes_read, &error);
     if( status != G_IO_STATUS_NORMAL && status != G_IO_STATUS_AGAIN)
     {
-        g_debug("status = %d",status);
-        if(error)
-        {
-            g_warning("error = %s",error->message);
-            g_error_free(error);
-        }
+        g_warning("removed");
+        base_station_is_initiated = 0;
+        g_io_channel_shutdown(channel, 0, NULL);
+        close(fd);
+        g_timeout_add_seconds(1, base_station_try_init, NULL);
         return FALSE;
     }
     buf[bytes_read] = '\0';
@@ -679,6 +680,9 @@ static void getRelaisState(void)
     gsize bytes_written;
     GError *error = NULL;
     struct headPacket headP;
+
+    if(!base_station_is_initiated)
+        return;
     headP.address = 0x02;
     headP.count = 1;
     headP.command = BASE_STATION_GET_RELAIS;
@@ -689,16 +693,24 @@ static void getRelaisState(void)
     g_io_channel_flush(base_station.channel, NULL);
 }
 
-int base_station_init(char *serial_device)
+void base_station_init()
 {
-    int fd;
+    g_timeout_add_seconds(1, base_station_try_init, NULL);
+    g_timeout_add_seconds(2, cycle_base_lcd, NULL);
+}
+
+static gboolean base_station_try_init(gpointer data)
+{
     struct termios newtio;
     GError *error = NULL;
+    
+    if(base_station_is_initiated)
+        return FALSE;
     /* open the device */
-    fd = open(serial_device, O_RDWR | O_NOCTTY /*| O_NDELAY*/ | O_NONBLOCK );
+    fd = open(config.tty, O_RDWR | O_NOCTTY /*| O_NDELAY*/ | O_NONBLOCK );
     if (fd <0) 
     {
-        return -1;
+        return TRUE;
     }
 
     memset(&newtio, 0, sizeof(newtio)); /* clear struct for new port settings */
@@ -708,7 +720,7 @@ int base_station_init(char *serial_device)
     tcflush(fd, TCIFLUSH);
     if(tcsetattr(fd,TCSANOW,&newtio) < 0)
     {
-        return -1;
+        return TRUE;
     }
     
     GIOChannel *serial_device_chan = g_io_channel_unix_new(fd);
@@ -719,10 +731,10 @@ int base_station_init(char *serial_device)
     base_station.channel = serial_device_chan;
     base_station.serial_port_watcher = serial_watch;
 
+    base_station_is_initiated = 1;
     getRelaisState();
     
-    g_timeout_add_seconds(2, cycle_base_lcd, NULL);
-    return 0;
+    return FALSE;
 }
 
 
@@ -731,6 +743,9 @@ void sendPacket(void *packet, int type)
     struct headPacket *headP = (struct headPacket*)packet;
     gsize bytes_written;
     GError *error = NULL;
+    
+    if(!base_station_is_initiated)
+        return;
 
     if(config.serial_activated)
     {
@@ -823,6 +838,10 @@ void setBeepOn()
     gsize bytes_written;
     GError *error = NULL;
     struct headPacket headP;
+    
+    if(!base_station_is_initiated)
+        return;
+
     headP.address = 0x02;
     headP.count = 1;
     headP.command = 3;
@@ -839,6 +858,10 @@ void setBeepOff()
     gsize bytes_written;
     GError *error = NULL;
     struct headPacket headP;
+    
+    if(!base_station_is_initiated)
+        return;
+
     headP.address = 0x02;
     headP.count = 1;
     headP.command = 4;
@@ -855,6 +878,10 @@ void setBaseLcdOn()
     gsize bytes_written;
     GError *error = NULL;
     struct headPacket headP;
+    
+    if(!base_station_is_initiated)
+        return;
+
     headP.address = 0x02;
     headP.count = 1;
     headP.command = 1;
@@ -872,6 +899,10 @@ void setBaseLcdOff()
     gsize bytes_written;
     GError *error = NULL;
     struct headPacket headP;
+    
+    if(!base_station_is_initiated)
+        return;
+
     headP.address = 0x02;
     headP.count = 1;
     headP.command = 2;
@@ -909,6 +940,9 @@ void sendBaseLcdText(char *text)
         struct headPacket headP;
         char text[33];
     }lcd_text;
+    
+    if(!base_station_is_initiated)
+        return;
 
     lcd_text.headP.address = 0x02;
     lcd_text.headP.count = 34;
