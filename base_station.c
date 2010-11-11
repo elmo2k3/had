@@ -940,7 +940,8 @@ void sendBaseLcdText(char *text)
         struct headPacket headP;
         char text[33];
     }lcd_text;
-    
+
+#ifndef _OE
     if(!base_station_is_initiated)
         return;
 
@@ -955,6 +956,7 @@ void sendBaseLcdText(char *text)
     if(error)
         g_error_free(error);
     g_io_channel_flush(base_station.channel, NULL);
+#endif
 }
 
 static void incrementColor(uint8_t *color)

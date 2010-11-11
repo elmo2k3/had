@@ -297,7 +297,6 @@ static void had_init_base_station(void)
 #endif
         lastTemperature[3][0][0] = (int16_t)celsius;
         lastTemperature[3][0][1] = (int16_t)decicelsius;
-        
         sendBaseLcdText("had wurde gestartet ... ");
 
     } // config.serial_activated
