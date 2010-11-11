@@ -6,7 +6,5 @@ set(SRCS had.c rfid_tag_reader.c config.c database.c hr20.c led_routines.c mpd.c
 
 cmake_minimum_required(VERSION 2.6)
 
-include_directories(libmpd)
-link_directories(libmpd)
 add_executable(had ${SRCS})
 target_link_libraries(had mysqlclient pthread mpd crypto curl ssl z glib-2.0 intl iconv gthread-2.0 fftw3)
