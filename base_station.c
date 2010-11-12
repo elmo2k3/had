@@ -43,8 +43,12 @@
 #define RELAIS_DOOR 16
 #define RELAIS_LIGHT 32
 
+#define SECONDS_PER_MINUTE 60
+#define SECONDS_PER_HOUR (SECONDS_PER_MINUTE*60)
+#define SECONDS_PER_DAY (24*SECONDS_PER_HOUR)
+
 #define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd /etc/mpd.conf > /dev/null 2>&1"
-#define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1 && sleep 1 && sdparm -q -C stop /dev/sda"
+#define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1 && sleep 1 && sdparm -q -C stop /dev/disk/by-id/usb-SAMSUNG_HM250JI_0123456789-0:0"
 
 static int base_station_is_initiated = 0;
 static int fd;
@@ -80,9 +84,6 @@ static struct BaseStation
 
 gboolean cycle_base_lcd(gpointer data)
 {
-#define SECONDS_PER_MINUTE 60
-#define SECONDS_PER_HOUR (SECONDS_PER_MINUTE*60)
-#define SECONDS_PER_DAY (24*SECONDS_PER_HOUR)
     time_t uptime;
     time_t days, hours, minutes, seconds;
     static int state = 0;
@@ -414,6 +415,8 @@ static void init_relais_state(unsigned char port)
 static void process_glcd(gchar **strings, int argc)
 {
     int command;
+    time_t uptime;
+    time_t days,hours,minutes,seconds;
     
     if(strings[1])
     {
@@ -422,6 +425,22 @@ static void process_glcd(gchar **strings, int argc)
         {
             updateGlcd();
             g_debug("GraphLCD Info Paket gesendet\r");
+            if(strings[2] && strings[3] && strings[4] && strings[5])
+            {
+                g_debug("%s %s %s %s",strings[2],strings[3],strings[4],strings[5]);
+                uptime = atoi(strings[5]) + atoi(strings[4])*255 +
+                         atoi(strings[3])*255*255 + atoi(strings[2])*255*255*255;
+                days = uptime / SECONDS_PER_DAY;
+                uptime -= days*SECONDS_PER_DAY;
+                hours = uptime / SECONDS_PER_HOUR;
+                uptime -= hours*SECONDS_PER_HOUR;
+                minutes = uptime / SECONDS_PER_MINUTE;
+                uptime -= minutes*SECONDS_PER_MINUTE;
+                seconds = uptime;
+
+                g_debug("glcd uptime %3d days, %02d:%02d:%02d",(int)days,(int)hours,
+                    (int)minutes,(int)seconds);
+            }
         }
         else if(command == 3)
         {
@@ -608,7 +627,7 @@ void process_command(struct BaseStation *base_station)
     GError *error = NULL;
     int i=0;
 
-    strings = g_strsplit( base_station->cmd, ";", 5);
+    strings = g_strsplit( base_station->cmd, ";", 10);
     
     while(strings[i])
     {
@@ -707,6 +726,9 @@ static gboolean base_station_try_init(gpointer data)
     if(base_station_is_initiated)
         return FALSE;
     /* open the device */
+#ifdef _OE
+#warning building OE version
+#endif
     fd = open(config.tty, O_RDWR | O_NOCTTY /*| O_NDELAY*/ | O_NONBLOCK );
     if (fd <0) 
     {
