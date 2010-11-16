@@ -71,6 +71,8 @@ static gboolean hr20TryInit(gpointer data)
 {
     struct termios newtio;
 
+    if(!config.hr20_activated) //try again until it gets activated by user
+        return TRUE;
     if(hr20_is_initiated)
         return FALSE;
 
@@ -100,13 +102,19 @@ static gboolean hr20TryInit(gpointer data)
     hr20status.channel = serial_device_chan;
 
     hr20_is_initiated = 1;
+    
+    g_warning("connected");
+    
     return FALSE;
 }
 
 void hr20Init()
 {
     if(!hr20_is_initiated)
+    {
         g_timeout_add_seconds(1, hr20TryInit, NULL);
+        g_timeout_add_seconds(300, hr20update, NULL);
+    }
 }
 
 static int hr20checkPlausibility(struct _hr20status *hr20status)

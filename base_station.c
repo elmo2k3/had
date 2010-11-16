@@ -725,6 +725,9 @@ static gboolean base_station_try_init(gpointer data)
     
     if(base_station_is_initiated)
         return FALSE;
+
+    if(!config.serial_activated) //try again until it gets activated
+        return TRUE;
     /* open the device */
 #ifdef _OE
 #warning building OE version
@@ -755,6 +758,8 @@ static gboolean base_station_try_init(gpointer data)
 
     base_station_is_initiated = 1;
     getRelaisState();
+    
+    g_warning("connected");
     
     return FALSE;
 }

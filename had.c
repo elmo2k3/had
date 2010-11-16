@@ -267,42 +267,30 @@ static void had_load_state(void)
 
 static void had_init_hr20(void)
 {   
-    if(config.hr20_database_activated)
-    {
-        hr20Init();
-        g_timeout_add_seconds(300, hr20update, NULL);
-    }
+    hr20Init();
 }
 
 static void had_init_base_station(void)
 {
     int16_t celsius,decicelsius;
-    if(config.serial_activated)
-    {
-        base_station_init();
-        
-        glcdP.backlight = 1;
+    base_station_init();
+    
+    glcdP.backlight = 1;
 #ifdef _NO_FFTW3_
-        getLastTemperature(4,0,&celsius,&decicelsius);
+    getLastTemperature(4,0,&celsius,&decicelsius);
 #else
-        getLastTemperature(3,1,&celsius,&decicelsius);
+    getLastTemperature(3,1,&celsius,&decicelsius);
 #endif
-        lastTemperature[3][1][0] = (int16_t)celsius;
-        lastTemperature[3][1][1] = (int16_t)decicelsius;
+    lastTemperature[3][1][0] = (int16_t)celsius;
+    lastTemperature[3][1][1] = (int16_t)decicelsius;
 
 #ifdef _NO_FFTW3_
-        getLastTemperature(4,1,&celsius,&decicelsius);
+    getLastTemperature(4,1,&celsius,&decicelsius);
 #else
-        getLastTemperature(3,0,&celsius,&decicelsius);
+    getLastTemperature(3,0,&celsius,&decicelsius);
 #endif
-        lastTemperature[3][0][0] = (int16_t)celsius;
-        lastTemperature[3][0][1] = (int16_t)decicelsius;
-        sendBaseLcdText("had wurde gestartet ... ");
-
-    } // config.serial_activated
-    else
-    {
-        g_debug("Serial port deactivated");
-    }
+    lastTemperature[3][0][0] = (int16_t)celsius;
+    lastTemperature[3][0][1] = (int16_t)decicelsius;
+    sendBaseLcdText("had wurde gestartet ... ");
 }
 
