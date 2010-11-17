@@ -678,10 +678,10 @@ static gboolean serialReceive
     {
         if(buf[i] == '\r' || base_station->cmd_position == 1023)
         {
-            process_command(base_station);
     //      g_debug("%lld %s",time(NULL), base_station->cmd);
             base_station->cmd[base_station->cmd_position] = '\0';
             base_station->cmd_position = 0;
+            process_command(base_station);
         }
         else if(buf[i] == '\n')
         {
