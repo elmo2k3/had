@@ -424,7 +424,7 @@ static void process_glcd(gchar **strings, int argc)
         if(command == 2)
         {
             updateGlcd();
-            g_debug("GraphLCD Info Paket gesendet\r");
+            g_debug("GraphLCD Info Paket gesendet");
             if(strings[2] && strings[3] && strings[4] && strings[5])
             {
                 g_debug("%s %s %s %s",strings[2],strings[3],strings[4],strings[5]);
@@ -486,7 +486,7 @@ void process_temperature_module(gchar **strings, int argc)
     g_debug("Processing temperature_module packet");
     if(argc != 5)
     {
-        g_warning("Got wrong count of parameters from temperature-module");
+        g_warning("Got wrong count of parameters (%d) from temperature-module",argc);
         return;
     }
     
@@ -626,7 +626,8 @@ void process_command(struct BaseStation *base_station)
     gchar **strings;
     GError *error = NULL;
     int i=0;
-
+    
+    g_debug("received string %s",base_station->cmd);
     strings = g_strsplit( base_station->cmd, ";", 10);
     
     while(strings[i])
@@ -996,7 +997,7 @@ static void incrementColor(uint8_t *color)
 }
 
 /*!
- *******************************************************************************
+ ***** *************************************************************************
  * send data to the GLCD module connected to the base station
  *
  * the following data is transmitted: current date and time, last measured 
@@ -1019,7 +1020,7 @@ void updateGlcd()
     glcdP.year = ptm->tm_year;
     glcdP.weekday = 0;
 
-#ifdef _OE_
+#ifdef _OE
     //alternative
     getLastTemperature(4,0,&glcdP.temperature[0], &glcdP.temperature[1]);
     glcdP.temperature[1] *= 100;
