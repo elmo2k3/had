@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #include "had.h"
 #include "database.h"
@@ -65,7 +66,7 @@ static int transformY(float temperature, int max, int min)
 {
     const float range = max - min; // hier muss noch was getan werden!
     if(range != 0)
-        return ((temperature-min)/range)*40;
+        return (int)(((temperature-(float)min)/range)*40.0);
     else
         return 40;
 }
@@ -172,11 +173,15 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 
     graph->max[0] = (int)max;
     graph->max[1] = (max - (int)max)*10;
+    if(graph->max[1] < 0) graph->max[1] = -graph->max[1];
     graph->min[0] = (int)min;
     graph->min[1] = (min - (int)min)*10;
+    if(graph->min[1] < 0) graph->min[1] = -graph->min[1];
 
-    temp_max = ((int)((float)graph->max[0]/10)+1)*10;
-    temp_min = (int)((float)graph->min[0]/10)*10;
+    temp_max = ((int)(ceilf((float)graph->max[0]/10.0)))*10;
+    temp_min = ((int)(floorf((float)graph->min[0]/10.0)))*10;
+    g_debug("Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
+    g_debug("Max: %d Min: %d\t",temp_max,temp_min);
     
     if(modul == 4) //erkenschwick
     {
@@ -237,8 +242,6 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
             graph->temperature_history[i] = graph->temperature_history[i-1];
         }
     }
-    
-    g_debug("Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
     
     mysql_free_result(mysql_res);
     if(modul == 4)
@@ -352,6 +355,7 @@ void getLastTemperature(int modul, int sensor, int16_t *temp, int16_t *temp_deci
     temperature = atof(mysql_row[0]);
     *temp = (int16_t)temperature;
     *temp_deci = (int16_t)((temperature - (float)(*temp))*10.0);
+    if(*temp_deci < 0) *temp_deci = -*temp_deci;
     g_debug("temperature = %f temp = %d temp_deci = %d",temperature, *temp, *temp_deci);
 
     mysql_free_result(mysql_res);
