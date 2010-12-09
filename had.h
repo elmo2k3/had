@@ -240,6 +240,8 @@ struct __attribute__((packed)) glcdMainPacket
     uint8_t hr20_decicelsius_set;
     uint8_t hr20_valve;
     uint8_t hr20_mode;
+    uint8_t hr20_auto_t[4];
+    uint8_t hr20_auto_t_deci[4];
 }glcdP;
 
 /**

@@ -463,6 +463,17 @@ static void process_glcd(gchar **strings, int argc)
                     hr20SetModeManu();
             }
         }
+        else if(command ==5) //set hr20 auto temperature
+        {
+            if(strings[2] && strings[3] && strings[4] && strings[5]
+                 && strings[6] && strings[7] && strings[8] && strings[9])
+            {
+                hr20SetAutoTemperature(0, atoi(strings[2]) + atoi(strings[3]));
+                hr20SetAutoTemperature(1, atoi(strings[4]) + atoi(strings[5]));
+                hr20SetAutoTemperature(2, atoi(strings[6]) + atoi(strings[7]));
+                hr20SetAutoTemperature(3, atoi(strings[8]) + atoi(strings[9]));
+            }
+        }
     }
 }
 
@@ -508,9 +519,13 @@ void process_temperature_module(gchar **strings, int argc)
         default: g_debug("Spannung: %2.2f",ADC_MODUL_DEFAULT/voltage);
     }       
 
-    //rawtime -= 32; // Modul misst immer vor dem Schlafengehen
+    // quite dirty hack: as there is no int with value -0 we have to put the
+    // information about negative value into the decimal
     lastTemperature[modul_id][sensor_id][0] = (int16_t)atoi(strings[2]);
-    lastTemperature[modul_id][sensor_id][1] = (int16_t)atoi(strings[3]);
+    if(temperature < 0.0 && (int16_t)temperature == 0)
+        lastTemperature[modul_id][sensor_id][1] = -(int16_t)atoi(strings[3]);
+    else
+        lastTemperature[modul_id][sensor_id][1] = (int16_t)atoi(strings[3]);
     lastVoltage[modul_id] = voltage;
     
     databaseInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
@@ -788,7 +803,7 @@ void sendPacket(void *packet, int type)
 #endif
             headP->address = GLCD_ADDRESS;
             headP->command = GP_PACKET;
-            headP->count = 24;
+            headP->count = 32;
 
             g_io_channel_write_chars(base_station.channel, packet, sizeof(glcdP),
                 &bytes_written, &error);
@@ -1008,6 +1023,7 @@ void updateGlcd()
     struct tm *ptm;
     time_t rawtime;
     uint8_t celsius, decicelsius;
+    int i;
     
     time(&rawtime);
     ptm = localtime(&rawtime);
@@ -1047,6 +1063,14 @@ void updateGlcd()
     glcdP.hr20_decicelsius_set = decicelsius;
     glcdP.hr20_valve = hr20GetValve();
     glcdP.hr20_mode = hr20GetMode();
+
+    for(i=0;i<4;i++)
+    {
+        celsius = (uint8_t)hr20GetAutoTemperature(i);
+        decicelsius = (uint8_t)((hr20GetAutoTemperature(i) - (float)celsius)*10.0);
+        glcdP.hr20_auto_t[i] = celsius;
+        glcdP.hr20_auto_t_deci[i] = decicelsius;
+    }
     
     glcdP.wecker = 0;
     sendPacket(&glcdP,GP_PACKET);

@@ -43,8 +43,8 @@
 static void hr20GetStatusLine(char *line);
 static int hr20InitSerial(char *device);
 static int16_t hexCharToInt(char c);
-static int16_t hr20GetAutoTemperature(int slot);
 static gboolean serialReceive (GIOChannel *channel, GIOCondition condition, gpointer data);
+static int hr20SerialCommand(char *buffer);
 static int fd;
 
 static int hr20_is_initiated = 0; 
@@ -137,12 +137,60 @@ static int hr20checkPlausibility(struct _hr20status *hr20status)
     return 1;
 }
 
-void parse_hr20()
+void parse_hr20_status(char *line, struct _hr20status *hr20status_temp)
 {
     /* example line as we receive it:
       D: d6 10.01.09 22:19:14 M V: 54 I: 1975 S: 2000 B: 3171 Is: 00b9 X
      */
     char *trenner;
+
+    trenner = (char*)strtok(line," ");
+    if(!trenner)
+    {
+        return;
+    }
+    trenner = (char*)strtok(NULL," ");
+    trenner = (char*)strtok(NULL," ");
+    trenner = (char*)strtok(NULL," ");
+    trenner = (char*)strtok(NULL," ");
+    if(trenner[0] == 'M')
+        hr20status_temp->mode = 1;
+    else if(trenner[0] == 'A')
+        hr20status_temp->mode = 2;
+    trenner = (char*)strtok(NULL," ");
+    trenner = (char*)strtok(NULL," ");
+    if(trenner)
+        hr20status_temp->valve = atoi(trenner);
+
+    trenner = (char*)strtok(NULL," ");
+    trenner = (char*)strtok(NULL," ");
+    if(trenner)
+        hr20status_temp->tempis = atoi(trenner);
+
+    trenner = (char*)strtok(NULL," ");
+    trenner = (char*)strtok(NULL," ");
+    if(trenner)
+        hr20status_temp->tempset = atoi(trenner);
+
+    trenner = (char*)strtok(NULL," ");
+    trenner = (char*)strtok(NULL," ");
+    if(trenner)
+        hr20status_temp->voltage = atoi(trenner);
+}
+
+void parse_hr20_auto_temperature(char *line)
+{
+    int num;
+    /* example line as we receive it:
+       G[13]=2d
+     */
+    num = hexCharToInt(line[2]) * 16 + hexCharToInt(line[3]) - 1;
+    hr20status.auto_temperature[num] = (hexCharToInt(line[6])*16 + 
+                                              hexCharToInt(line[7]))*50;
+}
+
+void parse_hr20()
+{
     char *line = hr20status.cmd;
     struct _hr20status hr20status_temp;
 
@@ -150,73 +198,52 @@ void parse_hr20()
     {
         return;
     }
-
-    trenner = (char*)strtok(line," ");
-    if(!trenner)
-    {
-        return;
-    }
-
-    if(trenner[0] != 'D')
-    {
-        return;
-    }
     
-    trenner = (char*)strtok(NULL," ");
-    trenner = (char*)strtok(NULL," ");
-    trenner = (char*)strtok(NULL," ");
-    trenner = (char*)strtok(NULL," ");
-    if(trenner[0] == 'M')
-        hr20status_temp.mode = 1;
-    else if(trenner[0] == 'A')
-        hr20status_temp.mode = 2;
-    trenner = (char*)strtok(NULL," ");
-    trenner = (char*)strtok(NULL," ");
-    if(trenner)
-        hr20status_temp.valve = atoi(trenner);
-
-    trenner = (char*)strtok(NULL," ");
-    trenner = (char*)strtok(NULL," ");
-    if(trenner)
-        hr20status_temp.tempis = atoi(trenner);
-
-    trenner = (char*)strtok(NULL," ");
-    trenner = (char*)strtok(NULL," ");
-    if(trenner)
-        hr20status_temp.tempset = atoi(trenner);
-
-    trenner = (char*)strtok(NULL," ");
-    trenner = (char*)strtok(NULL," ");
-    if(trenner)
-        hr20status_temp.voltage = atoi(trenner);
-//    for(i=0;i<4;i++)
-//    {
-//        hr20status.auto_temperature[i] = hr20GetAutoTemperature(i);
-//    }
-    if(hr20checkPlausibility(&hr20status_temp))
+    if(line[0] == 'D')
     {
-        hr20status.mode = hr20status_temp.mode;
-        hr20status.valve = hr20status_temp.valve;
-        hr20status.tempis = hr20status_temp.tempis;
-        hr20status.tempset = hr20status_temp.tempset;
-        hr20status.voltage = hr20status_temp.voltage;
-        hr20status.time_last = time(NULL);
-        g_debug("received sane data: %d %d %d %d %d",
-            hr20status.mode,
-            hr20status.valve,
-            hr20status.tempis,
-            hr20status.tempset,
-            hr20status.voltage);
+        parse_hr20_status(line, &hr20status_temp);
+        if(hr20checkPlausibility(&hr20status_temp))
+        {
+            hr20status.mode = hr20status_temp.mode;
+            hr20status.valve = hr20status_temp.valve;
+            hr20status.tempis = hr20status_temp.tempis;
+            hr20status.tempset = hr20status_temp.tempset;
+            hr20status.voltage = hr20status_temp.voltage;
+            hr20status.time_last = time(NULL);
+            g_debug("received sane data: %d %d %d %d %d",
+                hr20status.mode,
+                hr20status.valve,
+                hr20status.tempis,
+                hr20status.tempset,
+                hr20status.voltage);
+        }
+        else
+        {
+            g_debug("received not sane data: %d %d %d %d %d",
+                hr20status_temp.mode,
+                hr20status_temp.valve,
+                hr20status_temp.tempis,
+                hr20status_temp.tempset,
+                hr20status_temp.voltage);
+        }
+
+        hr20SerialCommand("G01\r");
+        hr20SerialCommand("G02\r");
+        hr20SerialCommand("G03\r");
+        hr20SerialCommand("G04\r");
+    }
+    else if(line[0] == 'G')
+    {
+        parse_hr20_auto_temperature(line);
+        g_debug("auto temperatures %d %d %d %d",
+            hr20status.auto_temperature[0],
+            hr20status.auto_temperature[1],
+            hr20status.auto_temperature[2],
+            hr20status.auto_temperature[3]);
     }
     else
-    {
-        g_debug("received not sane data: %d %d %d %d %d",
-            hr20status_temp.mode,
-            hr20status_temp.valve,
-            hr20status_temp.tempis,
-            hr20status_temp.tempset,
-            hr20status_temp.voltage);
-    }
+        return;
+    
 }
 
 static gboolean serialReceive
@@ -268,6 +295,7 @@ static int hr20SerialCommand(char *buffer)
         g_io_channel_write_chars(hr20status.channel, buffer, strlen(buffer),
           NULL, NULL);
         g_io_channel_flush(hr20status.channel, NULL);
+        g_usleep(100000);
         return 0;
     }
     return 1;
@@ -291,7 +319,7 @@ int hr20SetTemperature(int temperature)
         return -1;
     if(temperature % 5) // temperature may only be XX.5°C
         return 1;
-    sprintf(buffer,"A%x\r", temperature/5);
+    sprintf(buffer,"A%02x\r", temperature/5);
     hr20SerialCommand(buffer);
     g_debug("setting temperature %d",temperature);
     return 0;
@@ -307,7 +335,7 @@ int hr20SetAutoTemperature(int slot, int temperature)
     if(temperature % 5) // temperature may only be XX.5°C
         return 0;
 
-    sprintf(buffer,"S%02x%x\r",slot+1, temperature/5);
+    sprintf(buffer,"S%02x%02x\r",slot+1, temperature/5);
     hr20SerialCommand(buffer);
     return 1;
 }
@@ -435,6 +463,13 @@ gboolean hr20update()
 float hr20GetTemperatureIs()
 {
     return hr20status.tempis / 100.0;
+}
+
+float hr20GetAutoTemperature(int slot)
+{
+    if(slot < 0 || slot > 3)
+        return 0.0;
+    return hr20status.auto_temperature[slot] / 100.0;
 }
 
 float hr20GetTemperatureSet()

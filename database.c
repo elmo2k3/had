@@ -353,9 +353,14 @@ void getLastTemperature(int modul, int sensor, int16_t *temp, int16_t *temp_deci
         return;
     }
     temperature = atof(mysql_row[0]);
+    // quite dirty hack: as there is no int with value -0 we have to put the
+    // information about negative value into the decimal
     *temp = (int16_t)temperature;
     *temp_deci = (int16_t)((temperature - (float)(*temp))*10.0);
     if(*temp_deci < 0) *temp_deci = -*temp_deci;
+    
+    if(temperature < 0.0 && (int16_t)temperature == 0.0)
+        *temp_deci = -*temp_deci;
     g_debug("temperature = %f temp = %d temp_deci = %d",temperature, *temp, *temp_deci);
 
     mysql_free_result(mysql_res);

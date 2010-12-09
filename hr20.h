@@ -33,6 +33,7 @@ gboolean hr20update();
 
 float hr20GetTemperatureIs();
 float hr20GetTemperatureSet();
+float hr20GetAutoTemperature(int slot);
 float hr20GetVoltage();
 int   hr20GetValve();
 int   hr20GetMode();
@@ -41,6 +42,7 @@ int   hr20GetMode();
  * \param temperature wanted temperature
  */
 int hr20SetTemperature(int temperature);
+int hr20SetAutoTemperature(int slot, int temperature);
 
 /** set current date and time on hr20 device */
 int hr20SetDateAndTime();

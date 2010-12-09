@@ -651,18 +651,22 @@ static enum command_return
 action_hr20_get_info(struct client *client,
         int argc, char *argv[])
 {
-    client_printf(client, "tempset: %2.2fC\r\n", hr20GetTemperatureSet());
-    client_printf(client, "tempis:  %2.2fC\r\n", hr20GetTemperatureIs());
-    client_printf(client, "valve:   %d\r\n", hr20GetValve());
-    client_printf(client, "voltage: %1.3fV\r\n", hr20GetVoltage());
+    client_printf(client, "tempset:          %2.2fC\r\n", hr20GetTemperatureSet());
+    client_printf(client, "tempis:           %2.2fC\r\n", hr20GetTemperatureIs());
+    client_printf(client, "valve:                %d\r\n", hr20GetValve());
+    client_printf(client, "voltage:          %1.3fV\r\n", hr20GetVoltage());
     if(hr20GetMode() == 1)
     {
-        client_printf(client, "mode:    manual\r\n");
+        client_printf(client, "mode:         manual\r\n");
     }
     else
     {
-        client_printf(client, "mode:    automatic\r\n");
+        client_printf(client, "mode:      automatic\r\n");
     }
+    client_printf(client, "frost protection: %2.2fC\r\n", hr20GetAutoTemperature(0));
+    client_printf(client, "energy save:      %2.2fC\r\n", hr20GetAutoTemperature(1));
+    client_printf(client, "comfort:          %2.2fC\r\n", hr20GetAutoTemperature(2));
+    client_printf(client, "supercomfort:     %2.2fC\r\n", hr20GetAutoTemperature(3));
     return COMMAND_RETURN_OK;
 }
 
@@ -679,6 +683,25 @@ action_hr20_set_temperature(struct client *client,
         return COMMAND_RETURN_ERROR;
     }
     hr20SetTemperature(temperature);
+
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_hr20_set_auto_temperature(struct client *client,
+        int argc, char *argv[])
+{
+    int temperature,slot;
+    if (!check_int(client, &slot, argv[1], need_positive))
+        return COMMAND_RETURN_ERROR;
+    if (!check_int(client, &temperature, argv[2], need_positive))
+        return COMMAND_RETURN_ERROR;
+    if(temperature < 50 || temperature > 300 || temperature % 5)
+    {
+        client_printf(client, "temperature must be between 50 and 300 in 5 steps\r\n");
+        return COMMAND_RETURN_ERROR;
+    }
+    hr20SetAutoTemperature(slot, temperature);
 
     return COMMAND_RETURN_OK;
 }
@@ -731,6 +754,7 @@ static const struct command commands[] = {
     {"hifi_on",         PERMISSION_ADMIN, 0,0, action_hifi_on_music_on},
     {"hr20_get",        PERMISSION_ADMIN, 0,0, action_hr20_get_info},
     {"hr20_set_auto",   PERMISSION_ADMIN, 0,0, action_hr20_set_mode_auto},
+    {"hr20_set_auto_t", PERMISSION_ADMIN, 2,2, action_hr20_set_auto_temperature},
     {"hr20_set_manual", PERMISSION_ADMIN, 0,0, action_hr20_set_mode_manual},
     {"hr20_set_t",      PERMISSION_ADMIN, 1,1, action_hr20_set_temperature},
     {"hr20_update",     PERMISSION_ADMIN, 1,1, action_hr20_update_date},
