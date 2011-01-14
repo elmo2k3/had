@@ -440,6 +440,15 @@ gboolean hr20update()
     if(!hr20_is_initiated)
         return TRUE;
 
+    if((time(NULL) - hr20status.time_last) > 300) // 5 minutes without new data
+    {
+        g_warning("300 seconds without data, reinitiating");
+        hr20_is_initiated = 0;
+        g_io_channel_shutdown(hr20status.channel, 0, NULL);
+        close(fd);
+        hr20Init();
+    }
+
     if((config.hr20_database_number != 0) && (hr20status.time_last != 0) &&
         (hr20status.time_last != hr20status.time_last_db_update))
     {
