@@ -48,6 +48,9 @@
 #define RGB_PACKET 4
 #define RELAIS_PACKET 5
 
+#define MPD_PLAYING 1
+#define MPD_RANDOM 2
+
 #define GLCD_ADDRESS 0x30
 #define TEMP1_ADDRESS 3
 #define BASE_ADDRESS 10
@@ -200,15 +203,6 @@ struct headPacket
 
 
 /**
- * struct for transmitting the current artist/title to glcd
- */
-struct mpdPacket
-{
-    struct headPacket headP;
-    char currentSong[31];
-}mpdP;
-
-/**
  * struct for trasmitting a full graph (y-points) to the glcd module
  */
 struct graphPacket
@@ -243,6 +237,17 @@ struct __attribute__((packed)) glcdMainPacket
     uint8_t hr20_auto_t[4];
     uint8_t hr20_auto_t_deci[4];
 }glcdP;
+
+struct __attribute__((packed)) glcdMpdPacket
+{
+    struct headPacket headP;
+    char title[20];
+    char artist[20];
+    char album[20];
+    uint16_t length;
+    uint16_t pos;
+    uint8_t status;
+}mpdP;
 
 /**
  *

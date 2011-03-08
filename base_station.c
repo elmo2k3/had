@@ -810,9 +810,14 @@ void sendPacket(void *packet, int type)
         }
         else if(type == MPD_PACKET)
         {
+#ifdef MIPSEB
+            struct glcdMpdPacket *ptr = packet;
+            endian_swap(&ptr->length);
+            endian_swap(&ptr->pos);
+#endif
             headP->address = GLCD_ADDRESS;
             headP->command = MPD_PACKET;
-            headP->count = 32;
+            headP->count = 66;
             g_io_channel_write_chars(base_station.channel, packet, sizeof(mpdP),
                 &bytes_written, &error);
         }

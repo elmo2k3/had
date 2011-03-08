@@ -126,15 +126,28 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
                 "\r%s\a - \b%s", song->artist, song->title);
             ledMatrixSetMpdText(led_matrix_text);
             if(song->artist)
-                strcpy(current_track.last_artist, song->artist);
+            {
+                strncpy(current_track.last_artist, song->artist, sizeof(current_track.last_artist));
+                strncpy(mpdP.artist, song->artist, sizeof(mpdP.artist));
+            }
             if(song->album)
-                strcpy(current_track.last_album, song->album);
+            {
+                strncpy(current_track.last_album, song->album, sizeof(current_track.last_album));
+                strncpy(mpdP.album, song->album, sizeof(mpdP.album));
+            }
             if(song->title)
-                strcpy(current_track.last_title, song->title);
+            {
+                strncpy(current_track.last_title, song->title, sizeof(current_track.last_title));
+                strncpy(mpdP.title, song->title, sizeof(mpdP.title));
+            }
             if(song->track)
-                strcpy(current_track.current_track, song->track);
+            {
+                strncpy(current_track.current_track, song->track, sizeof(current_track));
+            }
             current_track.length = song->time;
             current_track.started_playing = time(NULL);
+            mpdP.length = song->time;
+            mpdP.pos = mpd_status_get_elapsed_song_time(mpd);
 
             if(song->time / 2 < 240)
                 shortest_time = song->time / 2 + 5;
@@ -168,9 +181,34 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
             {
                 g_debug("Stereoanlage ist aus, kein Submit zu last.fm");
             }
-
-            sprintf(mpdP.currentSong,"%s - %s",song->artist,song->title);
+            sendPacket(&mpdP, MPD_PACKET);
         }
+    }
+    if(what & MPD_CST_ELAPSED_TIME)
+    {
+        mpdP.pos = mpd_status_get_elapsed_song_time(mpd);
+    }
+    if(what & MPD_CST_RANDOM)
+    {
+        if(mpd_player_get_random(mpd))
+        {
+            ledInsertFifo("Random on", 2, 1);
+            mpdP.status |= MPD_RANDOM;
+        }
+        else
+        {
+            ledInsertFifo("Random off", 2, 1);
+            mpdP.status &= ~MPD_RANDOM;
+        }
+        sendPacket(&mpdP, MPD_PACKET);
+    }
+    if(what & MPD_CST_STATE)
+    {
+        if(isPlaying == MPD_PLAYER_PLAY)
+            mpdP.status |= MPD_PLAYING;
+        else
+            mpdP.status &= ~MPD_PLAYING;    
+        sendPacket(&mpdP, MPD_PACKET);
     }
 }
 
@@ -210,15 +248,9 @@ void mpdPlayNumber(int number)
 void mpdToggleRandom(void)
 {
     if(mpd_player_get_random(mpd))
-    {
-        ledInsertFifo("Random off", 2, 1);
         mpd_player_set_random(mpd, 0);
-    }
     else
-    {
-        ledInsertFifo("Random on", 2, 1);
         mpd_player_set_random(mpd, 1);
-    }
 }
 
 static gboolean mpdCheckConnected(gpointer data)

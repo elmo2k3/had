@@ -262,7 +262,7 @@ static gboolean serialReceive
         hr20_is_initiated = 0;
         g_io_channel_shutdown(channel, 0, NULL);
         close(fd);
-        hr20Init();
+        g_timeout_add_seconds(1, hr20TryInit, NULL);
         return FALSE;
     }
     if(bytes_read > 2048)
@@ -446,7 +446,7 @@ gboolean hr20update()
         hr20_is_initiated = 0;
         g_io_channel_shutdown(hr20status.channel, 0, NULL);
         close(fd);
-        hr20Init();
+        g_timeout_add_seconds(1, hr20TryInit, NULL);
     }
 
     if((config.hr20_database_number != 0) && (hr20status.time_last != 0) &&
