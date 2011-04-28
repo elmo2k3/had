@@ -32,6 +32,7 @@
 #include "database.h"
 #include "security.h"
 #include "hr20.h"
+#include "voltageboard.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "base_station"
@@ -400,6 +401,14 @@ void process_remote(gchar **strings, int argc)
         {
             open_door();
         }
+        else if(command == config.rkeys.dockstar_on)
+        {
+            voltageboard_dockstar_on();
+        }
+        else if(command == config.rkeys.dockstar_off)
+        {
+            voltageboard_dockstar_off();
+        }
     }
 }
 
@@ -490,34 +499,26 @@ void base_station_beep(int count, int time, int pause)
 void process_temperature_module(gchar **strings, int argc)
 {
     int modul_id, sensor_id;
-    int voltage;
     float temperature;
     char temp_string[1023];
     
     g_debug("Processing temperature_module packet");
-    if(argc != 5)
+    if(argc < 4)
     {
         g_warning("Got wrong count of parameters (%d) from temperature-module",argc);
         return;
     }
     
     g_debug("temperature = %s.%s",strings[2],strings[3]);
-    if(strlen(strings[3]) == 3) // 0625 is send as 625
+    if(strlen(strings[3]) == 3 || strlen(strings[3]) == 1) // 0625 is send as 625 
         sprintf(temp_string,"%s.0%s",strings[2], strings[3]);
     else
         sprintf(temp_string,"%s.%s",strings[2], strings[3]);
     temperature = atof(temp_string);
     modul_id = atoi(strings[0]);
     sensor_id = atoi(strings[1]);
-    voltage = atoi(strings[4]);
 
     g_debug("Temperatur: %2.2f\t",temperature);
-    switch(modul_id)
-    {
-        case 1: g_debug("Spannung: %2.2f",ADC_MODUL_1/voltage); break;
-        case 3: g_debug("Spannung: %2.2f",ADC_MODUL_3/voltage); break;
-        default: g_debug("Spannung: %2.2f",ADC_MODUL_DEFAULT/voltage);
-    }       
 
     // quite dirty hack: as there is no int with value -0 we have to put the
     // information about negative value into the decimal
@@ -526,7 +527,6 @@ void process_temperature_module(gchar **strings, int argc)
         lastTemperature[modul_id][sensor_id][1] = -(int16_t)atoi(strings[3]);
     else
         lastTemperature[modul_id][sensor_id][1] = (int16_t)atoi(strings[3]);
-    lastVoltage[modul_id] = voltage;
     
     databaseInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
 

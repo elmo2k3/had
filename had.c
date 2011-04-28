@@ -50,6 +50,7 @@
 #include "rfid_tag_reader.h"
 #include "statefile.h"
 #include "security.h"
+#include "voltageboard.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "had"
@@ -103,6 +104,7 @@ int main(int argc, char* argv[])
     mpdInit();
     had_init_hr20();
     had_init_base_station();
+    voltageboard_init();
 
     if(config.rfid_activated) {
         tag_reader = rfid_tag_reader_new(config.rfid_port);

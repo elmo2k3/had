@@ -46,7 +46,7 @@ static char *config_params[] = { "db_db", "db_server", "db_user", "db_pass",
     "hr20_database_activated","hr20_database_number","door_sensor_id","window_sensor_id",
     "digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security",
     "sms_on_main_door","time_to_active","time_before_alarm","beep_on_window_open","remote_activated",
-    "mpd_fifo_file","mpd_fifo_activated","db_ws2000"};
+    "mpd_fifo_file","mpd_fifo_activated","db_ws2000","voltageboard_activated","voltageboard_tty"};
 
 static int setConfigValue(int param, char *value);
 
@@ -115,6 +115,10 @@ void printConfig(void (*func)(void*,...), void *dest)
     func(dest,"sms_on_main_door = %d\n",config.sms_on_main_door);
     func(dest,"time_to_activate = %d\n",config.security_time_to_active);
     func(dest,"time_before_alarm = %d\n",config.security_time_before_alarm);
+    func(dest,"\n");
+
+    func(dest,"voltageboard_activated = %d\n", config.voltageboard_activated);
+    func(dest,"voltageboard_tty = %s\n", config.voltageboard_tty);
     func(dest,"\n");
 }
 
@@ -304,6 +308,11 @@ static int setConfigValue(int param, char *value)
         /* ws2000 database */
         case 50: strcpy(config.database_database_ws2000, value);
             break;
+        /* voltageboard */
+        case 51: config.voltageboard_activated = atoi(value);
+            break;
+        case 52: strcpy(config.voltageboard_tty, value);
+            break;
     }
     return 0;
 }
@@ -355,6 +364,8 @@ static int loadConfig(char *conf)
     config.rkeys.blue_single[2] = 72;
     config.rkeys.ledmatrix_toggle = 57;
     config.rkeys.open_door = 65;
+    config.rkeys.dockstar_on = 73;
+    config.rkeys.dockstar_off = 81;
 
     config.security_time_to_active = 60;
     config.security_time_before_alarm = 60;

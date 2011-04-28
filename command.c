@@ -38,6 +38,7 @@
 #include "string.h"
 #include "security.h"
 #include "config.h"
+#include "voltageboard.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "command"
@@ -730,6 +731,38 @@ action_hr20_update_date(struct client *client,
     return COMMAND_RETURN_OK;
 }
 
+static enum command_return
+action_dockstar_off(struct client *client,
+        int argc, char *argv[])
+{
+    voltageboard_dockstar_off();
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_dockstar_on(struct client *client,
+        int argc, char *argv[])
+{
+    voltageboard_dockstar_on();
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_voltageboard_get(struct client *client,
+        int argc, char *argv[])
+{
+    client_printf(client, "voltage:       %0.1fV\r\n", voltageboard_get_voltage_total()/100.0);
+    client_printf(client, "current:       %0.1fA\r\n", voltageboard_get_amps_total()/1000.0);
+    client_printf(client, "power:         %dW\r\n", voltageboard_get_power_total());
+    client_printf(client, "voltage 5V 1:  %0.1fV\r\n", voltageboard_get_voltage_5v_1()/100.0);
+    client_printf(client, "voltage 5V 2:  %0.1fV\r\n", voltageboard_get_voltage_5v_2()/100.0);
+    client_printf(client, "5V 1 on:       %d\r\n", voltageboard_get_power_on_5v_1());
+    client_printf(client, "5V 2 on:       %d\r\n", voltageboard_get_power_on_5v_2());
+    client_printf(client, "Relais on:     %d\r\n", voltageboard_get_relais());
+    client_printf(client, "Relais bat on: %d\r\n", voltageboard_get_relais_bat());
+    return COMMAND_RETURN_OK;
+}
+
 /**
  * The command registry.
  *
@@ -744,6 +777,8 @@ static const struct command commands[] = {
     {"config_load",     PERMISSION_ADMIN, 0,0, action_config_load},
     {"config_save",     PERMISSION_ADMIN, 0,0, action_config_save},
     {"config_set",      PERMISSION_ADMIN, 2,2, action_config_set},
+    {"dockstar_off",    PERMISSION_ADMIN, 0,0, action_dockstar_off},
+    {"dockstar_on",     PERMISSION_ADMIN, 0,0, action_dockstar_on},
     {"get_hifi",        PERMISSION_ADMIN, 0,0, action_get_hifi},
     {"get_log",         PERMISSION_ADMIN, 0,0, action_get_log},
     {"get_printer",     PERMISSION_ADMIN, 0,0, action_get_printer},
@@ -773,7 +808,8 @@ static const struct command commands[] = {
     {"set_rgb_all",     PERMISSION_ADMIN, 4,4, action_set_rgb_all},
     {"set_sleep_light", PERMISSION_ADMIN, 1,1, action_set_sleep_light},
     {"sms",             PERMISSION_ADMIN, 1,2, action_sms},
-    {"uptime",          PERMISSION_ADMIN, 0,0, action_uptime}
+    {"uptime",          PERMISSION_ADMIN, 0,0, action_uptime},
+    {"voltageboard_get",PERMISSION_ADMIN, 0,0, action_voltageboard_get}
 };
 
 static const unsigned num_commands = sizeof(commands) / sizeof(commands[0]);

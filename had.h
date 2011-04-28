@@ -87,6 +87,8 @@ struct _remote_control_keys
     int light_single_off[3];
     int ledmatrix_toggle;
     int open_door;
+    int dockstar_on;
+    int dockstar_off;
 };
 
 /** Struct holding all config vars
@@ -157,6 +159,9 @@ struct _config
     int security_time_before_alarm;
     int beep_on_window_open;
     int remote_activated;
+
+    int voltageboard_activated;
+    char voltageboard_tty[255];
 
     struct _remote_control_keys rkeys;
 }config;

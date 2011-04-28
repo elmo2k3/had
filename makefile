@@ -33,6 +33,7 @@ had: had.o \
 	listen.o \
 	command.o \
 	tokenizer.o \
+	voltageboard.o \
 	security.o
 
 *.o:	had.h
