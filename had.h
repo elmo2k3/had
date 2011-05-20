@@ -61,7 +61,7 @@
 
 //extern pthread_t threads[5];
 
-extern int16_t lastTemperature[9][9][2];
+extern int16_t lastTemperature[9][9];
 extern int16_t lastVoltage[9];
 extern GThread *ledMatrixThread;
 extern time_t time_had_started;

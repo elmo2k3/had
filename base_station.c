@@ -94,10 +94,10 @@ gboolean cycle_base_lcd(gpointer data)
     
     if (state == 0) {
         sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
-            lastTemperature[3][1][0],
-            lastTemperature[3][1][1]/100,
-            lastTemperature[3][0][0],
-            lastTemperature[3][0][1]/100);
+            lastTemperature[3][1]/10,
+            lastTemperature[3][1]%10,
+            lastTemperature[3][3]/10,
+            lastTemperature[3][3]%10);
     }
     else if (state == 1) {
         time(&rawtime);
@@ -510,7 +510,7 @@ void process_temperature_module(gchar **strings, int argc)
     }
     
     g_debug("temperature = %s.%s",strings[2],strings[3]);
-    if(strlen(strings[3]) == 3 || strlen(strings[3]) == 1) // 0625 is send as 625 
+    if(strlen(strings[3]) == 3) // 0625 is send as 625 
         sprintf(temp_string,"%s.0%s",strings[2], strings[3]);
     else
         sprintf(temp_string,"%s.%s",strings[2], strings[3]);
@@ -522,11 +522,7 @@ void process_temperature_module(gchar **strings, int argc)
 
     // quite dirty hack: as there is no int with value -0 we have to put the
     // information about negative value into the decimal
-    lastTemperature[modul_id][sensor_id][0] = (int16_t)atoi(strings[2]);
-    if(temperature < 0.0 && (int16_t)temperature == 0)
-        lastTemperature[modul_id][sensor_id][1] = -(int16_t)atoi(strings[3]);
-    else
-        lastTemperature[modul_id][sensor_id][1] = (int16_t)atoi(strings[3]);
+    lastTemperature[modul_id][sensor_id] = (int16_t)(temperature*10.0);
     
     databaseInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
 
@@ -1048,10 +1044,9 @@ void updateGlcd()
     getLastTemperature(4,1,&glcdP.temperature[2], &glcdP.temperature[3]);
     glcdP.temperature[3] *= 100;
 #else
-    glcdP.temperature[0] = lastTemperature[3][1][0]; // draussen
-    glcdP.temperature[1] = lastTemperature[3][1][1]; 
-    glcdP.temperature[2] = lastTemperature[3][0][0]; // schlaf
-    glcdP.temperature[3] = lastTemperature[3][0][1];
+    glcdP.temperature[0] = lastTemperature[3][1]; // draussen
+    glcdP.temperature[1] = lastTemperature[3][3]; // drinnen
+    glcdP.temperature[2] = lastTemperature[3][4]; // feuchte
 #endif
     
     g_debug("last 1: %d,%d last 2: %d,%d",glcdP.temperature[0],

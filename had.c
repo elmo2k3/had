@@ -59,7 +59,7 @@
 GMainLoop *had_main_loop;
 
 /*! big array for the last measured temperatures */
-int16_t lastTemperature[9][9][2];
+int16_t lastTemperature[9][9];
 /*! big array for the last measured voltages at the rf temperature modules */
 int16_t lastVoltage[9];
 
@@ -283,16 +283,14 @@ static void had_init_base_station(void)
 #else
     getLastTemperature(3,1,&celsius,&decicelsius);
 #endif
-    lastTemperature[3][1][0] = (int16_t)celsius;
-    lastTemperature[3][1][1] = (int16_t)decicelsius;
+    lastTemperature[3][3] = (int16_t)celsius*10;
 
 #ifdef _NO_FFTW3_
     getLastTemperature(4,1,&celsius,&decicelsius);
 #else
     getLastTemperature(3,0,&celsius,&decicelsius);
 #endif
-    lastTemperature[3][0][0] = (int16_t)celsius;
-    lastTemperature[3][0][1] = (int16_t)decicelsius;
+    lastTemperature[3][0] = (int16_t)celsius*10;
     sendBaseLcdText("had wurde gestartet ... ");
 }
 

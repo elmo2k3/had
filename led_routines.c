@@ -751,10 +751,10 @@ static gpointer ledMatrixStartThread(gpointer data)
             {
                 font = Comic_10;
                 sprintf(time_string,"\r%2d.%02d\bC \r%2d.%02d\bC",
-                    lastTemperature[3][1][0],
-                    lastTemperature[3][1][1]/100,
-                    lastTemperature[3][0][0],
-                    lastTemperature[3][0][1]/100
+                    lastTemperature[3][3]/10,
+                    lastTemperature[3][3]%10,
+                    lastTemperature[3][0]/10,
+                    lastTemperature[3][0]%10
                     );
                 clearScreen(&ledLineTime);
                 ledLineTime.x = (64-stringWidth(time_string))/2;

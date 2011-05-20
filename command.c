@@ -109,7 +109,7 @@ action_get_temperature(struct client *client, int argc, char **argv)
         return COMMAND_RETURN_ERROR;
 
     client_printf(client,"temperature: %d %d %d.%d\r\n", modul, sensor,
-        lastTemperature[modul][sensor][0], lastTemperature[modul][sensor][1]);
+        lastTemperature[modul][sensor]/10, lastTemperature[modul][sensor]%10);
     return COMMAND_RETURN_OK;
 }
 
