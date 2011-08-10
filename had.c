@@ -30,7 +30,6 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libmpd/libmpd.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sysexits.h>

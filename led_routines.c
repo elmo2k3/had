@@ -610,6 +610,7 @@ static gpointer ledMatrixStartThread(gpointer data)
     int red_on = 0;
 
     screen_to_draw = SCREEN_TIME;
+    ledLineToDraw = &ledLineTime;
     
     if(initNetwork() < 0)
     {
