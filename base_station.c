@@ -1044,8 +1044,13 @@ void updateGlcd()
     getLastTemperature(4,1,&glcdP.temperature[2], &glcdP.temperature[3]);
     glcdP.temperature[3] *= 100;
 #else
-    glcdP.temperature[0] = lastTemperature[3][1]; // draussen
-    glcdP.temperature[1] = lastTemperature[3][3]; // drinnen
+    // bochum
+    //glcdP.temperature[0] = lastTemperature[3][1]; // draussen
+    //glcdP.temperature[1] = lastTemperature[3][3]; // drinnen
+    //glcdP.temperature[2] = lastTemperature[3][4]; // feuchte
+    // re
+    glcdP.temperature[0] = lastTemperature[0][0]; // draussen
+    glcdP.temperature[1] = lastTemperature[0][1]; // drinnen
     glcdP.temperature[2] = lastTemperature[3][4]; // feuchte
 #endif
     

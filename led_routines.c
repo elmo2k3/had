@@ -61,7 +61,6 @@ static int putChar(char c, uint8_t color, struct _ledLine *ledLine);
 static int charWidth(char c);
 static int stringWidth(char *string);
 static int shiftLeft(struct _ledLine *ledLine);
-static int initNetwork(void);
 static void ledRemoveFromFifo(void);
 static gpointer ledMatrixStartThread(gpointer data);
 
@@ -198,6 +197,7 @@ static void updateDisplay(struct _ledLine ledLine)
 {
     int bytes_send;
     int i,p,m;
+    struct sockaddr_in server;
 
     memset(&RED,0,sizeof(RED));
     memset(&GREEN,0,sizeof(GREEN));
@@ -272,8 +272,21 @@ static void updateDisplay(struct _ledLine ledLine)
             }
         }
     }
-    bytes_send = send(client_sock, &RED, sizeof(RED),0);
-    bytes_send = send(client_sock, &GREEN, sizeof(GREEN),0);
+
+    server.sin_family = AF_INET;
+    server.sin_port = htons(config.led_matrix_port);
+#ifdef _WIN32
+        unsigned long addr;
+        addr = inet_addr(config.led_matrix_ip);
+        memcpy( (char *)&server.sin_addr, &addr, sizeof(addr));
+#else
+    inet_aton(config.led_matrix_ip, &server.sin_addr);
+#endif
+    bytes_send = sendto(client_sock, &RED, sizeof(RED),0,(struct sockaddr*)&server,sizeof(server));
+    bytes_send = sendto(client_sock, &GREEN, sizeof(GREEN),0,(struct sockaddr*)&server,sizeof(server));
+    
+    char buf[10];
+    recvfrom(client_sock, &buf, 1,0,(struct sockaddr*)&server,sizeof(server));
 }
 
 /* Achtung, funktioniert derzeit nur fuer font ! */
@@ -481,30 +494,16 @@ static int shiftLeft(struct _ledLine *ledLine)
 
 static int initNetwork(void)
 {
-    struct sockaddr_in server;
+    struct timeval t;
+    t.tv_sec = 2;
 
-    client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    client_sock = socket(PF_INET, SOCK_DGRAM, 0);
     if(client_sock < 0) {
         g_warning("Keine Verbindung zum LED-Modul");
         return -1;
     }
-    server.sin_family = AF_INET;
-    server.sin_port = htons(config.led_matrix_port);
-#ifdef _WIN32
-        unsigned long addr;
-        addr = inet_addr(config.led_matrix_ip);
-        memcpy( (char *)&server.sin_addr, &addr, sizeof(addr));
-#else
-    inet_aton(config.led_matrix_ip, &server.sin_addr);
-#endif
+    setsockopt(client_sock, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(t));
     
-
-    if(connect(client_sock, (struct sockaddr*)&server, sizeof(server)) != 0)
-    {
-        g_warning("Konnte nicht zum LED-Modul verbinden");
-        return -1;
-    }   
-
     return 0;
 }
 
@@ -864,7 +863,6 @@ static gpointer ledMatrixStartThread(gpointer data)
     freeLedLine(&ledLineTime);
     freeLedLine(&ledLineVoid);
     freeLedLine(&ledLineMpd);
-    g_debug("close status = %d",close(client_sock));
     g_mutex_lock(mutex_is_running);
     running = 0;
     g_mutex_unlock(mutex_is_running);
