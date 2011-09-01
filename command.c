@@ -135,7 +135,7 @@ static enum command_return action_led_display_text(struct client *client, int ar
         return COMMAND_RETURN_ERROR;
     if (!check_int(client, &count, argv[3], need_positive))
         return COMMAND_RETURN_ERROR;
-    ledInsertFifo(argv[1],shift,count);
+    ledPushStack(argv[1],shift,count);
 
     return COMMAND_RETURN_OK;
 }
@@ -442,7 +442,7 @@ action_open_door(struct client *client, int argc, char **argv)
         g_debug("Opening door for %s",argv[1]);
         snprintf(led_string,1024,"Tuer geoeffnet fuer %s", argv[1]);
         security_main_door_opening(argv[1]);
-        ledInsertFifo(led_string,1,2);
+        ledPushStack(led_string,1,2);
     }
     else
     {

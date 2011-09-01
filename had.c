@@ -100,11 +100,11 @@ int main(int argc, char* argv[])
         g_error_free(error);
         return EXIT_FAILURE;
     }
+    ledMatrixStart();
     mpdInit();
     had_init_hr20();
     had_init_base_station();
     voltageboard_init();
-    ledMatrixStart();
 
     if(config.rfid_activated) {
         tag_reader = rfid_tag_reader_new(config.rfid_port);

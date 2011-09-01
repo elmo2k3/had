@@ -191,12 +191,12 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
     {
         if(mpd_player_get_random(mpd))
         {
-            ledInsertFifo("Random on", 2, 1);
+            ledPushStack("Random on", 2, 1);
             mpdP.status |= MPD_RANDOM;
         }
         else
         {
-            ledInsertFifo("Random off", 2, 1);
+            ledPushStack("Random off", 2, 1);
             mpdP.status &= ~MPD_RANDOM;
         }
         sendPacket(&mpdP, MPD_PACKET);

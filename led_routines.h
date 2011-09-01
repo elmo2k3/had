@@ -35,7 +35,7 @@
 
 #define LINE_LENGTH 512
 
-#define LED_FIFO_SIZE 30
+#define LED_STACK_SIZE 30
 
 //#define LED_HEADFIRST
 
@@ -84,7 +84,7 @@ extern void ledMatrixStop(void);
  * @param shift currently ignored
  * @param lifetime num of cycled this string will be displayed
  */
-extern void ledInsertFifo(char *string, int shift, int lifetime);
+extern void ledPushStack(char *string, int shift, int lifetime);
 extern void ledMatrixToggle(void);
 extern void ledMatrixInit(void);
 extern void ledMatrixSelectScreen(enum _screenToDraw screen);
