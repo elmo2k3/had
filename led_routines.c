@@ -934,29 +934,29 @@ static gpointer ledMatrixStartThread(gpointer data)
                         ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
                         ledLineScope.column_green[i] = 0xE000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 8){
-                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_red[i] = (0xF000 - 0xE000) | (ledLineScope.column_red[i] & 0xFF);
                         ledLineScope.column_green[i] = 0xF000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 9){
-                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_red[i] = (0xF000 - 0xE000) | (ledLineScope.column_red[i] & 0xFF);
                         ledLineScope.column_green[i] = 0xF000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 10){
-                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_red[i] = (0xF800 - 0xE000) | (ledLineScope.column_red[i] & 0xFF);
                         ledLineScope.column_green[i] = 0xF800 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 11){
-                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_red[i] = (0xF800 - 0xE000) | (ledLineScope.column_red[i] & 0xFF);
                         ledLineScope.column_green[i] = 0xF800 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 12){
-                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
-                        ledLineScope.column_green[i] = 0xFC00 | (ledLineScope.column_green[i] & 0xFF);
+                        ledLineScope.column_red[i] = (0xFC00 - 0xE000) | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xF800 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 13){
-                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
-                        ledLineScope.column_green[i] = 0xFC00 | (ledLineScope.column_green[i] & 0xFF);
+                        ledLineScope.column_red[i] = (0xFC00 - 0xE000) | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xF800 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 14){
-                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
-                        ledLineScope.column_green[i] = 0xFE00 | (ledLineScope.column_green[i] & 0xFF);
+                        ledLineScope.column_red[i] = (0xFE00 - 0xE000) | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xF800 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value >= 15){
-                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
-                        ledLineScope.column_green[i] = 0xFE00 | (ledLineScope.column_green[i] & 0xFF);
+                        ledLineScope.column_red[i] = (0xFE00 - 0xE000) | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xF800 | (ledLineScope.column_green[i] & 0xFF);
                     }
                 }
                 shift_what = SHIFT_UPPER;
