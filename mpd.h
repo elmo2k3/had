@@ -65,6 +65,11 @@ extern void mpdPlayNumber(int number);
 extern void mpdPlay();
 extern void mpdPause();
 
+struct _artist_title{
+    char artist[255];
+    char title[255];
+};
+
 
 #endif
 

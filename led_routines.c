@@ -39,9 +39,21 @@
 
 #include "base_station.h"
 #include "led_routines.h"
-#include "fonts/arial_bold_14.h"
-#include "fonts/Comic_8.h"
-#include "fonts/Comic_10.h"
+
+// 10x16.h  12x16.h  4x6.h  5x12.h  5x8.h  6x10.h  6x8.h  7x12b.h  7x12.h  8x12.h  8x14.h  8x8.h
+#include "alternative_fonts/4x6.h"
+#include "alternative_fonts/5x8.h"
+#include "alternative_fonts/5x12.h"
+#include "alternative_fonts/6x8.h"
+#include "alternative_fonts/6x10.h"
+#include "alternative_fonts/7x12.h"
+#include "alternative_fonts/7x12b.h"
+#include "alternative_fonts/8x8.h"
+#include "alternative_fonts/8x12.h"
+#include "alternative_fonts/8x14.h"
+#include "alternative_fonts/10x14.h"
+#include "alternative_fonts/10x16.h"
+#include "alternative_fonts/12x16.h"
 #include "had.h"
 #include "mpd.h"
 
@@ -54,13 +66,16 @@ static fftw_complex *fft_output;
 static fftw_plan fft_plan;
 #endif
 
+#define SHIFT_ALL 0
+#define SHIFT_UPPER 1
+#define SHIFT_LOWER 2
+
 static uint16_t charGetStart(char c);
 static int initNetwork(void);
-static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
-static int putChar(char c, uint8_t color, struct _ledLine *ledLine);
-static int charWidth(char c);
-static int stringWidth(char *string);
-static int shiftLeft(struct _ledLine *ledLine);
+static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed, int shift_what);
+static int putChar(char c, const char (*font)[24], uint8_t color, struct _ledLine *ledLine);
+static int stringWidth(char *string, const char (*font)[24]);
+static int shiftLeft(struct _ledLine *ledLine, int section);
 static void ledRemoveFromStack(void);
 static gpointer ledMatrixStartThread(gpointer data);
 
@@ -74,10 +89,7 @@ static unsigned int col_magnitude_max;
 static double col_magnitude[64];
 
 static enum _screenToDraw current_screen;
-static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed);
 
-//static uint8_t *font = Arial_Bold_14;
-static uint8_t *font = Comic_8;
 
 /* Diese Arrays werden nur zur Uebertragung ans Modul genutzt */
 static uint16_t RED[4][16];
@@ -289,63 +301,57 @@ static void updateDisplay(struct _ledLine ledLine)
     recvfrom(client_sock, &buf, 1,0,(struct sockaddr*)&server,&length);
 }
 
-/* Achtung, funktioniert derzeit nur fuer font ! */
-static uint16_t charGetStart(char c)
+static int charWidth(char c, const char (*font)[24])
 {
-    uint8_t first_char = font[4];
-    uint8_t char_height = font[3];
+    int i, count;
 
-    uint8_t factor = 1;
+    count = 0;
 
-    if(char_height > 8)
-        factor = 2;
+    if(c == ' ')
+        return 3;
 
-    uint8_t counter;
-    uint16_t position = 0;
-
-    for(counter=0;counter<(c-first_char);counter++)
-    {
-        position += font[6+counter]*factor;
-    }
-
-    return position;
-}
-
-static int charWidth(char c)
-{
-    if(c == '\a' || c == '\b' || c == '\n' || c == '\r')
+    if(c == '\a' || c == '\b' || c == '\r')
         return 0;
-    else if(c == 32)
-        return 4;
+
+    if(font[256][1] > 8)
+    {
+        for(i=0;i<font[256][0];i++)
+        {
+            if(font[(int)c][i*2] != 0 && font[(int)c][i*2+1] != 0)
+               count++;
+        }
+    }
     else
-        return font[6+c-font[4]] + 1;
+    {
+        for(i=0;i<font[256][0];i++)
+        {
+            if(font[(int)c][i] != 0)
+                count++;
+        }
+    }
+    return count+1;
 }
 
 
-static int stringWidth(char *string)
+static int stringWidth(char *string, const char (*font)[24])
 {
     int width = 0;
     if(!string)
         string = "null";
     while(*string)
     {
-        width += charWidth(*string++);
+        width += charWidth(*string++,font);
     }
     return width - 1;
 }
 
 
-static int putChar(char c, uint8_t color, struct _ledLine *ledLine)
+static int putChar(char c, const char (*font)[24], uint8_t color, struct _ledLine *ledLine)
 {
+    int char_width = font[256][0];
+    int char_height = font[256][1];
 
-    uint8_t first_char = font[4];
-    uint8_t char_count = font[5];
-    uint8_t char_width;
-    uint8_t char_height = font[3];
-
-    uint16_t start;
-
-    uint8_t i;
+    int i;
 
     if(c == '\n')
     {
@@ -353,73 +359,81 @@ static int putChar(char c, uint8_t color, struct _ledLine *ledLine)
         ledLine->y = 8;
         return 1;
     }
-
-    /* if char is not in our font just leave */
-    if(c < first_char || c > (first_char + char_count))
+    else if(c == ' ')
     {
+        ledLine->x += 3;
         return 1;
-    }
-    
-    /* Leerzeichen abfangen */
-    if(c == 32)
-        char_width = 4;
-    else
-    {
-        char_width = font[6+c-first_char];
-        start = charGetStart(c);
     }
     
     if((ledLine->x + char_width) >= LINE_LENGTH-50)
     {
         return 0;
     }
-
-    if(c == ' ')
+    
+    if(char_height > 8)
     {
-        ledLine->x += 4;
-        return 1;
-    }
-
-    for(i=0;i<char_width;i++)
-    {
-        if(color == COLOR_RED)
+        for(i=0;i<char_width;i++)
         {
-            ledLine->column_red[i+ledLine->x] |= font[6+char_count+start+i]<<ledLine->y;
-        }
-        else if(color == COLOR_GREEN)
-        {
-            ledLine->column_green[i+ledLine->x] |= font[6+char_count+start+i]<<ledLine->y;
-        }
-        else if(color == COLOR_AMBER)
-        {
-            ledLine->column_red[i+ledLine->x] |= font[6+char_count+start+i]<<ledLine->y;
-            ledLine->column_green[i+ledLine->x] |= font[6+char_count+start+i]<<ledLine->y;
-        }
-    }
-    /* unteren Teil der Zeichen schreiben (noch nicht dynamisch fuer verschiedene Schriftgroessen) */
-    for(i=0;i<char_width;i++)
-    {
-        if(color == COLOR_RED)
-        {
-            /* Man erklaere mir was ich hier geschrieben. Aber funktionieren tuts! :-) */
-            ledLine->column_red[i+ledLine->x] |= font[6+char_count+start+i+char_width]<<(char_height - 8)<<ledLine->y;
-        }
-        else if(color == COLOR_GREEN)
-        {
-            ledLine->column_green[i+ledLine->x] |= font[6+char_count+start+i+char_width]<<(char_height - 8)<<ledLine->y;
-        }
-        else if(color == COLOR_AMBER)
-        {
-            ledLine->column_red[i+ledLine->x] |= font[6+char_count+start+i+char_width]<<(char_height - 8)<<ledLine->y;
-            ledLine->column_green[i+ledLine->x] |= font[6+char_count+start+i+char_width]<<(char_height -8)<<ledLine->y;
+            if(color == COLOR_RED)
+            {
+                if(ledLine->y > 0)
+                    ledLine->column_red[i+ledLine->x] |= font[(int)c][i*2]<<ledLine->y & (0xFF<<ledLine->y);
+                else
+                    ledLine->column_red[i+ledLine->x] |= font[(int)c][i*2]>>-ledLine->y & (0xFF>>-ledLine->y);
+                ledLine->column_red[i+ledLine->x] |= font[(int)c][i*2+1]<<(ledLine->y+8) & (0xFF<<(ledLine->y+8));
+            }
+            else if(color == COLOR_GREEN)
+            {
+                if(ledLine->y > 0)
+                    ledLine->column_green[i+ledLine->x] |= font[(int)c][i*2]<<ledLine->y & (0xFF<<ledLine->y);
+                else
+                    ledLine->column_green[i+ledLine->x] |= font[(int)c][i*2]>>-ledLine->y & (0xFF>>-ledLine->y);
+                ledLine->column_green[i+ledLine->x] |= font[(int)c][i*2+1]<<(ledLine->y+8) & (0xFF<<(ledLine->y+8));
+            }
+            else if(color == COLOR_AMBER)
+            {
+                if(ledLine->y > 0)
+                    ledLine->column_red[i+ledLine->x] |= font[(int)c][i*2]<<ledLine->y & (0xFF<<ledLine->y);
+                else
+                    ledLine->column_red[i+ledLine->x] |= font[(int)c][i*2]>>-ledLine->y & (0xFF>>-ledLine->y);
+                ledLine->column_red[i+ledLine->x] |= font[(int)c][i*2+1]<<(ledLine->y+8) & (0xFF<<(ledLine->y+8));
+                if(ledLine->y > 0)
+                    ledLine->column_green[i+ledLine->x] |= font[(int)c][i*2]<<ledLine->y & (0xFF<<ledLine->y);
+                else
+                    ledLine->column_green[i+ledLine->x] |= font[(int)c][i*2]>>-ledLine->y & (0xFF>>-ledLine->y);
+                ledLine->column_green[i+ledLine->x] |= font[(int)c][i*2+1]<<(ledLine->y+8) & (0xFF<<(ledLine->y+8));
+            }
+            if(font[(int)c][i*2] == 0 && font[(int)c][i*2+1] == 0)
+                ledLine->x -=1;
         }
     }
+    else
+    {
+        for(i=0;i<char_width;i++)
+        {
+            if(color == COLOR_RED)
+            {
+                ledLine->column_red[i+ledLine->x] |= font[(int)c][i]<<ledLine->y & (0xFF<<ledLine->y);
+            }
+            else if(color == COLOR_GREEN)
+            {
+                ledLine->column_green[i+ledLine->x] |= font[(int)c][i]<<ledLine->y & (0xFF<<ledLine->y);
+            }
+            else if(color == COLOR_AMBER)
+            {
+                ledLine->column_red[i+ledLine->x] |= font[(int)c][i]<<ledLine->y & (0xFF<<ledLine->y);
+                ledLine->column_green[i+ledLine->x] |= font[(int)c][i]<<ledLine->y & (0xFF<<ledLine->y);
+            }
+            if(font[(int)c][i] == 0)
+                ledLine->x -=1;
+        }
+    }
 
-    ledLine->x += char_width + 1;
+    ledLine->x += char_width+1;
     return 1;
 }
 
-static void putString(char *string, struct _ledLine *ledLine)
+static void putString(char *string, const char (*font)[24],struct _ledLine *ledLine)
 {
     static int color = COLOR_RED;
 
@@ -433,7 +447,7 @@ static void putString(char *string, struct _ledLine *ledLine)
             color = COLOR_RED;
         else if(*string == '\a')
             color = COLOR_AMBER;
-        else if(!putChar(*string,color,ledLine))
+        else if(!putChar(*string,font,color,ledLine))
         {
             return;
         }
@@ -451,10 +465,11 @@ static void clearScreen(struct _ledLine *ledLine)
 
     ledLine->x = 0;
     ledLine->y = 1;
+    ledLine->shift_position = 0;
 }
 
 
-static int shiftLeft(struct _ledLine *ledLine)
+static int shiftLeft(struct _ledLine *ledLine, int section)
 {
     int counter;
 
@@ -469,13 +484,47 @@ static int shiftLeft(struct _ledLine *ledLine)
     {
         if(ledLine->shift_position + counter > scroll_length - 1)
         {
-            ledLine->column_red_output[counter] = ledLine->column_red[counter + ledLine->shift_position - (scroll_length)];
-            ledLine->column_green_output[counter] = ledLine->column_green[counter + ledLine->shift_position - (scroll_length)];
+            if(section == 0)
+            {
+                ledLine->column_red_output[counter] = ledLine->column_red[counter + ledLine->shift_position - (scroll_length)];
+                ledLine->column_green_output[counter] = ledLine->column_green[counter + ledLine->shift_position - (scroll_length)];
+            }
+            else if(section == 1) // upper 8 lines
+            {
+                ledLine->column_red_output[counter] = ledLine->column_red[counter + ledLine->shift_position - (scroll_length)] & 0xFF;
+                ledLine->column_red_output[counter] |= ledLine->column_red[counter] & 0xFF00;
+                ledLine->column_green_output[counter] = ledLine->column_green[counter + ledLine->shift_position - (scroll_length)] & 0xFF;
+                ledLine->column_green_output[counter] |= ledLine->column_green[counter] & 0xFF00;
+            }
+            else if(section == 2) // lower 8 lines
+            {
+                ledLine->column_red_output[counter] = ledLine->column_red[counter + ledLine->shift_position - (scroll_length)] & 0xFF00;
+                ledLine->column_red_output[counter] |= ledLine->column_red[counter] & 0xFF;
+                ledLine->column_green_output[counter] = ledLine->column_green[counter + ledLine->shift_position - (scroll_length)] & 0xFF00;
+                ledLine->column_green_output[counter] |= ledLine->column_green[counter] & 0xFF;
+            }
         }
         else
         {
-            ledLine->column_red_output[counter] = ledLine->column_red[ledLine->shift_position+counter];
-            ledLine->column_green_output[counter] = ledLine->column_green[ledLine->shift_position+counter];
+            if(section == 0)
+            {
+                ledLine->column_red_output[counter] = ledLine->column_red[ledLine->shift_position+counter];
+                ledLine->column_green_output[counter] = ledLine->column_green[ledLine->shift_position+counter];
+            }
+            else if(section == 1)
+            {
+                ledLine->column_red_output[counter] = ledLine->column_red[ledLine->shift_position+counter] & 0xFF;
+                ledLine->column_red_output[counter] |= ledLine->column_red[counter] & 0xFF00;
+                ledLine->column_green_output[counter] = ledLine->column_green[ledLine->shift_position+counter] & 0xFF;
+                ledLine->column_green_output[counter] |= ledLine->column_green[counter] & 0xFF00;
+            }
+            else if(section == 2)
+            {
+                ledLine->column_red_output[counter] = ledLine->column_red[ledLine->shift_position+counter] & 0xFF00;
+                ledLine->column_red_output[counter] |= ledLine->column_red[counter] & 0xFF;
+                ledLine->column_green_output[counter] = ledLine->column_green[ledLine->shift_position+counter] & 0xFF00;
+                ledLine->column_green_output[counter] |= ledLine->column_green[counter] & 0xFF;
+            }
         }
     }
 
@@ -563,7 +612,7 @@ static void ledInternalInsertFifo(char *string, int shift, int lifetime)
     }
     
     g_debug("String pushed to stack: %s",string);
-    putString(string,&ledLineFifo[led_stack_top]);
+    putString(string,font8x8,&ledLineFifo[led_stack_top]);
     
     x = ledLineFifo[led_stack_top].x;
 
@@ -598,6 +647,7 @@ static gpointer ledMatrixStartThread(gpointer data)
     struct _ledLine ledLineStatic;
     struct _ledLine ledLineScope;
     int shift_speed = 0;
+    int shift_what = SHIFT_ALL;
     time_t rawtime;
     struct tm *ptm;
     int last_mpd_state = 0;
@@ -606,6 +656,7 @@ static gpointer ledMatrixStartThread(gpointer data)
     char *text_to_set;
     int shift;
     int lifetime;
+    struct _artist_title *artist_title;
 
     screen_to_draw = SCREEN_TIME;
     ledLineToDraw = &ledLineTime;
@@ -634,19 +685,42 @@ static gpointer ledMatrixStartThread(gpointer data)
     g_mutex_unlock(mutex_is_running);
     while(1)
     {
-        if((text_to_set = (char*)g_async_queue_try_pop(
+        if((artist_title = (struct _artist_title*)g_async_queue_try_pop(
             async_queue_set_mpd_text)))
         {
-            clearScreen(&ledLineMpd); 
-            putString(text_to_set, &ledLineMpd);
-            free(text_to_set);
+            clearScreen(&ledLineMpd);
+            clearScreen(&ledLineScope);
+            if(stringWidth(artist_title->artist,font8x8) > 64 ||
+                stringWidth(artist_title->title,font8x8) > 64)
+            {
+                ledLineMpd.y = 1;
+                putString("\r",font8x8,&ledLineMpd);
+                putString(artist_title->artist,font8x8, &ledLineMpd);
+                putString(" \a- \b",font8x8,&ledLineMpd);
+                putString(artist_title->title,font8x8, &ledLineMpd);
+            }
+            else
+            {
+                ledLineMpd.x = (64-stringWidth(artist_title->artist,font8x8))/2;
+                putString("\r",font8x8,&ledLineMpd);
+                putString(artist_title->artist,font8x8, &ledLineMpd);
+                putString("\n\b",font8x8,&ledLineMpd);
+                ledLineMpd.x = (64-stringWidth(artist_title->title,font8x8))/2;
+                putString(artist_title->title,font8x8, &ledLineMpd);
+            }
+            ledLineScope.y = 1;
+            putString("\r",font8x8,&ledLineScope);
+            putString(artist_title->artist,font8x8, &ledLineScope);
+            putString(" \a- \b",font8x8,&ledLineScope);
+            putString(artist_title->title,font8x8, &ledLineScope);
+            free(artist_title);
         }
         
         if((text_to_set = (char*)g_async_queue_try_pop(
             async_queue_set_static_text)))
         {
             clearScreen(&ledLineStatic); 
-            putString(text_to_set, &ledLineStatic);
+            putString(text_to_set, font8x8,&ledLineStatic);
             free(text_to_set);
         }
 
@@ -670,7 +744,7 @@ static gpointer ledMatrixStartThread(gpointer data)
                 ledRemoveFromStack();
             }
             else
-                ledDisplayMain(ledLineToDraw, shift_speed);
+                ledDisplayMain(ledLineToDraw, shift_speed, shift_what);
 
         }
         /* Important! else doesn't work here */
@@ -729,7 +803,7 @@ static gpointer ledMatrixStartThread(gpointer data)
             else if(screen_to_draw == SCREEN_MPD)
             {
                 ledLineToDraw = &ledLineMpd;
-                if(ledLineMpd.x >= 63)
+                if(ledLineMpd.x > 64)
                     shift_speed = 2;
                 else
                     shift_speed = 0;
@@ -740,33 +814,33 @@ static gpointer ledMatrixStartThread(gpointer data)
                 ptm = localtime(&rawtime);
                 sprintf(time_string,"\r%02d:%02d:%02d",ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
                 clearScreen(&ledLineTime);
-                ledLineTime.x = (64-stringWidth(time_string))/2;
-                ledLineTime.y = 2;
-                putString(time_string,&ledLineTime);
+                //ledLineTime.x = (64-stringWidth(time_string,font8x12)-4)/2;
+                ledLineTime.x = 6;
+                ledLineTime.y = -2;
+                putString(time_string,font8x12,&ledLineTime);
                 ledLineToDraw = &ledLineTime;
                 shift_speed = 0;
             }
             else if(screen_to_draw == SCREEN_TEMPERATURES)
             {
-                font = Comic_10;
                 sprintf(time_string,"\r%2d.%02d\bC \r%2d.%02d\bC",
-                    lastTemperature[3][3]/10,
-                    lastTemperature[3][3]%10,
+                    lastTemperature[3][1]/10,
+                    lastTemperature[3][1]%10,
                     lastTemperature[3][0]/10,
                     lastTemperature[3][0]%10
                     );
                 clearScreen(&ledLineTime);
-                ledLineTime.x = (64-stringWidth(time_string))/2;
+                ledLineTime.x = (64-stringWidth(time_string,font8x8))/2;
                 ledLineTime.y = 0;
-                putString(time_string,&ledLineTime);
+                putString(time_string,font8x8,&ledLineTime);
                 
-                font = Comic_8;
-                ledLineTime.x = (64-stringWidth(time_string))/2;
+                //font = Comic_8;
+                ledLineTime.x = (64-stringWidth(time_string,font8x8))/2;
                 ledLineTime.y = 8;
-                putString("\a Out   Wohn",&ledLineTime);
+                putString("\a Out   Wohn",font8x8,&ledLineTime);
                 ledLineToDraw = &ledLineTime;
                 shift_speed = 0;
-                font = Arial_Bold_14;
+                //font = Arial_Bold_14;
             }
             else if(screen_to_draw == SCREEN_VOID)
             {
@@ -782,66 +856,116 @@ static gpointer ledMatrixStartThread(gpointer data)
                 mpdFifoInit();
                 ledLineToDraw = &ledLineScope;
                 mpdFifoUpdate();
-                shift_speed = 0;
                 int i;
                 for(i=0;i<64;i++)
                 {
                     uint8_t value = (uint8_t)(col_magnitude[i]/430000*(i+1));
+                   // if(value == 0) {
+                   //     ledLineScope.column_red[i] = 0;
+                   //     ledLineScope.column_green[i] = 0;
+                   // } else if(value == 1){
+                   //     ledLineScope.column_red[i] = 0;
+                   //     ledLineScope.column_green[i] = 0x8000;
+                   // } else if(value == 2){
+                   //     ledLineScope.column_red[i] = 0;
+                   //     ledLineScope.column_green[i] = 0xC000;
+                   // } else if(value == 3){
+                   //     ledLineScope.column_red[i] = 0;
+                   //     ledLineScope.column_green[i] = 0xE000;
+                   // } else if(value == 4){
+                   //     ledLineScope.column_red[i] = 0;
+                   //     ledLineScope.column_green[i] = 0xF000;
+                   // } else if(value == 5){
+                   //     ledLineScope.column_red[i] = 0;
+                   //     ledLineScope.column_green[i] = 0xF800;
+                   // } else if(value == 6){
+                   //     ledLineScope.column_red[i] = 0;
+                   //     ledLineScope.column_green[i] = 0xFC00;
+                   // } else if(value == 7){
+                   //     ledLineScope.column_red[i] = 0xFE00 - 0xFC00;
+                   //     ledLineScope.column_green[i] = 0xFE00;
+                   // } else if(value == 8){
+                   //     ledLineScope.column_red[i] = 0xFF00 - 0xFC00;
+                   //     ledLineScope.column_green[i] = 0xFF00;
+                   // } else if(value == 9){
+                   //     ledLineScope.column_red[i] = 0xFF80 - 0xFC00;
+                   //     ledLineScope.column_green[i] = 0xFF80;
+                   // } else if(value == 10){
+                   //     ledLineScope.column_red[i] = 0xFFC0 - 0xFC00;
+                   //     ledLineScope.column_green[i] = 0xFFC0;
+                   // } else if(value == 11){
+                   //     ledLineScope.column_red[i] = 0xFFE0 - 0xFC00;
+                   //     ledLineScope.column_green[i] = 0xFFC0;
+                   // } else if(value == 12){
+                   //     ledLineScope.column_red[i] = 0xFFF0 - 0xFC00;
+                   //     ledLineScope.column_green[i] = 0xFFC0;
+                   // } else if(value == 13){
+                   //     ledLineScope.column_red[i] = 0xFFF8 - 0xFC00;
+                   //     ledLineScope.column_green[i] = 0xFFC0;
+                   // } else if(value == 14){
+                   //     ledLineScope.column_red[i] = 0xFFFC - 0xFC00;
+                   //     ledLineScope.column_green[i] = 0xFFC0;
+                   // } else if(value >= 15){
+                   //     ledLineScope.column_red[i] = 0xFFFE - 0xFC00;
+                   //     ledLineScope.column_green[i] = 0xFFC0;
+                   // }
                     if(value == 0) {
-                        ledLineScope.column_red[i] = 0;
-                        ledLineScope.column_green[i] = 0;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 1){
-                        ledLineScope.column_red[i] = 0;
-                        ledLineScope.column_green[i] = 0x8000;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 2){
-                        ledLineScope.column_red[i] = 0;
-                        ledLineScope.column_green[i] = 0xC000;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0x8000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 3){
-                        ledLineScope.column_red[i] = 0;
-                        ledLineScope.column_green[i] = 0xE000;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0x8000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 4){
-                        ledLineScope.column_red[i] = 0;
-                        ledLineScope.column_green[i] = 0xF000;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xC000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 5){
-                        ledLineScope.column_red[i] = 0;
-                        ledLineScope.column_green[i] = 0xF800;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xC000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 6){
-                        ledLineScope.column_red[i] = 0;
-                        ledLineScope.column_green[i] = 0xFC00;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xE000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 7){
-                        ledLineScope.column_red[i] = 0xFE00 - 0xFC00;
-                        ledLineScope.column_green[i] = 0xFE00;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xE000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 8){
-                        ledLineScope.column_red[i] = 0xFF00 - 0xFC00;
-                        ledLineScope.column_green[i] = 0xFF00;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xF000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 9){
-                        ledLineScope.column_red[i] = 0xFF80 - 0xFC00;
-                        ledLineScope.column_green[i] = 0xFF80;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xF000 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 10){
-                        ledLineScope.column_red[i] = 0xFFC0 - 0xFC00;
-                        ledLineScope.column_green[i] = 0xFFC0;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xF800 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 11){
-                        ledLineScope.column_red[i] = 0xFFE0 - 0xFC00;
-                        ledLineScope.column_green[i] = 0xFFC0;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xF800 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 12){
-                        ledLineScope.column_red[i] = 0xFFF0 - 0xFC00;
-                        ledLineScope.column_green[i] = 0xFFC0;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xFC00 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 13){
-                        ledLineScope.column_red[i] = 0xFFF8 - 0xFC00;
-                        ledLineScope.column_green[i] = 0xFFC0;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xFC00 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value == 14){
-                        ledLineScope.column_red[i] = 0xFFFC - 0xFC00;
-                        ledLineScope.column_green[i] = 0xFFC0;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xFE00 | (ledLineScope.column_green[i] & 0xFF);
                     } else if(value >= 15){
-                        ledLineScope.column_red[i] = 0xFFFE - 0xFC00;
-                        ledLineScope.column_green[i] = 0xFFC0;
+                        ledLineScope.column_red[i] = 0 | (ledLineScope.column_red[i] & 0xFF);
+                        ledLineScope.column_green[i] = 0xFE00 | (ledLineScope.column_green[i] & 0xFF);
                     }
                 }
+                shift_what = SHIFT_UPPER;
+                shift_speed = 2;
             }
             g_mutex_lock(current_screen_mutex);
             current_screen = screen_to_draw;
             g_mutex_unlock(current_screen_mutex);
-            ledDisplayMain(ledLineToDraw, shift_speed);
+            ledDisplayMain(ledLineToDraw, shift_speed, shift_what);
             if(screen_to_draw != SCREEN_SCOPE)
                 g_usleep(1000);
         }
@@ -868,11 +992,11 @@ static gpointer ledMatrixStartThread(gpointer data)
     return NULL;
 }
 
-static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed)
+static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed, int shift_what)
 {
     if(shift_speed)
     {
-        shiftLeft(ledLineToDraw);
+        shiftLeft(ledLineToDraw,shift_what);
         updateDisplay(*ledLineToDraw);
         g_usleep(config.led_shift_speed);
     }
@@ -907,12 +1031,15 @@ enum _screenToDraw ledMatrixCurrentScreen()
     return screen;
 }
 
-void ledMatrixSetMpdText(char *text)
+void ledMatrixSetMpdText(struct _artist_title *artist_title)
 {
-    char *stext = strdup(text);
+    struct _artist_title *s_artist_title;
+
+    s_artist_title = malloc(sizeof(struct _artist_title));
+    memcpy(s_artist_title, artist_title,sizeof(struct _artist_title));
     if(ledIsRunning())
     {
-        g_async_queue_push(async_queue_set_mpd_text, (gpointer)stext);
+        g_async_queue_push(async_queue_set_mpd_text, (gpointer)s_artist_title);
     }
 }
 

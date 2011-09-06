@@ -112,7 +112,7 @@ int mpdInit(void)
 static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
 {
     guint shortest_time;
-    static char led_matrix_text[255];
+    static struct _artist_title artist_title;
     
     mpd_Song *song = mpd_playlist_get_current_song(mi);
     isPlaying = mpd_player_get_state(mpd);
@@ -121,11 +121,11 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
     {
         if(song)
         {
-            snprintf(led_matrix_text, sizeof(led_matrix_text),
-                "\r%s\a - \b%s", song->artist, song->title);
-            ledMatrixSetMpdText(led_matrix_text);
+            strcpy(artist_title.artist, "No Artist");
+            strcpy(artist_title.title, "No Title");
             if(song->artist)
             {
+                strcpy(artist_title.artist, song->artist);
                 strncpy(current_track.last_artist, song->artist, sizeof(current_track.last_artist));
                 strncpy(mpdP.artist, song->artist, sizeof(mpdP.artist));
             }
@@ -136,6 +136,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
             }
             if(song->title)
             {
+                strcpy(artist_title.title, song->title);
                 strncpy(current_track.last_title, song->title, sizeof(current_track.last_title));
                 strncpy(mpdP.title, song->title, sizeof(mpdP.title));
             }
@@ -143,6 +144,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
             {
                 strncpy(current_track.current_track, song->track, sizeof(current_track));
             }
+            ledMatrixSetMpdText(&artist_title);
             current_track.length = song->time;
             current_track.started_playing = time(NULL);
             mpdP.length = song->time;

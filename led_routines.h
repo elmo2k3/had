@@ -27,6 +27,7 @@
 #define __LED_ROUTINES_H__
 
 #include <inttypes.h>
+#include "mpd.h"
 
 
 #define COLOR_RED 0
@@ -88,7 +89,7 @@ extern void ledPushStack(char *string, int shift, int lifetime);
 extern void ledMatrixToggle(void);
 extern void ledMatrixInit(void);
 extern void ledMatrixSelectScreen(enum _screenToDraw screen);
-extern void ledMatrixSetMpdText(char *text);
+extern void ledMatrixSetMpdText(struct _artist_title *artist_title);
 extern void ledMatrixSetStaticText(char *text);
 extern enum _screenToDraw ledMatrixCurrentScreen(void);
 
