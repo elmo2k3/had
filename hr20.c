@@ -34,7 +34,6 @@
 
 #include "hr20.h"
 #include "had.h"
-#include "config.h"
 #include "database.h"
 
 #undef G_LOG_DOMAIN

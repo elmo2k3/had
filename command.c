@@ -37,7 +37,7 @@
 #include "tokenizer.h"
 #include "string.h"
 #include "security.h"
-#include "config.h"
+#include "configfile.h"
 #include "voltageboard.h"
 
 #undef G_LOG_DOMAIN

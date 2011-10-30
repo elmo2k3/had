@@ -5,7 +5,7 @@ LDFLAGS=`pkg-config --libs glib-2.0 gthread-2.0 libmpd libcurl fftw3 libcrypto `
 
 had: had.o \
 	rfid_tag_reader.o \
-	config.o \
+	configfile.o \
 	database.o \
 	hr20.o \
 	led_routines.o \

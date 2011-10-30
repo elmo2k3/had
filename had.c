@@ -41,7 +41,7 @@
 #include "mpd.h"
 #include "listen.h"
 #include "client.h"
-#include "config.h"
+#include "configfile.h"
 #include "led_routines.h"
 #include "sms.h"
 #include "version.h"

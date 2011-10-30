@@ -18,7 +18,7 @@
  */
 
 /*!
-* \file config.c
+* \file configfile.c
 * \brief    config file handling
 * \author   Bjoern Biesenbach <bjoern at bjoern-b dot de>
 */
@@ -28,11 +28,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
+#include "configfile.h"
 #include "had.h"
 
 #undef G_LOG_DOMAIN
-#define G_LOG_DOMAIN "config"
+#define G_LOG_DOMAIN "configfile"
 
 static char *had_used_config_file = NULL;
 
