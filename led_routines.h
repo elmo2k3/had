@@ -36,7 +36,7 @@
 
 #define LINE_LENGTH 512
 
-#define LED_STACK_SIZE 30
+#define LED_FIFO_SIZE 30
 
 //#define LED_HEADFIRST
 

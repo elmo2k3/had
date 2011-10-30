@@ -34,6 +34,7 @@ had: had.o \
 	command.o \
 	tokenizer.o \
 	voltageboard.o \
+	led_mpd_fifo.o \
 	security.o
 
 *.o:	had.h

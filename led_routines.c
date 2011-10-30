@@ -34,11 +34,9 @@
 #include <string.h>
 #include <time.h>
 #include <glib.h>
-#include <fcntl.h>
-#include <math.h>
 
-#include "base_station.h"
 #include "led_routines.h"
+#include "led_mpd_fifo.h"
 
 // 10x16.h  12x16.h  4x6.h  5x12.h  5x8.h  6x10.h  6x8.h  7x12b.h  7x12.h  8x12.h  8x14.h  8x8.h
 #include "alternative_fonts/4x6.h"
@@ -60,45 +58,28 @@
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "led_routines"
 
-#ifndef _NO_FFTW3_
-#include <fftw3.h>
-static fftw_complex *fft_output;
-static fftw_plan fft_plan;
-#endif
-
 #define SHIFT_ALL 0
 #define SHIFT_UPPER 1
 #define SHIFT_LOWER 2
 
-static uint16_t charGetStart(char c);
 static int initNetwork(void);
 static void ledDisplayMain(struct _ledLine *ledLineToDraw, int shift_speed, int shift_what);
 static int putChar(char c, const char (*font)[24], uint8_t color, struct _ledLine *ledLine);
 static int stringWidth(char *string, const char (*font)[24]);
 static int shiftLeft(struct _ledLine *ledLine, int section);
-static void ledRemoveFromStack(void);
+static void ledRemoveFromFifo(void);
 static gpointer ledMatrixStartThread(gpointer data);
 
-#define SAMPLES 256
-#define RESULTS (SAMPLES/2+1)
-#define FREQ_PER_COL (RESULTS/64*4/5)
-static int mpd_fifo_fd = 0;
-static double *fft_input;
-static unsigned int fft_magnitude[RESULTS];
-static unsigned int col_magnitude_max;
-static double col_magnitude[64];
-
 static enum _screenToDraw current_screen;
-
 
 /* Diese Arrays werden nur zur Uebertragung ans Modul genutzt */
 static uint16_t RED[4][16];
 static uint16_t GREEN[4][16];
 
-static struct _ledLine ledLineFifo[LED_STACK_SIZE];
+static struct _ledLine ledLineFifo[LED_FIFO_SIZE];
 
-int led_line_fifo_time[LED_STACK_SIZE];
-int led_line_fifo_shift[LED_STACK_SIZE];
+int led_line_fifo_time[LED_FIFO_SIZE];
+int led_line_fifo_shift[LED_FIFO_SIZE];
 
 static int client_sock;
 
@@ -117,82 +98,6 @@ GAsyncQueue *async_queue_select_screen;
 GAsyncQueue *async_queue_set_mpd_text;
 GAsyncQueue *async_queue_push_stack;
 GAsyncQueue *async_queue_set_static_text;
-
-static int mpdFifoInit(void)
-{
-    if(!config.mpd_fifo_activated)
-        return 1;
-    if(mpd_fifo_fd > 0)
-        return 2;
-    mpd_fifo_fd = open(config.mpd_fifo_file,O_RDONLY | O_NONBLOCK);
-    if(mpd_fifo_fd < 0)
-        return 1;
-    
-#ifndef _NO_FFTW3_
-    fft_input = (double*)fftw_malloc(sizeof(double)*SAMPLES);
-    fft_output = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*RESULTS);
-    fft_plan = fftw_plan_dft_r2c_1d(SAMPLES, fft_input, fft_output, FFTW_ESTIMATE);
-#endif
-    return 0;
-}
-
-static void mpdFifoClose(void)
-{
-    if(mpd_fifo_fd <= 0)
-        return;
-    close(mpd_fifo_fd);
-    mpd_fifo_fd = 0;
-#ifndef _NO_FFTW3_
-    fftw_free(fft_input);
-    fftw_free(fft_output);
-#endif
-}
-
-static void mpdFifoUpdate(void)
-{
-    static int16_t buf[SAMPLES*2];
-    ssize_t num;
-    int i,p;
-
-    if(mpd_fifo_fd <= 0)
-        return;
-
-    num = read(mpd_fifo_fd, buf, sizeof(buf));
-    if(num < 0)
-        return;
-
-    for(i=num;i<SAMPLES;i++)
-    {
-        fft_input[i] = 0;
-    }
-    
-    for(i=0;i<SAMPLES;i++)
-    {
-        fft_input[i] = buf[i];
-    }
-    
-#ifndef _NO_FFTW3_
-    fftw_execute(fft_plan);
-
-    for(i=0;i<RESULTS;i++)
-    {
-        fft_magnitude[i] = sqrt(fft_output[i][0]*fft_output[i][0] + fft_output[i][1]*fft_output[i][1]);
-    }
-    col_magnitude_max = 0;
-    for(i=0;i<64;i++)
-    {
-        col_magnitude[i] = 0;
-        for(p=0;p<FREQ_PER_COL;p++)
-        {
-            col_magnitude[i] += fft_magnitude[p+i*FREQ_PER_COL];
-        }
-        col_magnitude[i] = col_magnitude[i]/FREQ_PER_COL;
-        if(col_magnitude[i] > col_magnitude_max)
-            col_magnitude_max = col_magnitude[i];
-    }
-#endif
-
-}
 
 
 static int ledIsRunning(void)
@@ -624,15 +529,15 @@ static void ledInternalInsertFifo(char *string, int shift, int lifetime)
     led_line_fifo_time[led_stack_top] = lifetime;
     led_line_fifo_shift[led_stack_top] = shift;
 
-    if(++led_stack_top > (LED_STACK_SIZE-1)) led_stack_top = 0;
+    if(++led_stack_top > (LED_FIFO_SIZE-1)) led_stack_top = 0;
     g_debug("led_stack_top: %d led_stack_bottom: %d",led_stack_top, led_stack_bottom);
 }
 
-static void ledRemoveFromStack(void)
+static void ledRemoveFromFifo(void)
 {
     g_debug("String removed from fifo");
     freeLedLine(&ledLineFifo[led_stack_bottom]);
-    if(++led_stack_bottom > (LED_STACK_SIZE- 1)) led_stack_bottom= 0;
+    if(++led_stack_bottom > (LED_FIFO_SIZE- 1)) led_stack_bottom= 0;
     g_debug("led_stack_top: %d led_stack_bottom: %d",led_stack_top, led_stack_bottom);
 }
 
@@ -741,7 +646,7 @@ static gpointer ledMatrixStartThread(gpointer data)
             shift_speed = led_line_fifo_shift[led_stack_bottom];
             if(!led_line_fifo_time[led_stack_bottom])
             {
-                ledRemoveFromStack();
+                ledRemoveFromFifo();
             }
             else
                 ledDisplayMain(ledLineToDraw, shift_speed, shift_what);

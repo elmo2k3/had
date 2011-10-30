@@ -278,18 +278,10 @@ static void had_init_base_station(void)
     base_station_init();
     
     glcdP.backlight = 1;
-#ifdef _NO_FFTW3_
-    getLastTemperature(4,0,&celsius,&decicelsius);
-#else
     getLastTemperature(3,1,&celsius,&decicelsius);
-#endif
     lastTemperature[3][3] = (int16_t)celsius*10;
 
-#ifdef _NO_FFTW3_
-    getLastTemperature(4,1,&celsius,&decicelsius);
-#else
     getLastTemperature(3,0,&celsius,&decicelsius);
-#endif
     lastTemperature[3][0] = (int16_t)celsius*10;
     sendBaseLcdText("had wurde gestartet ... ");
 }
