@@ -74,24 +74,17 @@ extern void ledMatrixStart(void);
  */
 extern void ledMatrixStop(void);
 
-/** 
- * Push a string onto the display stack
- *
- * The string will automatically be scrolled if it does not fit into the display.
- * It will be scrolled completely for lifetime cycles.
- * When called while stack is not empty, the new string will be shown first for lifetime
- *
- * @param *string null-terminated string
- * @param shift currently ignored
- * @param lifetime num of cycled this string will be displayed
- */
-extern void ledPushStack(char *string, int shift, int lifetime);
+extern void ledFifoInsert(char *string, int shift, int lifetime);
 extern void ledMatrixToggle(void);
 extern void ledMatrixInit(void);
 extern void ledMatrixSelectScreen(enum _screenToDraw screen);
 extern void ledMatrixSetMpdText(struct _artist_title *artist_title);
 extern void ledMatrixSetStaticText(char *text);
 extern enum _screenToDraw ledMatrixCurrentScreen(void);
+extern int ledIsRunning(void);
+extern int allocateLedLine(struct _ledLine *ledLine, int line_length);
+extern void putString(char *string, const char (*font)[24],struct _ledLine *ledLine);
+extern void freeLedLine(struct _ledLine *ledLine);
 
 #endif
 

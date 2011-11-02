@@ -31,6 +31,9 @@ had_SOURCES = had.c\
 	tokenizer.c \
 	voltageboard.c \
 	led_mpd_fifo.c \
+	led_text_fifo.c \
+	fonts/8x8.c \
+	fonts/8x12.c \
 	security.c
 
 LIBS = @glib_LIBS@ \

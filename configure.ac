@@ -5,6 +5,7 @@ AC_PREREQ(2.61)
 AC_INIT(had, 0.3.0, bjoern@bjoern-b.de)
 AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE(had, 0.3.0)
+AM_SILENT_RULES([yes])
 
 # Checks for programs.
 AC_PROG_CC
@@ -13,7 +14,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
+AC_CHECK_HEADERS([stdlib.h string.h unistd.h inet.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -27,7 +28,7 @@ AC_FUNC_MALLOC
 AC_FUNC_MKTIME
 AC_FUNC_REALLOC
 AC_FUNC_STRFTIME
-AC_CHECK_FUNCS([floor memset strchr strstr])
+AC_CHECK_FUNCS([floor memset strchr strstr inet_aton getnameinfo])
 
 AC_SUBST(EXTRA_CFLAGS)
 AC_SUBST(EXTRA_LDFLAGS)
@@ -40,15 +41,15 @@ PKG_CHECK_MODULES([gthread], gthread-2.0 >= 2.10)
 AC_SUBST(gthread_LIBS)
 AC_SUBST(gthread_CFLAGS)
 
-PKG_CHECK_MODULES([libcrypto], libcrypto >= 1.0.0e)
+PKG_CHECK_MODULES([libcrypto], libcrypto >= 0.9.8m)
 AC_SUBST(libcrypto_LIBS)
 AC_SUBST(libcrypto_CFLAGS)
 
-PKG_CHECK_MODULES([libmpd], libmpd >= 0.20.0)
+PKG_CHECK_MODULES([libmpd], libmpd >= 0.19.0)
 AC_SUBST(libmpd_LIBS)
 AC_SUBST(libmpd_CFLAGS)
 
-PKG_CHECK_MODULES([libcurl], libcurl >= 7.21.7)
+PKG_CHECK_MODULES([libcurl], libcurl >= 7.0.0)
 AC_SUBST(libcurl_LIBS)
 AC_SUBST(libcurl_CFLAGS)
 
