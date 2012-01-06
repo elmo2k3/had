@@ -29,10 +29,12 @@
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "led_mpd_fifo"
 
+#ifndef _OE
 #include <fftw3.h>
 static fftw_complex *fft_output;
 static fftw_plan fft_plan;
 
+#endif
 #define SAMPLES 256
 #define RESULTS (SAMPLES/2+1)
 #define FREQ_PER_COL (RESULTS/64*4/5)
@@ -46,6 +48,7 @@ double col_magnitude[64];
 
 int mpdFifoInit(void)
 {
+#ifndef _OE
     if(!config.mpd_fifo_activated)
         return 1;
     if(mpd_fifo_fd > 0)
@@ -57,21 +60,25 @@ int mpdFifoInit(void)
     fft_input = (double*)fftw_malloc(sizeof(double)*SAMPLES);
     fft_output = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*RESULTS);
     fft_plan = fftw_plan_dft_r2c_1d(SAMPLES, fft_input, fft_output, FFTW_ESTIMATE);
+#endif
     return 0;
 }
 
 void mpdFifoClose(void)
 {
+#ifndef _OE
     if(mpd_fifo_fd <= 0)
         return;
     close(mpd_fifo_fd);
     mpd_fifo_fd = 0;
     fftw_free(fft_input);
     fftw_free(fft_output);
+#endif
 }
 
 void mpdFifoUpdate(void)
 {
+#ifndef _OE
     static int16_t buf[SAMPLES*2];
     ssize_t num;
     int i,p;
@@ -111,5 +118,6 @@ void mpdFifoUpdate(void)
         if(col_magnitude[i] > col_magnitude_max)
             col_magnitude_max = col_magnitude[i];
     }
+#endif
 }
 

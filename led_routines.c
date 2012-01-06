@@ -24,13 +24,13 @@
 */
 
 #include <inttypes.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <stdio.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <glib.h>
@@ -41,17 +41,6 @@
 
 #include "fonts/8x8.h"
 #include "fonts/8x12.h"
-//#include "fonts/8x14.h"
-//#include "fonts/10x14.h"
-//#include "fonts/10x16.h"
-//#include "fonts/12x16.h"
-//#include "fonts/4x6.h"
-//#include "fonts/5x8.h"
-//#include "fonts/5x12.h"
-//#include "fonts/6x8.h"
-//#include "fonts/6x10.h"
-//#include "fonts/7x12.h"
-//#include "fonts/7x12b.h"
 #include "had.h"
 #include "mpd.h"
 
@@ -104,7 +93,28 @@ int ledIsRunning(void)
 static void updateDisplay(struct _ledLine ledLine)
 {
     int i,p,m;
+    int status;
     struct sockaddr_in server;
+    struct addrinfo hints;
+    struct addrinfo *res, *addr_iterator;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    status = getaddrinfo(config.led_matrix_ip, NULL, &hints, &res);
+
+    if(status)
+        return;
+    
+    if(res)
+    {
+        if(res->ai_family == AF_INET) // ipv4
+        {
+            memcpy(&server, res->ai_addr,sizeof(server));
+        }
+        freeaddrinfo(res); // free the linked list
+    }
 
     memset(&RED,0,sizeof(RED));
     memset(&GREEN,0,sizeof(GREEN));
@@ -180,15 +190,15 @@ static void updateDisplay(struct _ledLine ledLine)
         }
     }
 
-    server.sin_family = AF_INET;
+//    server.sin_family = AF_INET;
     server.sin_port = htons(config.led_matrix_port);
-#ifdef _WIN32
-        unsigned long addr;
-        addr = inet_addr(config.led_matrix_ip);
-        memcpy( (char *)&server.sin_addr, &addr, sizeof(addr));
-#else
-    inet_aton(config.led_matrix_ip, &server.sin_addr);
-#endif
+//#ifdef _WIN32
+//        unsigned long addr;
+//        addr = inet_addr(config.led_matrix_ip);
+//        memcpy( (char *)&server.sin_addr, &addr, sizeof(addr));
+//#else
+//    inet_aton(config.led_matrix_ip, &server.sin_addr);
+//#endif
     sendto(client_sock, &RED, sizeof(RED),0,(struct sockaddr*)&server,sizeof(server));
     sendto(client_sock, &GREEN, sizeof(GREEN),0,(struct sockaddr*)&server,sizeof(server));
     

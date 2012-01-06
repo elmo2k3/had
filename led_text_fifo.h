@@ -22,6 +22,8 @@
 
 #include "led_routines.h"
 
+#define LED_FIFO_SIZE 30
+
 void ledInternalInsertFifo(char *string, int shift, int lifetime);
 int ledFifoEmpty(void);
 struct _ledLine *ledFifoGetLine(void);
