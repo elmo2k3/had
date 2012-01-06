@@ -1039,10 +1039,8 @@ void updateGlcd()
 
 #ifdef _OE
     //alternative
-    getLastTemperature(4,0,&glcdP.temperature[0], &glcdP.temperature[1]);
-    glcdP.temperature[1] *= 100;
-    getLastTemperature(4,1,&glcdP.temperature[2], &glcdP.temperature[3]);
-    glcdP.temperature[3] *= 100;
+    getLastTemperature(4,0,&glcdP.temperature[0]);
+    getLastTemperature(4,1,&glcdP.temperature[1]);
 #else
     // bochum
     //glcdP.temperature[0] = lastTemperature[3][1]; // draussen

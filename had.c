@@ -278,11 +278,11 @@ static void had_init_base_station(void)
     base_station_init();
     
     glcdP.backlight = 1;
-    getLastTemperature(3,1,&celsius,&decicelsius);
-    lastTemperature[3][3] = (int16_t)celsius*10;
+//    getLastTemperature(3,1,&celsius,&decicelsius);
+//    lastTemperature[3][3] = (int16_t)celsius*10;
 
-    getLastTemperature(3,0,&celsius,&decicelsius);
-    lastTemperature[3][0] = (int16_t)celsius*10;
+//    getLastTemperature(3,0,&celsius,&decicelsius);
+//    lastTemperature[3][0] = (int16_t)celsius*10;
     sendBaseLcdText("had wurde gestartet ... ");
 }
 

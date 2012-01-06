@@ -46,7 +46,7 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph);
  * \param *temp store celsius here
  * \param *temp_deci store decicelsius here
  */
-void getLastTemperature(int modul, int sensor, int16_t *temp, int16_t *temp_deci);
+void getLastTemperature(int modul, int sensor, int16_t *temp);
 
 /** insert measured temperature
  * \param modul modul
