@@ -9,7 +9,6 @@ had_SOURCES = had.c\
 	mpd.c \
 	scrobbler.c \
 	sms.c \
-	statefile.c \
 	base_station.c \
 	misc.c \
 	client.c \

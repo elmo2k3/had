@@ -44,12 +44,11 @@
 #include "configfile.h"
 #include "led_routines.h"
 #include "sms.h"
-#include "version.h"
 #include "hr20.h"
 #include "rfid_tag_reader.h"
-#include "statefile.h"
 #include "security.h"
 #include "voltageboard.h"
+#include "version.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "had"
@@ -69,7 +68,6 @@ static void hadSignalHandler(int signal);
 static void had_check_parameters(int argc, char **argv);
 static void had_check_daemonize(void);
 static void had_print_version(void);
-static void had_load_state(void);
 static void had_init_hr20(void);
 static void had_init_base_station(void);
 
@@ -90,7 +88,6 @@ int main(int argc, char* argv[])
     had_check_daemonize();
     g_log_set_default_handler(had_log_handler, NULL);
     had_print_version();
-    had_load_state();
     client_manager_init();
     listen_global_init(&error);
 
@@ -131,8 +128,6 @@ static void hadSignalHandler(int signal)
         g_main_loop_quit(had_main_loop);
         if(config.daemonize)
             unlink(config.pid_file);
-        //networkThreadStop();
-        writeStateFile(config.statefile);
         g_message("Shutting down");
     }
     else if(signal == SIGHUP)
@@ -195,8 +190,6 @@ static void had_check_daemonize(void)
     pid_t pid;
     FILE *pid_file;
     
-//  freopen("/dev/null", "a", stderr);
-
     if(config.daemonize)
     {
         if(fileExists(config.pid_file))
@@ -230,8 +223,6 @@ static void had_check_daemonize(void)
         fclose(pid_file);
 
         freopen(config.logfile, "a", stdout);
-//      freopen("/dev/null", "a", stderr);
-
         /* write into file without buffer */
         setvbuf(stdout, NULL, _IONBF, 0);
         setvbuf(stderr, NULL, _IONBF, 0);
@@ -248,25 +239,6 @@ static void had_print_version(void)
 #endif
 }
 
-static void had_load_state(void)
-{
-    if(loadStateFile(config.statefile))
-    {
-        g_debug("Statefile successfully read");
-        //relaisP.port = hadState.relais_state;
-    }
-    else
-    {
-        g_debug("Statefile could not be read, using default values");
-        memset(&hadState, 0, sizeof(hadState));
-//      memset(&relaisP, 0, sizeof(relaisP));
-        hadState.scrobbler_user_activated = config.scrobbler_activated;
-        hadState.ledmatrix_user_activated = config.led_matrix_activated;
-        hadState.beep_on_door_opened = 1;
-        hadState.beep_on_window_left_open = 1;
-    }
-}
-
 static void had_init_hr20(void)
 {   
     hr20Init();
@@ -277,7 +249,6 @@ static void had_init_base_station(void)
     int16_t celsius,decicelsius;
     base_station_init();
     
-    glcdP.backlight = 1;
 //    getLastTemperature(3,1,&celsius,&decicelsius);
 //    lastTemperature[3][3] = (int16_t)celsius*10;
 
