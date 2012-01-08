@@ -14,7 +14,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h string.h unistd.h inet.h])
+AC_CHECK_HEADERS([stdlib.h string.h unistd.h inet.h netdb.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -41,17 +41,23 @@ PKG_CHECK_MODULES([gthread], gthread-2.0 >= 2.10)
 AC_SUBST(gthread_LIBS)
 AC_SUBST(gthread_CFLAGS)
 
-PKG_CHECK_MODULES([libcrypto], libcrypto >= 0.9.8m)
-AC_SUBST(libcrypto_LIBS)
-AC_SUBST(libcrypto_CFLAGS)
+AC_ARG_ENABLE(libcrypto,
+              [  --disable-libcrypto			Support for last.fm scrobbler],
+              [ case "${enableval}" in
+                    yes)    enable_libcrypto=yes;;
+                     no)    enable_libcrypto=no;;
+                      *)    AC_MSG_ERROR([bad value ${enableval} for --disable-libcrypto]);;
+                esac],
+              [enable_libcrypto=yes])
 
-PKG_CHECK_MODULES([libmpd], libmpd >= 0.19.0)
-AC_SUBST(libmpd_LIBS)
-AC_SUBST(libmpd_CFLAGS)
+if test x${enable_libcrypto} = xyes; then
+	PKG_CHECK_MODULES([libcrypto], libcrypto >= 0.9.8m)
+	AC_SUBST(libcrypto_LIBS)
+	AC_SUBST(libcrypto_CFLAGS)
+	AC_DEFINE(ENABLE_LIBCRYPTO, 1, [Enable scrobbler])
 
-PKG_CHECK_MODULES([libcurl], libcurl >= 7.0.0)
-AC_SUBST(libcurl_LIBS)
-AC_SUBST(libcurl_CFLAGS)
+fi
+AM_CONDITIONAL(ENABLE_LIBCRYPTO, test x$enable_libcrypto = xyes)
 
 AC_ARG_ENABLE(fftw3,
               [  --disable-fftw3			Support for ledmatrix mpd fft.],
@@ -71,6 +77,42 @@ if test x${enable_fftw3} = xyes; then
 fi
 AM_CONDITIONAL(ENABLE_FFTW3, test x$enable_fftw3 = xyes)
 
+AC_ARG_ENABLE(libmpd,
+              [  --disable-libmpd			Support for mpd],
+              [ case "${enableval}" in
+                    yes)    enable_libmpd=yes;;
+                     no)    enable_libmpd=no;;
+                      *)    AC_MSG_ERROR([bad value ${enableval} for --disable-libmpd]);;
+                esac],
+              [enable_libmpd=yes])
+
+if test x${enable_libmpd} = xyes; then
+	PKG_CHECK_MODULES([libmpd], libmpd >= 0.19.0)
+	AC_SUBST(libmpd_LIBS)
+	AC_SUBST(libmpd_CFLAGS)
+	AC_DEFINE(ENABLE_LIBMPD, 1, [Enable mpd connection])
+
+fi
+AM_CONDITIONAL(ENABLE_LIBMPD, test x$enable_libmpd = xyes)
+
+AC_ARG_ENABLE(libcurl,
+              [  --disable-libcurl			Support for sipgate sms],
+              [ case "${enableval}" in
+                    yes)    enable_libcurl=yes;;
+                     no)    enable_libcurl=no;;
+                      *)    AC_MSG_ERROR([bad value ${enableval} for --disable-libcurl]);;
+                esac],
+              [enable_libcurl=yes])
+
+if test x${enable_libcurl} = xyes; then
+	PKG_CHECK_MODULES([libcurl], libcurl >= 7.0.0)
+	AC_SUBST(libcurl_LIBS)
+	AC_SUBST(libcurl_CFLAGS)
+	AC_DEFINE(ENABLE_LIBCURL, 1, [Enable sipgate sms support])
+
+fi
+AM_CONDITIONAL(ENABLE_LIBCURL, test x$enable_libcurl = xyes)
+
 
 AC_OUTPUT(Makefile)
 
@@ -78,5 +120,20 @@ if test x${enable_fftw3} = xyes; then
 	echo "Use fftw3:  enabled"
 else
 	echo "Use fftw3:  disabled"
+fi
+if test x${enable_libmpd} = xyes; then
+	echo "Use libmpd:  enabled"
+else
+	echo "Use libmpd:  disabled"
+fi
+if test x${enable_libcurl} = xyes; then
+	echo "Use libcurl:  enabled"
+else
+	echo "Use libcurl:  disabled"
+fi
+if test x${enable_libcrypto} = xyes; then
+	echo "Use libcrypto:  enabled"
+else
+	echo "Use libcrypto:  disabled"
 fi
 

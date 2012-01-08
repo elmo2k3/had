@@ -28,7 +28,11 @@
 #include <time.h>
 #include <unistd.h>
 #include <string.h>
+
+#include "config.h"
+#ifdef ENABLE_LIBCRYPTO
 #include <openssl/md5.h>
+#endif
 
 #include "had.h"
 #include "scrobbler.h"
@@ -49,6 +53,7 @@ struct _scrobbler_data
 
 static int scrobblerHandshake(void)
 {
+#ifdef ENABLE_LIBCRYPTO
     time_t rawtime;
     /* String nur genau passend fuer Benutzer mit maximal 7 Zeichen! */
     char wgetString[300];
@@ -88,10 +93,14 @@ static int scrobblerHandshake(void)
         g_warning("Fehler: %s",status);
         return 0;
     }
+#else
+    return 1;
+#endif
 }
 
 static char *scrobblerGetAuthHash(time_t timestamp)
 {
+#ifdef ENABLE_LIBCRYPTO
     char executeString[160];
     unsigned char digest[MD5_DIGEST_LENGTH];
     int i;
@@ -114,6 +123,9 @@ static char *scrobblerGetAuthHash(time_t timestamp)
     }
     
     return authHash;
+#else
+    return NULL;
+#endif
 }
 
 void scrobblerSubmitTrack

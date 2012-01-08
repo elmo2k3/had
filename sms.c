@@ -25,11 +25,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <curl/curl.h>
 #include <string.h>
 #include <glib.h>
 #include <stdio.h>
+#include "config.h"
 #include "had.h"
+
+#ifdef ENABLE_LIBCURL
+#include <curl/curl.h>
+#endif
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "sms"
@@ -74,6 +78,7 @@ static size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp)
 
 void sms(char *number, char *message)
 {
+#ifdef ENABLE_LIBCURL
     char buf[2048];
     char buf2[2048];
     char new_url[2048];
@@ -120,4 +125,5 @@ void sms(char *number, char *message)
 
     g_message("sms send %s to number %s",message, number);
     curl_easy_perform(curlhandler);
+#endif
 }

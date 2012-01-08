@@ -27,7 +27,11 @@
 #ifndef __MPD_H__
 #define __MPD_H__
 
+#include "config.h"
+
+#ifdef ENABLE_LIBMPD
 #include <libmpd/libmpd.h>
+#endif
 
 
 extern struct _ledLine ledLineMpd;

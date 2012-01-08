@@ -38,14 +38,16 @@
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "mpd"
-    
+
+#ifdef ENABLE_LIBMPD
 static MpdObj *mpd;
+static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what);
+#endif
 
 static int isPlaying;
 static guint submit_source = 0;
 static guint now_playing_source = 0;
 
-static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what);
 static gboolean mpdCheckConnected(gpointer data);
 static gboolean submitTrack(gpointer data);
 static gboolean submitNowPlaying(gpointer data);
@@ -61,52 +63,16 @@ struct _track_information
     int length;
 }current_track;
 
-MpdObj *getMpdObject(void)
-{
-    return mpd;
-}
-
 int mpdGetState(void)
 {
     return isPlaying;
 }
 
-void mpdErrorCallback(MpdObj *mi, int errorid, char *msg, void *userdata)
-{
-    g_warning("Error: %i : %s ", errorid, msg);
-}
-
+#ifdef ENABLE_LIBMPD
 static gboolean mpdStatusUpdate(gpointer data)
 {
     mpd_status_update(mpd);
     return TRUE;
-}
-
-int mpdInit(void)
-{
-    if(!config.mpd_activated)
-    {
-        return 1;
-    }
-
-
-    mpd = mpd_new(config.mpd_server,
-            config.mpd_port,
-            config.mpd_password);
-
-    mpd_signal_connect_status_changed(mpd,(StatusChangedCallback)mpdStatusChanged, NULL);
-
-    mpd_set_connection_timeout(mpd,10);
-    g_timeout_add(500, mpdStatusUpdate, NULL);
-    g_timeout_add_seconds(1, mpdCheckConnected, NULL);
-
-    if(mpd_connect(mpd))
-    {
-        g_debug("Error connecting to mpd!");
-        return 1;
-    }
-    isPlaying = mpd_player_get_state(mpd);
-    return 0;
 }
 
 static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
@@ -213,47 +179,6 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
     }
 }
 
-void mpdTogglePlayPause(void)
-{
-    if(mpdGetState() == MPD_PLAYER_PLAY)
-        mpd_player_pause(mpd);
-    else
-        mpd_player_play(mpd);
-}
-
-void mpdPlay(void)
-{
-    mpd_player_play(mpd);
-}
-
-void mpdPause(void)
-{
-    mpd_player_pause(mpd);
-}
-
-void mpdNext(void)
-{
-    mpd_player_next(mpd);
-}
-
-void mpdPrev(void)
-{
-    mpd_player_prev(mpd);
-}
-
-void mpdPlayNumber(int number)
-{
-    mpd_player_play_id(mpd, number);
-}
-
-void mpdToggleRandom(void)
-{
-    if(mpd_player_get_random(mpd))
-        mpd_player_set_random(mpd, 0);
-    else
-        mpd_player_set_random(mpd, 1);
-}
-
 static gboolean mpdCheckConnected(gpointer data)
 {
     if(!mpd_check_connected(mpd))
@@ -284,4 +209,97 @@ static gboolean submitNowPlaying(gpointer data)
     now_playing_source = 0;
     return FALSE;
 }
+#endif // ENABLE_LIBMPD
+
+#ifdef ENABLE_LIBMPD
+int mpdInit(void)
+{
+    if(!config.mpd_activated)
+    {
+        return 1;
+    }
+
+
+    mpd = mpd_new(config.mpd_server,
+            config.mpd_port,
+            config.mpd_password);
+
+    mpd_signal_connect_status_changed(mpd,(StatusChangedCallback)mpdStatusChanged, NULL);
+
+    mpd_set_connection_timeout(mpd,10);
+    g_timeout_add(500, mpdStatusUpdate, NULL);
+    g_timeout_add_seconds(1, mpdCheckConnected, NULL);
+
+    if(mpd_connect(mpd))
+    {
+        g_debug("Error connecting to mpd!");
+        return 1;
+    }
+    isPlaying = mpd_player_get_state(mpd);
+    return 0;
+}
+#else
+int mpdInit(void)
+{
+    return 0;
+}
+#endif
+
+
+
+void mpdTogglePlayPause(void)
+{
+#ifdef ENABLE_LIBMPD
+    if(mpdGetState() == MPD_PLAYER_PLAY)
+        mpd_player_pause(mpd);
+    else
+        mpd_player_play(mpd);
+#endif
+}
+
+void mpdPlay(void)
+{
+#ifdef ENABLE_LIBMPD
+    mpd_player_play(mpd);
+#endif
+}
+
+void mpdPause(void)
+{
+#ifdef ENABLE_LIBMPD
+    mpd_player_pause(mpd);
+#endif
+}
+
+void mpdNext(void)
+{
+#ifdef ENABLE_LIBMPD
+    mpd_player_next(mpd);
+#endif
+}
+
+void mpdPrev(void)
+{
+#ifdef ENABLE_LIBMPD
+    mpd_player_prev(mpd);
+#endif
+}
+
+void mpdPlayNumber(int number)
+{
+#ifdef ENABLE_LIBMPD
+    mpd_player_play_id(mpd, number);
+#endif
+}
+
+void mpdToggleRandom(void)
+{
+#ifdef ENABLE_LIBMPD
+    if(mpd_player_get_random(mpd))
+        mpd_player_set_random(mpd, 0);
+    else
+        mpd_player_set_random(mpd, 1);
+#endif
+}
+
 

@@ -626,8 +626,13 @@ static gpointer ledMatrixStartThread(gpointer data)
                                         break;
                     case SCREEN_SCOPE: screen_to_draw = SCREEN_VOID;
                                         break;
-                    case SCREEN_VOID: if(mpdGetState() == MPD_PLAYER_PLAY) screen_to_draw = SCREEN_MPD;
+                    case SCREEN_VOID: 
+#ifdef ENABLE_LIBMPD
+                                        if(mpdGetState() == MPD_PLAYER_PLAY) screen_to_draw = SCREEN_MPD;
                                         else screen_to_draw = SCREEN_TIME;
+#else
+                                        screen_to_draw = SCREEN_TIME;
+#endif
                                         break;
                 }
             }
@@ -653,6 +658,7 @@ static gpointer ledMatrixStartThread(gpointer data)
                     default: break;
                 }
             }
+#ifdef ENABLE_LIBMPD
             else if(mpdGetState() == MPD_PLAYER_PLAY && last_mpd_state == 0)
             {
                 last_mpd_state = 1;
@@ -663,6 +669,7 @@ static gpointer ledMatrixStartThread(gpointer data)
                 last_mpd_state = 0;
                 screen_to_draw = SCREEN_TIME;
             }
+#endif
             else if(screen_to_draw == SCREEN_MPD)
             {
                 ledLineToDraw = &ledLineMpd;

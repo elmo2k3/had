@@ -37,19 +37,19 @@ had_SOURCES = had.c\
 	security.c
 
 LIBS = @glib_LIBS@ \
-	@libcrypto_LIBS@ \
 	@gthread_LIBS@ \
+	@libcrypto_LIBS@ \
 	@libmpd_LIBS@ \
 	@fftw3_LIBS@ \
 	@libcurl_LIBS@ \
 	@EXTRA_LDFLAGS@ \
-	-lmysqlclient
+	-lmysqlclient -L/usr/lib64/mysql -lm
 AM_CFLAGS = @glib_CFLAGS@ \
-	@libcrypto_CFLAGS@ \
 	@gthread_CFLAGS@ \
+	@libcrypto_CFLAGS@ \
 	@libmpd_CFLAGS@ \
 	@fftw3_CFLAGS@ \
 	@libcurl_CFLAGS@ \
 	@EXTRA_CFLAGS@ \
-	-std=c99
+	-std=gnu99
 

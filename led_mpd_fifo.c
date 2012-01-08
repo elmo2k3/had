@@ -24,17 +24,18 @@
 #include <fcntl.h>
 #include <glib.h>
 #include "had.h"
+#include "config.h"
 #include "led_mpd_fifo.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "led_mpd_fifo"
 
-#ifndef _OE
+#ifdef ENABLE_FFTW3
 #include <fftw3.h>
 static fftw_complex *fft_output;
 static fftw_plan fft_plan;
-
 #endif
+
 #define SAMPLES 256
 #define RESULTS (SAMPLES/2+1)
 #define FREQ_PER_COL (RESULTS/64*4/5)
@@ -48,7 +49,7 @@ double col_magnitude[64];
 
 int mpdFifoInit(void)
 {
-#ifndef _OE
+#ifdef ENABLE_FFTW3
     if(!config.mpd_fifo_activated)
         return 1;
     if(mpd_fifo_fd > 0)
@@ -66,7 +67,7 @@ int mpdFifoInit(void)
 
 void mpdFifoClose(void)
 {
-#ifndef _OE
+#ifdef ENABLE_FFTW3
     if(mpd_fifo_fd <= 0)
         return;
     close(mpd_fifo_fd);
@@ -78,7 +79,7 @@ void mpdFifoClose(void)
 
 void mpdFifoUpdate(void)
 {
-#ifndef _OE
+#ifdef ENABLE_FFTW3
     static int16_t buf[SAMPLES*2];
     ssize_t num;
     int i,p;
