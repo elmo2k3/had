@@ -98,12 +98,21 @@ struct _config
 {
     char password[128];
     int serial_activated; /**< communication to base station activated? */
+    int database_mysql_activated;
     char database_server[50]; /**< mysql server, can be hostname or ip */
     char database_user[20]; /**< mysql user */
     char database_password[30]; /**< mysql password */
     char database_database[20]; /**< database name */
     char database_database_ws2000[20]; /**< database name for old style weather station*/
     int database_port; /**< database port. default 3306 */
+    
+    int database_pg_activated;
+    char database_pg_server[50]; /**< pg server, can be hostname or ip */
+    char database_pg_user[20]; /**< pg user */
+    char database_pg_password[30]; /**< pg password */
+    char database_pg_database[20]; /**< database name */
+    char database_pg_sslmode[20]; /**< database ssl mode */
+    int database_pg_port; /**< database port. default 3306 */
     
     int mpd_activated; /**< mpd activated */
     char mpd_server[50]; /**< mpd server, hostname or ip */

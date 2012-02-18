@@ -3,7 +3,8 @@ bin_PROGRAMS = had
 had_SOURCES = had.c\
 	rfid_tag_reader.c \
 	configfile.c \
-	database.c \
+	database_mysql.c \
+	database_pgsql.c \
 	hr20.c \
 	led_routines.c \
 	mpd.c \
@@ -41,14 +42,20 @@ LIBS = @glib_LIBS@ \
 	@libmpd_LIBS@ \
 	@fftw3_LIBS@ \
 	@libcurl_LIBS@ \
+	@MYSQL_LIBS@ \
+	@POSTGRESQL_LDFLAGS@ \
 	@EXTRA_LDFLAGS@ \
-	-lmysqlclient -L/usr/lib64/mysql -lm
+	-lm
 AM_CFLAGS = @glib_CFLAGS@ \
 	@gthread_CFLAGS@ \
 	@libcrypto_CFLAGS@ \
 	@libmpd_CFLAGS@ \
 	@fftw3_CFLAGS@ \
 	@libcurl_CFLAGS@ \
+	@MYSQL_CFLAGS@ \
+	@POSTGRESQL_CFLAGS@ \
 	@EXTRA_CFLAGS@ \
 	-std=gnu99
-
+AM_LDFLAGS = \
+    @EXTRA_LDFLAGS@\
+    @LDFLAGS@

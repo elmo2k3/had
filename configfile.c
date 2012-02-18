@@ -46,7 +46,9 @@ static char *config_params[] = { "db_db", "db_server", "db_user", "db_pass",
     "hr20_database_activated","hr20_database_number","door_sensor_id","window_sensor_id",
     "digital_input_module","password","rfid_port","rfid_activated","switch_off_with_security",
     "sms_on_main_door","time_to_active","time_before_alarm","beep_on_window_open","remote_activated",
-    "mpd_fifo_file","mpd_fifo_activated","db_ws2000","voltageboard_activated","voltageboard_tty"};
+    "mpd_fifo_file","mpd_fifo_activated","db_ws2000","voltageboard_activated","voltageboard_tty",
+    "db_pg_activated","db_pg_db","db_pg_server","db_pg_user","db_pg_pass","db_pg_port","db_pg_sslmode",
+    "db_mysql_activated"};
 
 static int setConfigValue(int param, char *value);
 
@@ -75,12 +77,21 @@ void printConfig(void (*func)(void*,...), void *dest)
     func(dest,"led_matrix_shift_speed = %d\n",config.led_shift_speed);
     func(dest,"\n");
 
+    func(dest,"db_mysql_activated = %d\n",config.database_mysql_activated);
     func(dest,"db_db = %s\n",config.database_database);
     func(dest,"db_ws2000 = %s\n",config.database_database_ws2000);
     func(dest,"db_server = %s\n",config.database_server);
     func(dest,"db_user = %s\n",config.database_user);
     func(dest,"db_pass = %s\n",config.database_password);
     func(dest,"db_port = %d\n",config.database_port);
+    func(dest,"\n");
+    
+    func(dest,"db_pg_activated = %d\n",config.database_pg_activated);
+    func(dest,"db_pg_db = %s\n",config.database_pg_database);
+    func(dest,"db_pg_server = %s\n",config.database_pg_server);
+    func(dest,"db_pg_user = %s\n",config.database_pg_user);
+    func(dest,"db_pg_pass = %s\n",config.database_pg_password);
+    func(dest,"db_pg_port = %d\n",config.database_pg_port);
     func(dest,"\n");
 
     func(dest,"mpd_activated = %d\n",config.mpd_activated);
@@ -312,6 +323,30 @@ static int setConfigValue(int param, char *value)
         case 51: config.voltageboard_activated = atoi(value);
             break;
         case 52: strcpy(config.voltageboard_tty, value);
+            break;
+        /* PG database activated */
+        case 53: config.database_pg_activated = atoi(value);
+            break;
+        /* PG database */
+        case 54: strcpy(config.database_pg_database, value);
+            break;
+        /* PG host */
+        case 55: strcpy(config.database_pg_server, value);
+            break;
+        /* PG user */
+        case 56: strcpy(config.database_pg_user, value);
+            break;
+        /* PG pass */
+        case 57: strcpy(config.database_pg_password, value);
+            break;
+        /* PG port */
+        case 58: config.database_pg_port = atoi(value);
+            break;
+        /* PG ssl mode */
+        case 59: strcpy(config.database_pg_sslmode, value);
+            break;
+        /* Mysql db activated */
+        case 60: config.database_mysql_activated = atoi(value);
             break;
     }
     return 0;

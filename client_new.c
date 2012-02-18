@@ -30,7 +30,7 @@
 
 #define LOG_LEVEL_SECURE G_LOG_LEVEL_INFO
 
-static const char GREETING[] = "OK HAD " VERSION "\n";
+static const char GREETING[] = "OK HAD " GIT_VERSION "\n";
 
 void client_new(int fd, const struct sockaddr *sa, size_t sa_length, int uid)
 {

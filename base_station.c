@@ -525,6 +525,7 @@ void process_temperature_module(gchar **strings, int argc)
     lastTemperature[modul_id][sensor_id] = (int16_t)(temperature*10.0);
     
     databaseInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
+    databasePgInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
 
 //  if(lastTemperature[3][0][0] < 15 && !belowMinTemp &&
 //          config.sms_activated)
@@ -1037,20 +1038,17 @@ void updateGlcd()
     glcdP.year = ptm->tm_year;
     glcdP.weekday = 0;
 
-#ifdef _OE
     //alternative
-    getLastTemperature(4,0,&glcdP.temperature[0]);
-    getLastTemperature(4,1,&glcdP.temperature[1]);
-#else
+    //getLastTemperature(4,0,&glcdP.temperature[0]);
+    //getLastTemperature(4,1,&glcdP.temperature[1]);
     // bochum
-    //glcdP.temperature[0] = lastTemperature[3][1]; // draussen
-    //glcdP.temperature[1] = lastTemperature[3][3]; // drinnen
-    //glcdP.temperature[2] = lastTemperature[3][4]; // feuchte
-    // re
-    glcdP.temperature[0] = lastTemperature[0][0]; // draussen
-    glcdP.temperature[1] = lastTemperature[0][1]; // drinnen
+    glcdP.temperature[0] = lastTemperature[3][1]; // draussen
+    glcdP.temperature[1] = lastTemperature[3][3]; // drinnen
     glcdP.temperature[2] = lastTemperature[3][4]; // feuchte
-#endif
+    // re
+    //glcdP.temperature[0] = lastTemperature[0][0]; // draussen
+    //glcdP.temperature[1] = lastTemperature[0][1]; // drinnen
+    //glcdP.temperature[2] = lastTemperature[3][4]; // feuchte
     
     g_debug("last 1: %d,%d last 2: %d,%d",glcdP.temperature[0],
         glcdP.temperature[1], glcdP.temperature[2], glcdP.temperature[3]);

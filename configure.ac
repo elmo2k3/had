@@ -4,8 +4,9 @@
 AC_PREREQ(2.61)
 AC_INIT(had, 0.3.0, bjoern@bjoern-b.de)
 AM_CONFIG_HEADER([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE(had, 0.3.0)
-AM_SILENT_RULES([yes])
+AM_SILENT_RULES([no])
 
 # Checks for programs.
 AC_PROG_CC
@@ -32,6 +33,12 @@ AC_CHECK_FUNCS([floor memset strchr strstr inet_aton getnameinfo])
 
 AC_SUBST(EXTRA_CFLAGS)
 AC_SUBST(EXTRA_LDFLAGS)
+
+PKG_PROG_PKG_CONFIG
+
+AX_LIB_POSTGRESQL(8.0)
+AM_GLIB_GNU_GETTEXT
+
 #glib
 PKG_CHECK_MODULES([glib], glib-2.0 >= 2.10)
 AC_SUBST(glib_LIBS)
@@ -113,6 +120,26 @@ if test x${enable_libcurl} = xyes; then
 fi
 AM_CONDITIONAL(ENABLE_LIBCURL, test x$enable_libcurl = xyes)
 
+MYSQL_PREFIX=/usr
+AC_ARG_WITH(libmysqlclient,
+              [  --with-libmysqlclient=<path>		Support for mysql],
+			  [MYSQL_PREFIX=$with_libmysqlclient],
+			  AC_MSG_WARN([You can call configure with the --with-mysql option.
+				This tells configure where to find the MySql C library and headers if configure cannot
+				locate them automatically.
+  				e.g. --with-mysql=/usr/local or --with-mysql=/usr])
+)
+
+#enable_libmysqlclient=yes
+#if test x${enable_libmysqlclient} = xyes; then
+	AC_SUBST(MYSQL_PREFIX)
+	MYSQL_LIBS="-L${MYSQL_PREFIX}/lib/mysql -L${MYSQL_PREFIX}/lib64/mysql -lmysqlclient -lz"
+	MYSQL_CFLAGS="-I${MYSQL_PREFIX}/include"
+	AC_SUBST(MYSQL_LIBS)
+	AC_SUBST(MYSQL_CFLAGS)
+	AC_DEFINE(ENABLE_LIBMYSQLCLIENT, 1, [Enable mysql support])
+
+#fi
 
 AC_OUTPUT(Makefile)
 
@@ -135,5 +162,10 @@ if test x${enable_libcrypto} = xyes; then
 	echo "Use libcrypto:  enabled"
 else
 	echo "Use libcrypto:  disabled"
+fi
+if test x${enable_libmysqlclient} = xyes; then
+	echo "Use libmysqlclient:  enabled"
+else
+	echo "Use libmysqlclient:  disabled"
 fi
 

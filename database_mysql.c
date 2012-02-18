@@ -30,16 +30,18 @@
 #include <time.h>
 #include <math.h>
 
+#include "config.h"
 #include "had.h"
 #include "database.h"
 
 #undef G_LOG_DOMAIN
-#define G_LOG_DOMAIN "database"
+#define G_LOG_DOMAIN "database_mysql"
 
 static MYSQL *mysql_connection = NULL;
 
 static int initDatabase(void)
 {
+#ifdef ENABLE_LIBMYSQLCLIENT
     my_bool reconnect = 1;
     const char timeout = 2;
 
@@ -60,6 +62,7 @@ static int initDatabase(void)
         return -1;
     }
     return 0;
+#endif
 }
 
 static int transformY(float temperature, int max, int min)
@@ -73,7 +76,11 @@ static int transformY(float temperature, int max, int min)
 
 static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 {
+#ifdef ENABLE_LIBMYSQLCLIENT
     char query[255];
+    
+    if(!config.database_mysql_activated)
+        return;
 
     MYSQL *mysql_ws2000_connection;
     MYSQL *mysql_local_connection;
@@ -139,11 +146,13 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
     mysql_free_result(mysql_res);
     if(modul == 4)
         mysql_close(mysql_local_connection);
+#endif
 }
 
 
 void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
 {
+#ifdef ENABLE_LIBMYSQLCLIENT
     MYSQL *mysql_local_connection;
     MYSQL *mysql_ws2000_connection;
     char query[255];
@@ -154,6 +163,9 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
     int i;
     float temperature[120];
     int num_values[120];
+    
+    if(!config.database_mysql_activated)
+        return;
 
     min = 0.0;
     max = 0.0;
@@ -246,6 +258,7 @@ void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
     mysql_free_result(mysql_res);
     if(modul == 4)
         mysql_close(mysql_local_connection);
+#endif
 }
 
 void databaseInsertDigitalValue
@@ -257,6 +270,9 @@ void databaseInsertDigitalValue
 
 void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t timestamp)
 {
+#ifdef ENABLE_LIBMYSQLCLIENT
+    if(!config.database_mysql_activated)
+        return;
     static char query[DATABASE_FIFO_SIZE][128];
     static int fifo_low = 0, fifo_high = 0;
     int status;
@@ -290,11 +306,16 @@ void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t
         }
 
     }
+#endif
 }
 
 void getLastTemperature(int modul, int sensor, int16_t *temp)
 {
+#ifdef ENABLE_LIBMYSQLCLIENT
     char query[255];
+
+    if(!config.database_mysql_activated)
+        return;
 
     MYSQL *mysql_ws2000_connection;
     MYSQL *mysql_local_connection;
@@ -359,5 +380,6 @@ void getLastTemperature(int modul, int sensor, int16_t *temp)
     mysql_free_result(mysql_res);
     if(modul == 4)
         mysql_close(mysql_local_connection);
+#endif
 }
 

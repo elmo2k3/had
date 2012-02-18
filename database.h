@@ -28,7 +28,12 @@
 
 #include <time.h>
 
+#ifdef HAVE_POSTGRESQL
+#include <libpq-fe.h>
+#endif
 #include "mysql/mysql.h"
+
+#include "config.h"
 #include "had.h"
 
 #define DATABASE_FIFO_SIZE 1024
@@ -54,6 +59,8 @@ void getLastTemperature(int modul, int sensor, int16_t *temp);
  */
 void databaseInsertTemperature(int modul, int sensor, float *temperature, time_t timestamp);
 void databaseInsertDigitalValue(int modul, int sensor, int value, time_t timestamp); 
+void databasePgInsertTemperature(int modul, int sensor, float *temperature, time_t timestamp);
+void databasePgInsertDigitalValue(int modul, int sensor, int value, time_t timestamp); 
 
 #endif
 

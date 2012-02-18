@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "running aclocal"
-aclocal || exit 1
+aclocal -I m4 || exit 1
 echo "running libtoolize"
 libtoolize --force || exit 1
 echo "running autoheader"
