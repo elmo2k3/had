@@ -26,7 +26,6 @@
 #include <unistd.h>
 
 #include "had.h"
-#include "hr20.h"
 #include "voltageboard.h"
 
 #undef G_LOG_DOMAIN

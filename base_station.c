@@ -30,9 +30,6 @@
 #include "mpd.h"
 #include "led_routines.h"
 #include "database.h"
-#include "security.h"
-#include "hr20.h"
-#include "voltageboard.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "base_station"
@@ -47,9 +44,6 @@
 #define SECONDS_PER_MINUTE 60
 #define SECONDS_PER_HOUR (SECONDS_PER_MINUTE*60)
 #define SECONDS_PER_DAY (24*SECONDS_PER_HOUR)
-
-#define SYSTEM_MOUNT_MPD "mount /mnt/usbstick > /dev/null 2>&1; sleep 1; mpd /etc/mpd.conf > /dev/null 2>&1"
-#define SYSTEM_KILL_MPD "mpd /etc/mpd.conf --kill > /dev/null 2>&1;sleep 3; umount /mnt/usbstick > /dev/null 2>&1 && sleep 1 && sdparm -q -C stop /dev/disk/by-id/usb-SAMSUNG_HM250JI_0123456789-0:0"
 
 static int base_station_is_initiated = 0;
 static int fd;
@@ -91,13 +85,22 @@ gboolean cycle_base_lcd(gpointer data)
     char buf[64];
     struct tm *ptm;
     time_t rawtime;
+    int16_t temperature[2];
+
+    if(!config.base_lcd)
+        return TRUE;
     
     if (state == 0) {
+        pgGetLastTemperature(config.glcd_modul_in,
+            config.glcd_sensor_in,&temperature[0]);
+        pgGetLastTemperature(config.glcd_modul_out,
+            config.glcd_sensor_out,&temperature[1]);
+
         sprintf(buf,"Aussen:  %2d.%2d CInnen:   %2d.%2d C",
-            lastTemperature[3][1]/10,
-            lastTemperature[3][1]%10,
-            lastTemperature[3][3]/10,
-            lastTemperature[3][3]%10);
+            temperature[1]/10,
+            temperature[1]%10,
+            temperature[0]/10,
+            temperature[0]%10);
     }
     else if (state == 1) {
         time(&rawtime);
@@ -134,14 +137,14 @@ gboolean cycle_base_lcd(gpointer data)
         sprintf(buf, "   sys uptime    %3d days, %02d:%02d\n",
             (int)days,(int)hours,(int)minutes);
     }
-    else if (state == 4) {
-        rawtime = dsl_uptime();
-        ptm = localtime(&rawtime);
-        sprintf(buf,"  DSL up since  %02d:%02d %02d.%02d.%d",
-            ptm->tm_hour, ptm->tm_min,
-            ptm->tm_mday, ptm->tm_mon+1, ptm->tm_year +1900);
-    }
-    if (++state > 4)
+    //else if (state == 4) {
+    //    rawtime = dsl_uptime();
+    //    ptm = localtime(&rawtime);
+    //    sprintf(buf,"  DSL up since  %02d:%02d %02d.%02d.%d",
+    //        ptm->tm_hour, ptm->tm_min,
+    //        ptm->tm_mday, ptm->tm_mon+1, ptm->tm_year +1900);
+    //}
+    if (++state > 3)
         state = 0;
 
     sendBaseLcdText(buf);
@@ -221,13 +224,11 @@ void base_station_everything_off(void)
         hadState.rgbModuleValues[i].blue = 0;
     }
     setCurrentRgbValues();
-    system(SYSTEM_KILL_MPD);
 }
 
 void base_station_music_on_hifi_on(void)
 {
     base_station_hifi_on();
-    system(SYSTEM_MOUNT_MPD);
     g_usleep(3000000); // wait until libmpd got connection
     mpdPlay();
 }
@@ -401,14 +402,6 @@ void process_remote(gchar **strings, int argc)
         {
             open_door();
         }
-        else if(command == config.rkeys.dockstar_on)
-        {
-            voltageboard_dockstar_on();
-        }
-        else if(command == config.rkeys.dockstar_off)
-        {
-            voltageboard_dockstar_off();
-        }
     }
 }
 
@@ -432,7 +425,8 @@ static void process_glcd(gchar **strings, int argc)
         command = atoi(strings[1]);
         if(command == 2)
         {
-            updateGlcd();
+            if(config.send_to_glcd)
+                updateGlcd();
             g_debug("GraphLCD Info Paket gesendet");
             if(strings[2] && strings[3] && strings[4] && strings[5])
             {
@@ -455,34 +449,37 @@ static void process_glcd(gchar **strings, int argc)
         {
             if(strings[2] && strings[3])
             {
-                getDailyGraph(atoi(strings[2]),atoi(strings[3]),&graphP);
-                sendPacket(&graphP, GRAPH_PACKET);
+                if(config.send_to_glcd)
+                {
+                    getDailyGraph(atoi(strings[2]),atoi(strings[3]),&graphP);
+                    sendPacket(&graphP, GRAPH_PACKET);
+                }
                 g_debug("GraphLCD Graph Paket gesendet\r");
             }
         }
-        else if(command ==4) //set hr20 temperature
-        {
-            if(strings[2] && strings[3] && strings[4])
-            {
-                hr20SetTemperature(atoi(strings[2]) + atoi(strings[3]));
-                g_usleep(100000);
-                if(atoi(strings[4]) == 2)
-                    hr20SetModeAuto();
-                else if(atoi(strings[4]) == 1)
-                    hr20SetModeManu();
-            }
-        }
-        else if(command ==5) //set hr20 auto temperature
-        {
-            if(strings[2] && strings[3] && strings[4] && strings[5]
-                 && strings[6] && strings[7] && strings[8] && strings[9])
-            {
-                hr20SetAutoTemperature(0, atoi(strings[2]) + atoi(strings[3]));
-                hr20SetAutoTemperature(1, atoi(strings[4]) + atoi(strings[5]));
-                hr20SetAutoTemperature(2, atoi(strings[6]) + atoi(strings[7]));
-                hr20SetAutoTemperature(3, atoi(strings[8]) + atoi(strings[9]));
-            }
-        }
+//        else if(command ==4) //set hr20 temperature
+//        {
+//            if(strings[2] && strings[3] && strings[4])
+//            {
+//                hr20SetTemperature(atoi(strings[2]) + atoi(strings[3]));
+//                g_usleep(100000);
+//                if(atoi(strings[4]) == 2)
+//                    hr20SetModeAuto();
+//                else if(atoi(strings[4]) == 1)
+//                    hr20SetModeManu();
+//            }
+//        }
+//        else if(command ==5) //set hr20 auto temperature
+//        {
+//            if(strings[2] && strings[3] && strings[4] && strings[5]
+//                 && strings[6] && strings[7] && strings[8] && strings[9])
+//            {
+//                hr20SetAutoTemperature(0, atoi(strings[2]) + atoi(strings[3]));
+//                hr20SetAutoTemperature(1, atoi(strings[4]) + atoi(strings[5]));
+//                hr20SetAutoTemperature(2, atoi(strings[6]) + atoi(strings[7]));
+//                hr20SetAutoTemperature(3, atoi(strings[8]) + atoi(strings[9]));
+//            }
+//        }
     }
 }
 
@@ -524,8 +521,11 @@ void process_temperature_module(gchar **strings, int argc)
     // information about negative value into the decimal
     lastTemperature[modul_id][sensor_id] = (int16_t)(temperature*10.0);
     
-    databaseInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
-    databasePgInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
+    if(config.database_insert)
+    {
+        databaseInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
+        databasePgInsertTemperature(modul_id,sensor_id,&temperature,time(NULL));
+    }
 
 //  if(lastTemperature[3][0][0] < 15 && !belowMinTemp &&
 //          config.sms_activated)
@@ -590,7 +590,6 @@ void process_base_station(gchar **strings, int argc)
                 databaseInsertDigitalValue(config.digital_input_module,
                     config.door_sensor_id, 1, rawtime);
             }
-            security_door_opened();
         }
         else if(command == 31)
         {
@@ -611,11 +610,6 @@ void process_base_station(gchar **strings, int argc)
             if(config.window_sensor_id && config.digital_input_module)
                 databaseInsertDigitalValue(config.digital_input_module,
                     config.window_sensor_id, 0, rawtime);
-//              if(config.hr20_activated && hr20info.tempset >= 50
-//                  && hr20info.tempset <= 300)
-//              {
-//                  hr20SetTemperature(hr20info.tempset);
-//              }
         }
         else if(command == 37)
         {
@@ -624,11 +618,6 @@ void process_base_station(gchar **strings, int argc)
             if(config.window_sensor_id && config.digital_input_module)
                 databaseInsertDigitalValue(config.digital_input_module,
                     config.window_sensor_id, 1, rawtime);
-            if(config.hr20_activated)
-            {
-//                          hr20GetStatus(&hr20info);
-//                          hr20SetTemperature(50);
-            }
         }
     }
 }
@@ -1039,12 +1028,14 @@ void updateGlcd()
     glcdP.weekday = 0;
 
     //alternative
-    //getLastTemperature(4,0,&glcdP.temperature[0]);
-    //getLastTemperature(4,1,&glcdP.temperature[1]);
+    pgGetLastTemperature(config.glcd_modul_out,
+        config.glcd_sensor_out,&glcdP.temperature[0]);
+    pgGetLastTemperature(config.glcd_modul_in,
+        config.glcd_sensor_in,&glcdP.temperature[1]);
     // bochum
-    glcdP.temperature[0] = lastTemperature[3][1]; // draussen
-    glcdP.temperature[1] = lastTemperature[3][3]; // drinnen
-    glcdP.temperature[2] = lastTemperature[3][4]; // feuchte
+    //glcdP.temperature[0] = lastTemperature[3][1]; // draussen
+    //glcdP.temperature[1] = lastTemperature[3][3]; // drinnen
+    //glcdP.temperature[2] = lastTemperature[3][4]; // feuchte
     // re
     //glcdP.temperature[0] = lastTemperature[0][0]; // draussen
     //glcdP.temperature[1] = lastTemperature[0][1]; // drinnen
@@ -1052,26 +1043,26 @@ void updateGlcd()
     
     g_debug("last 1: %d,%d last 2: %d,%d",glcdP.temperature[0],
         glcdP.temperature[1], glcdP.temperature[2], glcdP.temperature[3]);
-    celsius = (uint8_t)hr20GetTemperatureIs();
-    decicelsius = (uint8_t)((hr20GetTemperatureIs() - (float)celsius)*10.0);
-    g_debug("celsius = %d, decicelsius = %d",celsius, decicelsius);
-    glcdP.hr20_celsius_is = celsius;
-    glcdP.hr20_decicelsius_is = decicelsius;
-    
-    celsius = (uint8_t)hr20GetTemperatureSet();
-    decicelsius = (uint8_t)((hr20GetTemperatureSet() - (float)celsius)*10.0);
-    glcdP.hr20_celsius_set = celsius;
-    glcdP.hr20_decicelsius_set = decicelsius;
-    glcdP.hr20_valve = hr20GetValve();
-    glcdP.hr20_mode = hr20GetMode();
+    //celsius = (uint8_t)hr20GetTemperatureIs();
+    //decicelsius = (uint8_t)((hr20GetTemperatureIs() - (float)celsius)*10.0);
+    //g_debug("celsius = %d, decicelsius = %d",celsius, decicelsius);
+    //glcdP.hr20_celsius_is = celsius;
+    //glcdP.hr20_decicelsius_is = decicelsius;
+    //
+    //celsius = (uint8_t)hr20GetTemperatureSet();
+    //decicelsius = (uint8_t)((hr20GetTemperatureSet() - (float)celsius)*10.0);
+    //glcdP.hr20_celsius_set = celsius;
+    //glcdP.hr20_decicelsius_set = decicelsius;
+    //glcdP.hr20_valve = hr20GetValve();
+    //glcdP.hr20_mode = hr20GetMode();
 
-    for(i=0;i<4;i++)
-    {
-        celsius = (uint8_t)hr20GetAutoTemperature(i);
-        decicelsius = (uint8_t)((hr20GetAutoTemperature(i) - (float)celsius)*10.0);
-        glcdP.hr20_auto_t[i] = celsius;
-        glcdP.hr20_auto_t_deci[i] = decicelsius;
-    }
+    //for(i=0;i<4;i++)
+    //{
+    //    celsius = (uint8_t)hr20GetAutoTemperature(i);
+    //    decicelsius = (uint8_t)((hr20GetAutoTemperature(i) - (float)celsius)*10.0);
+    //    glcdP.hr20_auto_t[i] = celsius;
+    //    glcdP.hr20_auto_t_deci[i] = decicelsius;
+    //}
     
     glcdP.wecker = 0;
     sendPacket(&glcdP,GP_PACKET);

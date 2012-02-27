@@ -32,11 +32,8 @@
 #include "base_station.h"
 #include "led_routines.h"
 #include "mpd.h"
-#include "hr20.h"
-#include "sms.h"
 #include "tokenizer.h"
 #include "string.h"
-#include "security.h"
 #include "configfile.h"
 #include "voltageboard.h"
 
@@ -110,19 +107,6 @@ action_get_temperature(struct client *client, int argc, char **argv)
 
     client_printf(client,"temperature: %d %d %d.%d\r\n", modul, sensor,
         lastTemperature[modul][sensor]/10, lastTemperature[modul][sensor]%10);
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
-action_get_voltage(struct client *client, int argc, char **argv)
-{
-    int modul;
-
-    if (!check_int(client, &modul, argv[1], need_positive))
-        return COMMAND_RETURN_ERROR;
-
-    client_printf(client,"voltage: %d %d\r\n", modul,
-        lastVoltage[modul]);
     return COMMAND_RETURN_OK;
 }
 
@@ -213,17 +197,6 @@ static enum command_return action_hifi_on_music_on
 (struct client *client, int argc, char **argv)
 {
     base_station_music_on_hifi_on();
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return action_sms
-(struct client *client, int argc, char **argv)
-{
-    if(argc == 2) {
-        sms(config.cellphone, argv[1]);
-    } else if(argc == 3) {
-        sms(argv[1],argv[2]);
-    }
     return COMMAND_RETURN_OK;
 }
 
@@ -434,26 +407,6 @@ check_bool(struct client *client, bool *value_r, const char *s)
 }
 
 static enum command_return
-action_open_door(struct client *client, int argc, char **argv)
-{
-    gchar led_string[1024];
-    if(argc == 2)
-    {
-        g_debug("Opening door for %s",argv[1]);
-        snprintf(led_string,1024,"Tuer geoeffnet fuer %s", argv[1]);
-        security_main_door_opening(argv[1]);
-        ledFifoInsert(led_string,1,2);
-    }
-    else
-    {
-        g_debug("Opening door");
-        security_main_door_opening(NULL);
-    }
-    open_door();
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
 action_beep(struct client *client,
         int argc, char *argv[])
 {
@@ -500,15 +453,6 @@ action_set_printer(struct client *client,
         base_station_printer_on();
     else
         base_station_printer_off();
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
-action_get_security(struct client *client,
-        int argc, char *argv[])
-{
-    client_printf(client, "security: %s\n",
-        security_is_active() ? "activated":"deactivated");
     return COMMAND_RETURN_OK;
 }
 
@@ -649,89 +593,6 @@ action_led_matrix_get_screen(struct client *client,
 }
 
 static enum command_return
-action_hr20_get_info(struct client *client,
-        int argc, char *argv[])
-{
-    client_printf(client, "tempset:          %2.2fC\r\n", hr20GetTemperatureSet());
-    client_printf(client, "tempis:           %2.2fC\r\n", hr20GetTemperatureIs());
-    client_printf(client, "valve:                %d\r\n", hr20GetValve());
-    client_printf(client, "voltage:          %1.3fV\r\n", hr20GetVoltage());
-    if(hr20GetMode() == 1)
-    {
-        client_printf(client, "mode:         manual\r\n");
-    }
-    else
-    {
-        client_printf(client, "mode:      automatic\r\n");
-    }
-    client_printf(client, "frost protection: %2.2fC\r\n", hr20GetAutoTemperature(0));
-    client_printf(client, "energy save:      %2.2fC\r\n", hr20GetAutoTemperature(1));
-    client_printf(client, "comfort:          %2.2fC\r\n", hr20GetAutoTemperature(2));
-    client_printf(client, "supercomfort:     %2.2fC\r\n", hr20GetAutoTemperature(3));
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
-action_hr20_set_temperature(struct client *client,
-        int argc, char *argv[])
-{
-    int temperature;
-    if (!check_int(client, &temperature, argv[1], need_positive))
-        return COMMAND_RETURN_ERROR;
-    if(temperature < 50 || temperature > 300 || temperature % 5)
-    {
-        client_printf(client, "temperature must be between 50 and 300 in 5 steps\r\n");
-        return COMMAND_RETURN_ERROR;
-    }
-    hr20SetTemperature(temperature);
-
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
-action_hr20_set_auto_temperature(struct client *client,
-        int argc, char *argv[])
-{
-    int temperature,slot;
-    if (!check_int(client, &slot, argv[1], need_positive))
-        return COMMAND_RETURN_ERROR;
-    if (!check_int(client, &temperature, argv[2], need_positive))
-        return COMMAND_RETURN_ERROR;
-    if(temperature < 50 || temperature > 300 || temperature % 5)
-    {
-        client_printf(client, "temperature must be between 50 and 300 in 5 steps\r\n");
-        return COMMAND_RETURN_ERROR;
-    }
-    hr20SetAutoTemperature(slot, temperature);
-
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
-action_hr20_set_mode_manual(struct client *client,
-        int argc, char *argv[])
-{
-    hr20SetModeManu();
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
-action_hr20_set_mode_auto(struct client *client,
-        int argc, char *argv[])
-{
-    hr20SetModeAuto();
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
-action_hr20_update_date(struct client *client,
-        int argc, char *argv[])
-{
-    hr20SetDateAndTime();
-    return COMMAND_RETURN_OK;
-}
-
-static enum command_return
 action_dockstar_off(struct client *client,
         int argc, char *argv[])
 {
@@ -782,23 +643,14 @@ static const struct command commands[] = {
     {"get_hifi",        PERMISSION_ADMIN, 0,0, action_get_hifi},
     {"get_log",         PERMISSION_ADMIN, 0,0, action_get_log},
     {"get_printer",     PERMISSION_ADMIN, 0,0, action_get_printer},
-    {"get_security",    PERMISSION_ADMIN, 0,0, action_get_security},
     {"get_sleep_light", PERMISSION_ADMIN, 0,0, action_get_sleep_light},
     {"get_temperature", PERMISSION_ADMIN, 2,2, action_get_temperature},
-    {"get_voltage",     PERMISSION_ADMIN, 1,1, action_get_voltage},
     {"hifi_on",         PERMISSION_ADMIN, 0,0, action_hifi_on_music_on},
-    {"hr20_get",        PERMISSION_ADMIN, 0,0, action_hr20_get_info},
-    {"hr20_set_auto",   PERMISSION_ADMIN, 0,0, action_hr20_set_mode_auto},
-    {"hr20_set_auto_t", PERMISSION_ADMIN, 2,2, action_hr20_set_auto_temperature},
-    {"hr20_set_manual", PERMISSION_ADMIN, 0,0, action_hr20_set_mode_manual},
-    {"hr20_set_t",      PERMISSION_ADMIN, 1,1, action_hr20_set_temperature},
-    {"hr20_update",     PERMISSION_ADMIN, 1,1, action_hr20_update_date},
     {"lm",              PERMISSION_ADMIN, 1,1, action_led_matrix_on_off},
     {"lm_get_screen",   PERMISSION_ADMIN, 0,0, action_led_matrix_get_screen},
     {"lm_select_screen",PERMISSION_ADMIN, 1,1, action_led_matrix_select_screen},
     {"lm_text",         PERMISSION_ADMIN, 3,3, action_led_display_text},
     {"lm_toggle",       PERMISSION_ADMIN, 0,0, action_led_matrix_toggle},
-    {"open_door",       PERMISSION_ADMIN, 0,1, action_open_door},
     {"quit",            PERMISSION_ADMIN, 0,0, action_disconnect},
     {"sent_graph",      PERMISSION_ADMIN, 0,0, action_sent_graph},
     {"set_backlight",   PERMISSION_ADMIN, 1,1, action_toggle_base_lcd_backlight},
@@ -807,7 +659,6 @@ static const struct command commands[] = {
     {"set_rgb",         PERMISSION_ADMIN, 5,5, action_set_rgb},
     {"set_rgb_all",     PERMISSION_ADMIN, 4,4, action_set_rgb_all},
     {"set_sleep_light", PERMISSION_ADMIN, 1,1, action_set_sleep_light},
-    {"sms",             PERMISSION_ADMIN, 1,2, action_sms},
     {"uptime",          PERMISSION_ADMIN, 0,0, action_uptime},
     {"voltageboard_get",PERMISSION_ADMIN, 0,0, action_voltageboard_get}
 };

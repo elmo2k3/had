@@ -62,7 +62,6 @@
 //extern pthread_t threads[5];
 
 extern int16_t lastTemperature[9][9];
-extern int16_t lastVoltage[9];
 extern GThread *ledMatrixThread;
 extern time_t time_had_started;
 
@@ -98,6 +97,7 @@ struct _config
 {
     char password[128];
     int serial_activated; /**< communication to base station activated? */
+    int send_to_glcd;
     int database_mysql_activated;
     char database_server[50]; /**< mysql server, can be hostname or ip */
     char database_user[20]; /**< mysql user */
@@ -113,6 +113,8 @@ struct _config
     char database_pg_database[20]; /**< database name */
     char database_pg_sslmode[20]; /**< database ssl mode */
     int database_pg_port; /**< database port. default 3306 */
+
+    int database_insert;
     
     int mpd_activated; /**< mpd activated */
     char mpd_server[50]; /**< mpd server, hostname or ip */
@@ -171,6 +173,13 @@ struct _config
 
     int voltageboard_activated;
     char voltageboard_tty[255];
+    
+    int glcd_modul_in;
+    int glcd_sensor_in;
+    int glcd_modul_out;
+    int glcd_sensor_out;
+
+    int base_lcd;
 
     struct _remote_control_keys rkeys;
 }config;

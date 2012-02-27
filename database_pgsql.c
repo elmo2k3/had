@@ -43,11 +43,12 @@ static PGconn *pgconn = NULL;
 static int initDatabase(void)
 {
     const char timeout = 2;
-    char conninfo[50];
+    char conninfo[200];
 
     g_debug("init pg db");
 
-    sprintf(conninfo,"dbname = %s host = %s user = %s sslmode = %s password= %s",
+    snprintf(conninfo,sizeof(conninfo),
+        "dbname = %s host = %s user = %s sslmode = %s password = %s",
         config.database_pg_database,
         config.database_pg_server,
         config.database_pg_user,
@@ -55,6 +56,8 @@ static int initDatabase(void)
         config.database_pg_password);
 
     pgconn = PQconnectdb(conninfo);
+
+    g_debug(conninfo);
 
     if (PQstatus(pgconn) != CONNECTION_OK)
     {
@@ -247,13 +250,12 @@ void databasePgInsertTemperature(int modul, int sensor, float *temperature, time
     {
         initDatabase();
     }
+    if(!pgconn)
+        return;
 
     sprintf(query[fifo_high],"INSERT INTO modul_%02d%02d (date,value) VALUES (to_timestamp(%ld),%4.4f)",modul, sensor, timestamp, *temperature);
 
     if(++fifo_high > (DATABASE_FIFO_SIZE -1)) fifo_high = 0;
-    
-    if(!pgconn)
-        return;
     
     // error code for undefined table 42P01
     while( fifo_low != fifo_high )
@@ -297,76 +299,47 @@ void databasePgInsertTemperature(int modul, int sensor, float *temperature, time
     }
 }
 
-/*void getLastTemperature(int modul, int sensor, int16_t *temp)
+void pgGetLastTemperature(int modul, int sensor, int16_t *temp)
 {
-    
+    float temperature;
     char query[255];
 
-    MYSQL *mysql_ws2000_connection;
-    MYSQL *mysql_local_connection;
-    MYSQL_RES *mysql_res;
-    MYSQL_ROW mysql_row;
+    PGresult *pgres;
+    
+    if(!config.database_pg_activated)
+        return;
 
-    float temperature;
+    if(!pgconn)
+    {
+        initDatabase();
+    }
 
-    if(!mysql_connection)
+    *temp = 0;
+    if(!pgconn)
+        return;
+
+    sprintf(query,"SELECT value FROM modul_%02d%02d ORDER BY date DESC LIMIT 1",modul,sensor);
+
+    g_debug(query);
+    
+    pgres = PQexec(pgconn, query);
+    if (PQresultStatus(pgres) != PGRES_TUPLES_OK)
     {
-        if(initDatabase())
-            return;
-    }
-    if(modul == 4) //erkenschwick
-    {
-        mysql_ws2000_connection = mysql_init(NULL);
-        if (!mysql_real_connect(mysql_ws2000_connection, 
-                    config.database_server, 
-                    config.database_user,
-                    config.database_password,
-                    config.database_database_ws2000, 0, NULL, 0))
-        {
-            fprintf(stderr, "%s\r\n", mysql_error(mysql_ws2000_connection));
-            mysql_close(mysql_ws2000_connection);
-            return;
-        }
-        if(sensor == 0)
-            sprintf(query,"SELECT T_1 FROM sensor_1_8 ORDER BY date DESC LIMIT 1");
-        else if(sensor == 1)
-            sprintf(query,"SELECT T_i FROM inside ORDER BY date DESC LIMIT 1");
-        mysql_local_connection = mysql_ws2000_connection;
-    }
-    else
-    {
-        mysql_local_connection = mysql_connection;
-        sprintf(query,"SELECT value FROM modul_%d WHERE sensor='%d' ORDER BY date DESC LIMIT 1",modul,sensor);
-    }
-    if(mysql_query(mysql_local_connection,query))
-    {
-        fprintf(stderr, "%s\r\n", mysql_error(mysql_local_connection));
-        if(modul == 4)
-            mysql_close(mysql_local_connection);
+        g_warning("failed: %s", PQerrorMessage(pgconn));
+        PQclear(pgres);
+        PQfinish(pgconn);
+        pgconn = NULL;
         return;
     }
-
-    mysql_res = mysql_use_result(mysql_local_connection);
-    mysql_row = mysql_fetch_row(mysql_res); // nur eine Zeile
-
-    if(!mysql_row[0])
-    {
-        mysql_free_result(mysql_res);
-        *temp= 0;
-        if(modul == 4)
-            mysql_close(mysql_local_connection);
+    if(PQntuples(pgres) != 1)
         return;
-    }
-    temperature = atof(mysql_row[0]);
-    // quite dirty hack: as there is no int with value -0 we have to put the
-    // information about negative value into the decimal
+    
+    temperature = atof(PQgetvalue(pgres,0,0));
+
+    g_debug("temperature = %f",temperature);
+
     *temp = (int16_t)(temperature*10.0);
-
-    mysql_free_result(mysql_res);
-    if(modul == 4)
-        mysql_close(mysql_local_connection);
-
-        
-}*/
+    PQclear(pgres);
+}
 
 #endif // HAVE_POSTGRESQL

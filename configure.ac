@@ -48,24 +48,6 @@ PKG_CHECK_MODULES([gthread], gthread-2.0 >= 2.10)
 AC_SUBST(gthread_LIBS)
 AC_SUBST(gthread_CFLAGS)
 
-AC_ARG_ENABLE(libcrypto,
-              [  --disable-libcrypto			Support for last.fm scrobbler],
-              [ case "${enableval}" in
-                    yes)    enable_libcrypto=yes;;
-                     no)    enable_libcrypto=no;;
-                      *)    AC_MSG_ERROR([bad value ${enableval} for --disable-libcrypto]);;
-                esac],
-              [enable_libcrypto=yes])
-
-if test x${enable_libcrypto} = xyes; then
-	PKG_CHECK_MODULES([libcrypto], libcrypto >= 0.9.8m)
-	AC_SUBST(libcrypto_LIBS)
-	AC_SUBST(libcrypto_CFLAGS)
-	AC_DEFINE(ENABLE_LIBCRYPTO, 1, [Enable scrobbler])
-
-fi
-AM_CONDITIONAL(ENABLE_LIBCRYPTO, test x$enable_libcrypto = xyes)
-
 AC_ARG_ENABLE(fftw3,
               [  --disable-fftw3			Support for ledmatrix mpd fft.],
               [ case "${enableval}" in
@@ -157,11 +139,6 @@ if test x${enable_libcurl} = xyes; then
 	echo "Use libcurl:  enabled"
 else
 	echo "Use libcurl:  disabled"
-fi
-if test x${enable_libcrypto} = xyes; then
-	echo "Use libcrypto:  enabled"
-else
-	echo "Use libcrypto:  disabled"
 fi
 if test x${enable_libmysqlclient} = xyes; then
 	echo "Use libmysqlclient:  enabled"

@@ -43,12 +43,8 @@
 #include "client.h"
 #include "configfile.h"
 #include "led_routines.h"
-#include "sms.h"
-#include "hr20.h"
-#include "rfid_tag_reader.h"
-#include "security.h"
-#include "voltageboard.h"
 #include "version.h"
+#include "voltageboard.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "had"
@@ -58,8 +54,6 @@ GMainLoop *had_main_loop;
 
 /*! big array for the last measured temperatures */
 int16_t lastTemperature[9][9];
-/*! big array for the last measured voltages at the rf temperature modules */
-int16_t lastVoltage[9];
 
 time_t time_had_started;
 
@@ -68,7 +62,6 @@ static void hadSignalHandler(int signal);
 static void had_check_parameters(int argc, char **argv);
 static void had_check_daemonize(void);
 static void had_print_version(void);
-static void had_init_hr20(void);
 static void had_init_base_station(void);
 
 int main(int argc, char* argv[])
@@ -99,19 +92,8 @@ int main(int argc, char* argv[])
     }
     ledMatrixStart();
     mpdInit();
-    had_init_hr20();
     had_init_base_station();
     voltageboard_init();
-
-    if(config.rfid_activated) {
-        tag_reader = rfid_tag_reader_new(config.rfid_port);
-        if(tag_reader == NULL) {
-            if(config.daemonize) unlink(config.pid_file);
-            g_error("Error opening %s for tagreader",config.rfid_port);
-            return EXIT_FAILURE;
-        }
-        rfid_tag_reader_set_callback(tag_reader, security_tag_handler);
-    }
 
     had_main_loop = g_main_loop_new(NULL,FALSE);
 
@@ -237,11 +219,6 @@ static void had_print_version(void)
 #else
     g_message("had started");
 #endif
-}
-
-static void had_init_hr20(void)
-{   
-    hr20Init();
 }
 
 static void had_init_base_station(void)

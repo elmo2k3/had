@@ -1,15 +1,11 @@
 bin_PROGRAMS = had
 
 had_SOURCES = had.c\
-	rfid_tag_reader.c \
 	configfile.c \
 	database_mysql.c \
 	database_pgsql.c \
-	hr20.c \
 	led_routines.c \
 	mpd.c \
-	scrobbler.c \
-	sms.c \
 	base_station.c \
 	misc.c \
 	client.c \
@@ -29,16 +25,14 @@ had_SOURCES = had.c\
 	listen.c \
 	command.c \
 	tokenizer.c \
-	voltageboard.c \
 	led_mpd_fifo.c \
 	led_text_fifo.c \
 	fonts/8x8.c \
 	fonts/8x12.c \
-	security.c
+	voltageboard.c
 
 LIBS = @glib_LIBS@ \
 	@gthread_LIBS@ \
-	@libcrypto_LIBS@ \
 	@libmpd_LIBS@ \
 	@fftw3_LIBS@ \
 	@libcurl_LIBS@ \
@@ -48,7 +42,6 @@ LIBS = @glib_LIBS@ \
 	-lm
 AM_CFLAGS = @glib_CFLAGS@ \
 	@gthread_CFLAGS@ \
-	@libcrypto_CFLAGS@ \
 	@libmpd_CFLAGS@ \
 	@fftw3_CFLAGS@ \
 	@libcurl_CFLAGS@ \

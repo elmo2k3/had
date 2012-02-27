@@ -48,7 +48,8 @@ static char *config_params[] = { "db_db", "db_server", "db_user", "db_pass",
     "sms_on_main_door","time_to_active","time_before_alarm","beep_on_window_open","remote_activated",
     "mpd_fifo_file","mpd_fifo_activated","db_ws2000","voltageboard_activated","voltageboard_tty",
     "db_pg_activated","db_pg_db","db_pg_server","db_pg_user","db_pg_pass","db_pg_port","db_pg_sslmode",
-    "db_mysql_activated"};
+    "db_mysql_activated","send_to_glcd","db_insert","glcd_modul_out","glcd_sensor_out","glcd_modul_in",
+    "glcd_sensor_in","base_lcd"};
 
 static int setConfigValue(int param, char *value);
 
@@ -63,12 +64,20 @@ void printConfig(void (*func)(void*,...), void *dest)
     func(dest,"\n");
     
     func(dest,"serial_activated = %d\n",config.serial_activated);
+    func(dest,"send_to_glcd = %d\n",config.send_to_glcd);
     func(dest,"tty = %s\n",config.tty);
     func(dest,"door_sensor_id = %d\n",config.door_sensor_id);
     func(dest,"window_sensor_id = %d\n",config.window_sensor_id);
     func(dest,"digital_input_module = %d\n",config.digital_input_module);
     func(dest,"beep_on_window_open = %d\n",config.beep_on_window_open);
     func(dest,"remote_activated = %d\n",config.remote_activated);
+    func(dest,"\n");
+    
+    func(dest,"glcd_modul_in = %d\n",config.glcd_modul_in);
+    func(dest,"glcd_sensor_in = %d\n",config.glcd_sensor_in);
+    func(dest,"glcd_modul_out = %d\n",config.glcd_modul_out);
+    func(dest,"glcd_sensor_out = %d\n",config.glcd_sensor_out);
+    func(dest,"base_lcd = %d\n",config.base_lcd);
     func(dest,"\n");
     
     func(dest,"led_matrix_activated = %d\n",config.led_matrix_activated);
@@ -91,7 +100,8 @@ void printConfig(void (*func)(void*,...), void *dest)
     func(dest,"db_pg_server = %s\n",config.database_pg_server);
     func(dest,"db_pg_user = %s\n",config.database_pg_user);
     func(dest,"db_pg_pass = %s\n",config.database_pg_password);
-    func(dest,"db_pg_port = %d\n",config.database_pg_port);
+    func(dest,"db_pg_sslmode = %s\n",config.database_pg_sslmode);
+    func(dest,"db_insert = %d\n",config.database_insert);
     func(dest,"\n");
 
     func(dest,"mpd_activated = %d\n",config.mpd_activated);
@@ -347,6 +357,27 @@ static int setConfigValue(int param, char *value)
             break;
         /* Mysql db activated */
         case 60: config.database_mysql_activated = atoi(value);
+            break;
+        /* Send to glcd */
+        case 61: config.send_to_glcd = atoi(value);
+            break;
+        /* Database insert */
+        case 62: config.database_insert = atoi(value);
+            break;
+        /* Glcd modul out */
+        case 63: config.glcd_modul_out = atoi(value);
+            break;
+        /* Glcd sensor out */
+        case 64: config.glcd_sensor_out = atoi(value);
+            break;
+        /* Glcd modul in */
+        case 65: config.glcd_modul_in = atoi(value);
+            break;
+        /* Glcd sensor int */
+        case 66: config.glcd_sensor_in = atoi(value);
+            break;
+        /* Base LCD */
+        case 67: config.base_lcd = atoi(value);
             break;
     }
     return 0;

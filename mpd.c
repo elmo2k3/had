@@ -32,7 +32,6 @@
 
 #include "mpd.h"
 #include "had.h"
-#include "scrobbler.h"
 #include "led_routines.h"
 #include "base_station.h"
 
@@ -124,30 +123,6 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
             /* Auf PIN4 liegt die Stereoanlage
              * Nur wenn diese an ist zu last.fm submitten!
              */
-            if(base_station_hifi_is_on() && config.scrobbler_activated)
-            {
-                /* check if the track ran at least 2:40 or half of its runtime */
-                if(song->artist && song->title)
-                {
-                    if(submit_source)
-                    {
-                        g_source_remove(submit_source);
-                    }
-                    submit_source = g_timeout_add_seconds(shortest_time,
-                        submitTrack, NULL);
-
-                    if(now_playing_source)
-                    {
-                        g_source_remove(now_playing_source);
-                    }
-                    now_playing_source = g_timeout_add_seconds(5,
-                        submitNowPlaying, NULL);
-                }
-            }
-            else
-            {
-                g_debug("Stereoanlage ist aus, kein Submit zu last.fm");
-            }
             sendPacket(&mpdP, MPD_PACKET);
         }
     }
@@ -189,26 +164,6 @@ static gboolean mpdCheckConnected(gpointer data)
     return TRUE;
 }
 
-static gboolean submitTrack(gpointer data)
-{
-    g_debug("Now submitting track %s", current_track.current_track);
-
-    scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
-        current_track.last_album, current_track.length, current_track.current_track,
-        current_track.started_playing, 0);
-    submit_source = 0;
-    return FALSE;
-}
-
-static gboolean submitNowPlaying(gpointer data)
-{
-    g_debug("Now submitting now playing track %s", current_track.current_track);
-    scrobblerSubmitTrack(current_track.last_artist, current_track.last_title,
-        current_track.last_album, current_track.length, current_track.current_track,
-        current_track.started_playing, 1);
-    now_playing_source = 0;
-    return FALSE;
-}
 #endif // ENABLE_LIBMPD
 
 #ifdef ENABLE_LIBMPD
