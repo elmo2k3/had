@@ -451,7 +451,10 @@ static void process_glcd(gchar **strings, int argc)
             {
                 if(config.send_to_glcd)
                 {
-                    getDailyGraph(atoi(strings[2]),atoi(strings[3]),&graphP);
+                    if(config.database_pg_activated)
+                        getDailyGraphPg(atoi(strings[2]),atoi(strings[3]),&graphP);
+                    else
+                        getDailyGraph(atoi(strings[2]),atoi(strings[3]),&graphP);
                     sendPacket(&graphP, GRAPH_PACKET);
                 }
                 g_debug("GraphLCD Graph Paket gesendet\r");

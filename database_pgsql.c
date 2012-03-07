@@ -70,7 +70,7 @@ static int initDatabase(void)
     return 0;
 }
 
-/*static int transformY(float temperature, int max, int min)
+static int transformY(float temperature, int max, int min)
 {
     const float range = max - min; // hier muss noch was getan werden!
     if(range != 0)
@@ -90,15 +90,18 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
 
     if(!pgconn)
     {
-        if(initDatabase())
-            return;
+        initDatabase();
     }
-    sprintf(query,"SELECT MAX(value), MIN(value) FROM modul_%d%d WHERE DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
+    if(!pgconn)
+        return;
+
+    sprintf(query,"SELECT MAX(value), MIN(value) FROM modul_%02d%02d WHERE date>current_date",modul,sensor);
     res = PQexec(pgconn, query);
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
         fprintf(stderr, "FETCH ALL failed: %s", PQerrorMessage(pgconn));
         PQclear(res);
+        return;
     }
 
     if(PQntuples(res) != 1)
@@ -116,14 +119,11 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
     *min = atof(c);
     
     PQclear(res);
-}*/
+}
 
-
-/*void getDailyGraph(int modul, int sensor, struct graphPacket *graph)
+void getDailyGraphPg(int modul, int sensor, struct graphPacket *graph)
 {
-    MYSQL *mysql_local_connection;
-    MYSQL *mysql_ws2000_connection;
-    char query[255];
+    char query[1024];
     float x_div=0.0;
     int temp_max,temp_min;
     float sec;  
@@ -131,22 +131,27 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
     int i;
     float temperature[120];
     int num_values[120];
+    PGresult *pgres;
 
     min = 0.0;
     max = 0.0;
 
     memset(graph, 0, sizeof(struct graphPacket));
 
-    if(!mysql_connection)
+    if(!config.database_pg_activated)
+        return;
+
+    if(!pgconn)
     {
-        if(initDatabase())
-            return;
+        initDatabase();
     }
-    
-    MYSQL_RES *mysql_res;
-    MYSQL_ROW mysql_row;
+    if(!pgconn)
+        return;
     
     getMinMaxTemp(modul, sensor, &max, &min);
+
+    if(max == 0.0 && min == 0.0) // no data, stop
+        return;
 
     graph->max[0] = (int)max;
     graph->max[1] = (max - (int)max)*10;
@@ -160,52 +165,29 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
     g_debug("Max: %d,%d Min: %d,%d\t",graph->max[0],graph->max[1],graph->min[0],graph->min[1]);
     g_debug("Max: %d Min: %d\t",temp_max,temp_min);
     
-    if(modul == 4) //erkenschwick
-    {
-        mysql_ws2000_connection = mysql_init(NULL);
-        if (!mysql_real_connect(mysql_ws2000_connection, 
-                    config.database_server, 
-                    config.database_user,
-                    config.database_password,
-                    config.database_database_ws2000, 0, NULL, 0))
-        {
-            fprintf(stderr, "%s\r\n", mysql_error(mysql_ws2000_connection));
-            mysql_close(mysql_ws2000_connection);
-            return;
-        }
-        if(sensor == 0)
-            sprintf(query,"SELECT TIME_TO_SEC(CONCAT(date,\" \",time)), T_1 FROM sensor_1_8 WHERE date=CURDATE()");
-        else if(sensor == 1)
-            sprintf(query,"SELECT TIME_TO_SEC(CONCAT(date,\" \",time)), T_i FROM inside WHERE date=CURDATE()");
-        mysql_local_connection = mysql_ws2000_connection;
-    }
-    else
-    {
-        sprintf(query,"SELECT TIME_TO_SEC(FROM_UNIXTIME(date)), value FROM modul_%d WHERE sensor='%d' AND DATE(FROM_UNIXTIME(date))=CURDATE() ORDER BY date asc",modul,sensor);
-        mysql_local_connection = mysql_connection;
-    }
-    if(mysql_query(mysql_local_connection,query))
-    {
-        fprintf(stderr, "%s\r\n", mysql_error(mysql_local_connection));
-        if(modul == 4)
-            mysql_close(mysql_local_connection);
-        return;
-    }
-
-    mysql_res = mysql_use_result(mysql_local_connection);
-
     for(i=0;i<120;i++)
     {
         num_values[i] = 0;
         temperature[i] = 0.0;
     }
-    while((mysql_row = mysql_fetch_row(mysql_res)))
+
+    sprintf(query,"SELECT date_part('epoch',date-current_date), value FROM modul_%02d%02d WHERE date>current_date ORDER BY date asc",modul,sensor);
+    pgres = PQexec(pgconn, query);
+
+    if (PQresultStatus(pgres) != PGRES_TUPLES_OK)
     {
-        sec = atoi(mysql_row[0]);
+        g_warning("failed: %s", PQerrorMessage(pgconn));
+        PQclear(pgres);
+        return;
+    }
+    for (i = 0; i < PQntuples(pgres); i++)
+    {
+        sec = atoi(PQgetvalue(pgres,i,0));
         x_div = (float)sec/(60.0*60.0*24.0)*120.0;
         num_values[(int)x_div]++;
-        temperature[(int)x_div] += atof(mysql_row[1]);
+        temperature[(int)x_div] += atof(PQgetvalue(pgres,i,1));
     }
+    PQclear(pgres);
     graph->numberOfPoints = x_div; // Letzter Wert
     for(i=0;i<(int)x_div;i++)
     {
@@ -220,11 +202,7 @@ static void getMinMaxTemp(int modul, int sensor, float *max, float *min)
         }
     }
     
-    mysql_free_result(mysql_res);
-    if(modul == 4)
-        mysql_close(mysql_local_connection);
-        
-}*/
+}
 
 void databasePgInsertDigitalValue
 (int modul, int sensor, int value, time_t timestamp)

@@ -44,6 +44,7 @@
  * \param *graph graphPacket to store the graph in
  */
 void getDailyGraph(int modul, int sensor, struct graphPacket *graph);
+void getDailyGraphPg(int modul, int sensor, struct graphPacket *graph);
 
 /** get the last measured temperature
  * \param modul modul
