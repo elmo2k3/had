@@ -1,0 +1,58 @@
+#
+# Copyright (C) 2007-2010 OpenWrt.org
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=had
+PKG_VERSION:=0.3.0
+PKG_RELEASE:=0
+
+PKG_SOURCE:=had.tar.gz
+PKG_SOURCE_URL:=http://www.bjoern-b.de/upload
+PKG_MD5SUM:=047935c2c7c3ecd1d8084af415da5882
+
+PKG_BUILD_DIR:=$(BUILD_DIR)/had
+PKG_FIXUP:=libtool
+
+include $(INCLUDE_DIR)/package.mk
+
+define Package/had
+  SECTION:=libs
+  CATEGORY:=Libraries
+  DEPENDS:=+libcurl +glib-2.0 +libmysqlclient
+  TITLE:=Home Automation Daemon
+  URL:=http://www.fftw.org/
+endef
+
+define Package/had/description
+	The Home Automation Daemon
+endef
+
+TARGET_CFLAGS += $(FPIC)
+
+CONFIGURE_ARGS += \
+	--prefix=/usr \
+	--without-libiconv-prefix \
+	--without-libintl-prefix \
+	--disable-nls \
+	--disable-fftw3 \
+	--disable-libmpd \
+	--disable-libcurl
+
+define Build/Compile
+	$(MAKE) -C $(PKG_BUILD_DIR) DESTDIR="$(PKG_INSTALL_DIR)" install
+endef
+
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/include
+endef
+
+define Package/had/install
+	$(INSTALL_DIR) $(1)/usr/lib
+endef
+
+$(eval $(call BuildPackage,had))
