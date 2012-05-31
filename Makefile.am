@@ -29,7 +29,9 @@ had_SOURCES = had.c\
 	led_text_fifo.c \
 	fonts/8x8.c \
 	fonts/8x12.c \
-	voltageboard.c
+	voltageboard.c \
+	can.c \
+	can_configfile.c
 
 LIBS = @glib_LIBS@ \
 	@gthread_LIBS@ \

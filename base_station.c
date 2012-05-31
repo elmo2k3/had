@@ -24,6 +24,8 @@
 #include <glib.h>
 #include <time.h>
 #include <unistd.h>
+#include <time.h>
+#include <math.h>
 
 #include "base_station.h"
 #include "had.h"
@@ -87,7 +89,7 @@ gboolean cycle_base_lcd(gpointer data)
     time_t rawtime;
     int16_t temperature[2];
 
-    if(!config.base_lcd)
+    if(!config.base_lcd || !config.serial_activated)
         return TRUE;
     
     if (state == 0) {
@@ -792,7 +794,8 @@ void sendPacket(void *packet, int type)
 #endif
             headP->address = GLCD_ADDRESS;
             headP->command = GP_PACKET;
-            headP->count = 32;
+            //headP->count = 32;
+            headP->count = 36;
 
             g_io_channel_write_chars(base_station.channel, packet, sizeof(glcdP),
                 &bytes_written, &error);
@@ -1005,6 +1008,37 @@ static void incrementColor(uint8_t *color)
         *color = 0;
 }
 
+// by http://www.steffenvogel.de
+static double deg2rad(double deg) {
+	return M_PI * deg / 180.0;
+}
+
+enum sun { RISE, SET };
+
+double sun(enum sun mode, double lat, double lon, int timezone) {
+	const double h = -0.0145;
+	const double g = 0.2618;
+
+	time_t t = time(NULL);
+	struct tm *now = localtime(&t);
+	int days = now->tm_yday;
+
+	/* Zeitgleichung */
+	double zgl = -0.171 * sin(0.0337 * days + 0.465) - 0.1299 * sin(0.01787 * days - 0.168) ;
+
+	/* Deklination der Sonne */
+	double dekl = 0.4095 * sin(0.016906 * (days - 80.086));
+
+	/* Zeitdifferenz */
+	double zd = 12 * acos((sin(h) - sin(lat) * sin(dekl)) / (cos(lat) * cos(dekl))) / M_PI;
+
+	switch (mode) {
+		case SET: return 12 + zd - zgl + lon/g + timezone;
+		case RISE: return 12 - zd - zgl + lon/g + timezone;
+		default: return 0;
+	}
+}
+
 /*!
  ***** *************************************************************************
  * send data to the GLCD module connected to the base station
@@ -1018,6 +1052,12 @@ void updateGlcd()
     time_t rawtime;
     uint8_t celsius, decicelsius;
     int i;
+
+    // for sunrise/set
+    double intpart;
+    double lat;
+    double lon;
+    double sun_time;
     
     time(&rawtime);
     ptm = localtime(&rawtime);
@@ -1035,6 +1075,19 @@ void updateGlcd()
         config.glcd_sensor_out,&glcdP.temperature[0]);
     pgGetLastTemperature(config.glcd_modul_in,
         config.glcd_sensor_in,&glcdP.temperature[1]);
+    pgGetLastTemperature(config.glcd_modul_dewpoint,
+        config.glcd_sensor_dewpoint,&glcdP.temperature[2]);
+
+    lat = deg2rad(strtod(config.lat,NULL));
+    lon = deg2rad(strtod(config.lon,NULL));
+
+    sun_time = sun(RISE, lat, lon, 1);
+    glcdP.sun_rise_hour = (uint8_t)floor(sun_time);
+    glcdP.sun_rise_minute = (uint8_t)(modf(sun_time, &intpart)*60);
+    
+    sun_time = sun(SET, lat, lon, 1);
+    glcdP.sun_set_hour = (uint8_t)floor(sun_time);
+    glcdP.sun_set_minute = (uint8_t)(modf(sun_time, &intpart)*60);
     // bochum
     //glcdP.temperature[0] = lastTemperature[3][1]; // draussen
     //glcdP.temperature[1] = lastTemperature[3][3]; // drinnen

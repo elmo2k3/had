@@ -49,7 +49,8 @@ static char *config_params[] = { "db_db", "db_server", "db_user", "db_pass",
     "mpd_fifo_file","mpd_fifo_activated","db_ws2000","voltageboard_activated","voltageboard_tty",
     "db_pg_activated","db_pg_db","db_pg_server","db_pg_user","db_pg_pass","db_pg_port","db_pg_sslmode",
     "db_mysql_activated","send_to_glcd","db_insert","glcd_modul_out","glcd_sensor_out","glcd_modul_in",
-    "glcd_sensor_in","base_lcd"};
+    "glcd_sensor_in","base_lcd","can_tty","can_activated","glcd_modul_dewpoint","glcd_sensor_dewpoint",
+    "latitude","longitude"};
 
 static int setConfigValue(int param, char *value);
 
@@ -77,6 +78,8 @@ void printConfig(void (*func)(void*,...), void *dest)
     func(dest,"glcd_sensor_in = %d\n",config.glcd_sensor_in);
     func(dest,"glcd_modul_out = %d\n",config.glcd_modul_out);
     func(dest,"glcd_sensor_out = %d\n",config.glcd_sensor_out);
+    func(dest,"glcd_modul_dewpoint = %d\n",config.glcd_modul_dewpoint);
+    func(dest,"glcd_sensor_dewpoint = %d\n",config.glcd_sensor_dewpoint);
     func(dest,"base_lcd = %d\n",config.base_lcd);
     func(dest,"\n");
     
@@ -140,6 +143,14 @@ void printConfig(void (*func)(void*,...), void *dest)
 
     func(dest,"voltageboard_activated = %d\n", config.voltageboard_activated);
     func(dest,"voltageboard_tty = %s\n", config.voltageboard_tty);
+    func(dest,"\n");
+    
+    func(dest,"can_activated = %d\n", config.can_activated);
+    func(dest,"can_tty = %s\n", config.can_tty);
+    func(dest,"\n");
+    
+    func(dest,"latitude = %s\n", config.lat);
+    func(dest,"longitude = %s\n", config.lon);
     func(dest,"\n");
 }
 
@@ -378,6 +389,24 @@ static int setConfigValue(int param, char *value)
             break;
         /* Base LCD */
         case 67: config.base_lcd = atoi(value);
+            break;
+        /* CAN tty */
+        case 68: strcpy(config.can_tty, value);
+            break;
+        /* CAN tty activated */
+        case 69: config.can_activated = atoi(value);
+            break;
+        /* Glcd modul dewpoint */
+        case 70: config.glcd_modul_dewpoint = atoi(value);
+            break;
+        /* Glcd sensor dewpoint */
+        case 71: config.glcd_sensor_dewpoint = atoi(value);
+            break;
+        /* Lat of position */
+        case 72: strcpy(config.lat, value);
+            break;
+        /* Long of position*/
+        case 73: strcpy(config.lon, value);
             break;
     }
     return 0;

@@ -36,6 +36,8 @@
 #include "string.h"
 #include "configfile.h"
 #include "voltageboard.h"
+#include "can.h"
+#include "can_configfile.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "command"
@@ -609,6 +611,96 @@ action_dockstar_on(struct client *client,
 }
 
 static enum command_return
+action_can_get_node(struct client *client,
+        int argc, char *argv[])
+{
+    int address;
+    struct CanNode *node;
+    int days, hours, minutes, seconds, uptime;
+    if (!check_int(client, &address, argv[1], need_positive))
+        return COMMAND_RETURN_ERROR;
+    node = can_get_node(address);
+    uptime = node->uptime;
+    days = uptime/(SECONDS_PER_HOUR*24); uptime -= days*SECONDS_PER_HOUR*24;
+    hours = uptime/SECONDS_PER_HOUR; uptime -= hours*SECONDS_PER_HOUR;
+    minutes = uptime/SECONDS_PER_MINUTE; uptime -= minutes*SECONDS_PER_MINUTE;
+    seconds = uptime;
+    client_printf(client, "address: %d\r\n",address);
+    client_printf(client, "uptime: %d %02d:%02d:%02d\r\n",
+        days, hours, minutes, seconds);
+    client_printf(client, "relais: %d\r\n",node->relais_state);
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_can_get_nodes(struct client *client,
+        int argc, char *argv[])
+{
+    int address;
+    int i;
+    struct CanNode *node;
+    int days, hours, minutes, seconds, uptime;
+
+    for(i=0;i<255;i++)
+    {
+        node = can_get_node(i);
+        if(node->time_last_active > time(NULL)-10)
+        {
+            uptime = node->uptime;
+            days = uptime/(SECONDS_PER_HOUR*24); uptime -= days*SECONDS_PER_HOUR*24;
+            hours = uptime/SECONDS_PER_HOUR; uptime -= hours*SECONDS_PER_HOUR;
+            minutes = uptime/SECONDS_PER_MINUTE; uptime -= minutes*SECONDS_PER_MINUTE;
+            seconds = uptime;
+            client_printf(client, "address: %d\r\n",i);
+            client_printf(client, "name: %s\r\n",can_config_get_node_name(i));
+            client_printf(client, "uptime: %d %02d:%02d:%02d\r\n",
+                days, hours, minutes, seconds);
+            client_printf(client, "relais: %d\r\n",node->relais_state);
+            client_printf(client, "relais1: %d %s\r\n",
+                node->relais_state & 0x01 ? 1:0, can_config_get_relais_name(i,1));
+            client_printf(client, "relais2: %d %s\r\n",
+                node->relais_state & 0x02 ? 1:0, can_config_get_relais_name(i,2));
+            client_printf(client, "relais3: %d %s\r\n",
+                node->relais_state & 0x04 ? 1:0, can_config_get_relais_name(i,3));
+            client_printf(client, "relais4: %d %s\r\n",
+                node->relais_state & 0x08 ? 1:0, can_config_get_relais_name(i,4));
+        }
+    }
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_can_set_relais(struct client *client,
+        int argc, char *argv[])
+{
+    int address;
+    int relais;
+    bool relais_state;
+    if (!check_int(client, &address, argv[1], need_positive))
+        return COMMAND_RETURN_ERROR;
+    if (!check_int(client, &relais, argv[2], need_positive))
+        return COMMAND_RETURN_ERROR;
+    if (!check_bool(client, &relais_state, argv[3]))
+        return COMMAND_RETURN_ERROR;
+    can_set_relais(address, relais, (int)relais_state);
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_can_toggle_relais(struct client *client,
+        int argc, char *argv[])
+{
+    int address;
+    int relais;
+    if (!check_int(client, &address, argv[1], need_positive))
+        return COMMAND_RETURN_ERROR;
+    if (!check_int(client, &relais, argv[2], need_positive))
+        return COMMAND_RETURN_ERROR;
+    can_toggle_relais(address, relais);
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
 action_voltageboard_get(struct client *client,
         int argc, char *argv[])
 {
@@ -633,6 +725,10 @@ static const struct command commands[] = {
     {"all_off",         PERMISSION_ADMIN, 0,0, action_all_off},
     {"beep",            PERMISSION_ADMIN, 0,3, action_beep},
     {"blink",           PERMISSION_ADMIN, 0,0, action_rgb_blink},
+    {"can_get_node",    PERMISSION_ADMIN, 1,1, action_can_get_node},
+    {"can_get_nodes",   PERMISSION_ADMIN, 0,0, action_can_get_nodes},
+    {"can_set_relais",  PERMISSION_ADMIN, 3,3, action_can_set_relais},
+    {"can_toggle_relais",  PERMISSION_ADMIN, 2,2, action_can_toggle_relais},
     {"commands",        PERMISSION_ADMIN, 0,0, action_commands},
     {"config_get",      PERMISSION_ADMIN, 0,0, action_config_get},
     {"config_load",     PERMISSION_ADMIN, 0,0, action_config_load},

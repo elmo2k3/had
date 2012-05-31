@@ -178,10 +178,18 @@ struct _config
     int glcd_sensor_in;
     int glcd_modul_out;
     int glcd_sensor_out;
+    int glcd_modul_dewpoint;
+    int glcd_sensor_dewpoint;
+
+    char lat[20];
+    char lon[20];
 
     int base_lcd;
 
     struct _remote_control_keys rkeys;
+
+    char can_tty[255];
+    int can_activated;
 }config;
 
 /**
@@ -259,6 +267,10 @@ struct __attribute__((packed)) glcdMainPacket
     uint8_t hr20_mode;
     uint8_t hr20_auto_t[4];
     uint8_t hr20_auto_t_deci[4];
+    uint8_t sun_rise_hour;                                                                                                                                                                
+    uint8_t sun_rise_minute;
+    uint8_t sun_set_hour;
+    uint8_t sun_set_minute;
 }glcdP;
 
 struct __attribute__((packed)) glcdMpdPacket

@@ -36,6 +36,7 @@
 #include <glib.h>
 
 #include "base_station.h"
+#include "can.h"
 #include "database.h"
 #include "had.h"
 #include "mpd.h"
@@ -94,6 +95,7 @@ int main(int argc, char* argv[])
     mpdInit();
     had_init_base_station();
     voltageboard_init();
+    can_init();
 
     had_main_loop = g_main_loop_new(NULL,FALSE);
 
