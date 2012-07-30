@@ -30,6 +30,7 @@
 #include "had.h"
 #include "database.h"
 #include "can.h"
+#include "mpd.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "can"
@@ -93,7 +94,7 @@ static void process_command(struct CanTTY *can_tty)
     
     //g_debug("received string %s",can_tty->cmd);
    
-    if(strlen(can_tty->cmd) < 8)
+    if(strlen(can_tty->cmd) < 6)
     {
         g_debug("length too short %d", strlen(can_tty->cmd));
         return;
@@ -129,6 +130,27 @@ static void process_command(struct CanTTY *can_tty)
                 case MSG_STATUS_RELAIS:
                     can_nodes[can_device].relais_state = can_data[1];
                 default:
+                    break;
+            }
+            break;
+        case MSG_COMMAND_MPD:
+            g_debug("received mpd command");
+            switch(can_data[0])
+            {
+                case MSG_MPD_PREV:
+                    mpdPrev();
+                    break;
+                case MSG_MPD_NEXT:
+                    mpdNext();
+                    break;
+                case MSG_MPD_RANDOM:
+                    mpdToggleRandom();
+                    break;
+                case MSG_MPD_PLAY:
+                    mpdPlay();
+                    break;
+                case MSG_MPD_PAUSE:
+                    mpdPause();
                     break;
             }
             break;

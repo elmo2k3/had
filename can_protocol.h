@@ -12,7 +12,8 @@ enum msg_type_command
 	MSG_COMMAND_EEPROM_GET,	// 5
 	MSG_COMMAND_HR20_SET_T,	// 6
 	MSG_COMMAND_HR20_SET_MODE_MANU,	// 7
-	MSG_COMMAND_HR20_SET_MODE_AUTO	// 8
+	MSG_COMMAND_HR20_SET_MODE_AUTO,	// 8
+	MSG_COMMAND_MPD // 9
 };
 
 enum msg_type_eeprom
@@ -24,6 +25,16 @@ enum msg_type_eeprom
 	MSG_EEPROM_RELAIS4,
 	MSG_EEPROM_RELAIS5,
 	MSG_EEPROM_RELAIS6
+};
+
+enum msg_type_mpd
+{
+	MSG_MPD_PLAY,
+	MSG_MPD_PAUSE,
+	MSG_MPD_NEXT,
+	MSG_MPD_PREV,
+	MSG_MPD_RANDOM,
+	MSG_MPD_ID
 };
 
 enum msg_type_status
