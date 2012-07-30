@@ -670,6 +670,52 @@ action_can_get_nodes(struct client *client,
 }
 
 static enum command_return
+action_can_get_nodes_json(struct client *client,
+        int argc, char *argv[])
+{
+    /*
+     * {
+     *    "name": "Schlafzimmer",
+     *    "uptime": "25 15:01:23",
+     *    "relais":[{"state":0, "name":""},{ "state":1, "name":"Lampe"},{ "state":0, "name":""},{ "state":0, "name":""}]
+     * }
+     * */
+    int address;
+    int i;
+    struct CanNode *node;
+    int first = 1;
+    
+    client_printf(client, "{\r\n");
+
+    for(i=0;i<255;i++)
+    {
+        node = can_get_node(i);
+        if(node->time_last_active > time(NULL)-10)
+        {
+            if(!first)
+            {
+                client_printf(client, ",\r\n");
+            }
+            first = 0;
+            client_printf(client, "\"%d\":{\r\n",i);
+            client_printf(client, "\"name\": \"%s\",\r\n",can_config_get_node_name(i));
+            client_printf(client, "\"uptime\": %d,\r\n",node->uptime);
+            client_printf(client, "\"relais\":[");
+            client_printf(client, "{\"state\": %d, \"name\": \"%s\"},",
+                node->relais_state & 0x01 ? 1:0, can_config_get_relais_name(i,1));
+            client_printf(client, "{\"state\": %d, \"name\": \"%s\"},",
+                node->relais_state & 0x02 ? 1:0, can_config_get_relais_name(i,2));
+            client_printf(client, "{\"state\": %d, \"name\": \"%s\"},",
+                node->relais_state & 0x04 ? 1:0, can_config_get_relais_name(i,3));
+            client_printf(client, "{\"state\": %d, \"name\": \"%s\"}]}",
+                node->relais_state & 0x08 ? 1:0, can_config_get_relais_name(i,4));
+        }
+    }
+    client_printf(client, "}\r\n");
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
 action_can_set_relais(struct client *client,
         int argc, char *argv[])
 {
@@ -725,6 +771,7 @@ static const struct command commands[] = {
     {"all_off",         PERMISSION_ADMIN, 0,0, action_all_off},
     {"beep",            PERMISSION_ADMIN, 0,3, action_beep},
     {"blink",           PERMISSION_ADMIN, 0,0, action_rgb_blink},
+    {"can_get_json",   PERMISSION_ADMIN, 0,0, action_can_get_nodes_json},
     {"can_get_node",    PERMISSION_ADMIN, 1,1, action_can_get_node},
     {"can_get_nodes",   PERMISSION_ADMIN, 0,0, action_can_get_nodes},
     {"can_set_relais",  PERMISSION_ADMIN, 3,3, action_can_set_relais},

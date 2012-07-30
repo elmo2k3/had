@@ -211,6 +211,20 @@ void can_init()
     g_timeout_add_seconds(1, can_try_init, NULL);
 }
 
+void can_send(char *data)
+{
+    //char data[20];
+    char esc = 27;
+    gsize bytes_written;
+    GError *error=NULL;
+
+    g_io_channel_write_chars(can_tty.channel, &esc, 1,
+        &bytes_written, &error);
+    g_io_channel_write_chars(can_tty.channel, data, strlen(data),
+        &bytes_written, &error);
+    g_io_channel_flush(can_tty.channel, NULL);
+}
+
 void can_set_relais(int address, int relais, int state)
 {
     char send_string[255];
@@ -226,20 +240,6 @@ void can_toggle_relais(int address, int relais)
         can_set_relais(address, relais, 0);
     else
         can_set_relais(address, relais, 1);
-}
-
-void can_send(char *data)
-{
-    //char data[20];
-    char esc = 27;
-    gsize bytes_written;
-    GError *error=NULL;
-
-    g_io_channel_write_chars(can_tty.channel, &esc, 1,
-        &bytes_written, &error);
-    g_io_channel_write_chars(can_tty.channel, data, strlen(data),
-        &bytes_written, &error);
-    g_io_channel_flush(can_tty.channel, NULL);
 }
 
 static gboolean can_try_init(gpointer data)
