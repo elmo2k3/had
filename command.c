@@ -664,6 +664,15 @@ action_can_get_nodes(struct client *client,
                 node->relais_state & 0x04 ? 1:0, can_config_get_relais_name(i,3));
             client_printf(client, "relais4: %d %s\r\n",
                 node->relais_state & 0x08 ? 1:0, can_config_get_relais_name(i,4));
+            client_printf(client, "hr20_data_valid: %d\r\n",node->hr20_state.data_valid);
+            client_printf(client, "hr20_mode: %d\r\n",node->hr20_state.mode);
+            client_printf(client, "hr20_window: %d\r\n",node->hr20_state.window_open);
+            client_printf(client, "hr20_tempis: %d\r\n",node->hr20_state.tempis);
+            client_printf(client, "hr20_tempset: %d\r\n",node->hr20_state.tempset);
+            client_printf(client, "hr20_valve: %d\r\n",node->hr20_state.valve);
+            client_printf(client, "hr20_voltage: %d\r\n",node->hr20_state.voltage);
+            client_printf(client, "hr20_error_code: %d\r\n",node->hr20_state.error_code);
+            client_printf(client, "hr20_data_age: %d\r\n",node->hr20_state.data_timestamp);
         }
     }
     return COMMAND_RETURN_OK;

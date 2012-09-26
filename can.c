@@ -129,6 +129,23 @@ static void process_command(struct CanTTY *can_tty)
                     break;
                 case MSG_STATUS_RELAIS:
                     can_nodes[can_device].relais_state = can_data[1];
+                    break;
+                case MSG_STATUS_HR20_TEMPS:
+                    can_nodes[can_device].hr20_state.data_valid = can_data[1] & 0x01;
+                    can_nodes[can_device].hr20_state.mode = can_data[1] & 0x02;
+                    can_nodes[can_device].hr20_state.window_open = can_data[1] & 0x04;
+                    can_nodes[can_device].hr20_state.tempis = can_data[2] << 8;
+                    can_nodes[can_device].hr20_state.tempis |= can_data[3];
+                    can_nodes[can_device].hr20_state.tempset = can_data[4] << 8;
+                    can_nodes[can_device].hr20_state.tempset |= can_data[5];
+                    break;
+                case MSG_STATUS_HR20_VALVE_VOLT:
+                    can_nodes[can_device].hr20_state.data_timestamp = can_data[1];
+                    can_nodes[can_device].hr20_state.valve = can_data[2];
+                    can_nodes[can_device].hr20_state.voltage = can_data[3] << 8;
+                    can_nodes[can_device].hr20_state.voltage |= can_data[4];
+                    can_nodes[can_device].hr20_state.error_code = can_data[5];
+                    break;
                 default:
                     break;
             }

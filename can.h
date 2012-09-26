@@ -20,6 +20,7 @@
 #define __CAN_H__
 
 #include <glib.h>
+#include <stdint.h>
 
 struct Hr20State
 {
@@ -29,6 +30,10 @@ struct Hr20State
     int16_t voltage; /**< voltage of the batteries */
     int8_t mode; /**< mode, 1 for manual, 2 for automatic control */
     int16_t auto_temperature[4];
+	uint32_t data_timestamp;
+	uint8_t error_code;
+	uint8_t window_open;
+	uint8_t data_valid;
 };
 
 struct CanNode
