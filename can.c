@@ -101,15 +101,18 @@ static void process_command(struct CanTTY *can_tty)
     }
     cl = can_tty->cmd;
     can_length = strlen(cl)/2;
-    can_cmd = hexToInt(cl[0])*16 + hexToInt(cl[1]);
-    can_device = hexToInt(cl[2])*16 + hexToInt(cl[3]);
+    can_cmd = hexToInt(cl[6])*16 + hexToInt(cl[7]);
+    can_device = hexToInt(cl[8])*16 + hexToInt(cl[9]);
+    can_length = hexToInt(cl[4])*16 + hexToInt(cl[5]);
     //sscanf(can_tty->cmd,"%3X%2X%2Xx%2X", &can_id, &can_cmd, &can_device, &can_length);
 
     //g_debug("can_device = %d",can_device);
     
+    if(can_length > 8)
+        return;
     for(i=0;i<can_length-2;i++)
     {
-        can_data[i] = hexToInt(cl[i*2+4])*16 + hexToInt(cl[i*2+5]);
+        can_data[i] = hexToInt(cl[i*2+10])*16 + hexToInt(cl[i*2+11]);
         //g_debug("data[%d] = %d",i,can_data[i]);
     }
 
@@ -257,7 +260,7 @@ void can_set_temperature(int address, int temperature)
     if(temperature < 50 || temperature > 300)
         return;
 
-    snprintf(send_string, sizeof(send_string),"001%02x%02x03%02x",
+    snprintf(send_string, sizeof(send_string),"00103%02x%02x%02x",
         MSG_COMMAND_HR20_SET_T, address, temperature/5);
     can_send(send_string);
 }
@@ -266,7 +269,7 @@ void can_set_mode_manu(int address)
 {
     char send_string[255];
 
-    snprintf(send_string, sizeof(send_string),"001%02x%02x02",
+    snprintf(send_string, sizeof(send_string),"00102%02x%02x",
         MSG_COMMAND_HR20_SET_MODE_MANU, address);
     can_send(send_string);
 }
@@ -275,7 +278,7 @@ void can_set_mode_auto(int address)
 {
     char send_string[255];
 
-    snprintf(send_string, sizeof(send_string),"001%02x%02x02",
+    snprintf(send_string, sizeof(send_string),"00102%02x%02x",
         MSG_COMMAND_HR20_SET_MODE_AUTO, address);
     can_send(send_string);
 }
@@ -284,7 +287,7 @@ void can_set_relais(int address, int relais, int state)
 {
     char send_string[255];
 
-    snprintf(send_string, sizeof(send_string),"001%02x%02x04%02x%02x",
+    snprintf(send_string, sizeof(send_string),"00104%02x%02x%02x%02x",
         MSG_COMMAND_RELAIS, address, relais, state);
     can_send(send_string);
 }
