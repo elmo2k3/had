@@ -121,11 +121,16 @@ static void process_command(struct CanTTY *can_tty)
             switch(can_data[0]) // STATUS TYPE
             {
                 case MSG_STATUS_UPTIME:
-                    uptime = can_data[1]*255*255*255 +
+                    uptime = (can_data[1]&0x0F)*255*255*255 +
                                 can_data[2]*255*255 +
                                 can_data[3]*255 +
                                 can_data[4];
                     can_nodes[can_device].uptime = uptime;
+                    can_nodes[can_device].version = (can_data[1] & 0xF0)>>4;
+                    if(can_nodes[can_device].version > 0)
+                        can_nodes[can_device].voltage = can_data[5];
+                    else
+                        can_nodes[can_device].voltage = 0;
                     break;
                 case MSG_STATUS_RELAIS:
                     can_nodes[can_device].relais_state = can_data[1];
@@ -240,6 +245,39 @@ void can_send(char *data)
     g_io_channel_write_chars(can_tty.channel, data, strlen(data),
         &bytes_written, &error);
     g_io_channel_flush(can_tty.channel, NULL);
+}
+
+void can_set_temperature(int address, int temperature)
+{
+    char send_string[255];
+
+    if(temperature % 5)
+        return;
+
+    if(temperature < 50 || temperature > 300)
+        return;
+
+    snprintf(send_string, sizeof(send_string),"001%02x%02x03%02x",
+        MSG_COMMAND_HR20_SET_T, address, temperature/5);
+    can_send(send_string);
+}
+
+void can_set_mode_manu(int address)
+{
+    char send_string[255];
+
+    snprintf(send_string, sizeof(send_string),"001%02x%02x02",
+        MSG_COMMAND_HR20_SET_MODE_MANU, address);
+    can_send(send_string);
+}
+
+void can_set_mode_auto(int address)
+{
+    char send_string[255];
+
+    snprintf(send_string, sizeof(send_string),"001%02x%02x02",
+        MSG_COMMAND_HR20_SET_MODE_AUTO, address);
+    can_send(send_string);
 }
 
 void can_set_relais(int address, int relais, int state)

@@ -46,6 +46,8 @@ struct CanNode
     int relais_relais[6];
     time_t time_last_active;
     time_t uptime;
+	int version;
+	int voltage;
     struct Hr20State hr20_state;
 };
 
@@ -53,5 +55,8 @@ extern void can_init(void);
 extern struct CanNode *can_get_node(int address);
 extern void can_set_relais(int address, int relais, int state);
 extern void can_toggle_relais(int address, int relais);
+extern void can_set_temperature(int address, int temperature);
+extern void can_set_mode_manu(int address);
+extern void can_set_mode_auto(int address);
 
 #endif
