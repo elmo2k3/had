@@ -51,6 +51,23 @@ char *can_config_get_node_name(int address) // static
     return node_name;
 }
 
+int can_config_get_show_in_ui(int address) // static
+{
+    char group_name[255];
+    char key_name[255];
+    int show_in_ui;
+
+    configfile_init();
+
+    if(!key_file)
+        return NULL;
+
+    sprintf(group_name,"node%d",address);
+    show_in_ui = g_key_file_get_integer(key_file,group_name, "show_in_ui", NULL);
+    
+    return show_in_ui;
+}
+
 char *can_config_get_relais_name(int address, int relais) // static
 {
     static char node_name[255];

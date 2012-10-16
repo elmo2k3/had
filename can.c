@@ -265,6 +265,23 @@ void can_set_temperature(int address, int temperature)
     can_send(send_string);
 }
 
+void can_set_date(int address)
+{
+    time_t rawtime;
+    struct tm *ptm;
+    char send_string[255];
+
+    time(&rawtime);
+    ptm = localtime(&rawtime);
+
+    snprintf(send_string, sizeof(send_string),"00105%02x%02x%02x%02x%02x",
+        MSG_COMMAND_HR20_SET_TIME, address,ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+    can_send(send_string);
+    snprintf(send_string, sizeof(send_string),"00105%02x%02x%02x%02x%02x",
+        MSG_COMMAND_HR20_SET_DATE, address, ptm->tm_year-100, ptm->tm_mon+1, ptm->tm_mday);
+    can_send(send_string);
+}
+
 void can_set_mode_manu(int address)
 {
     char send_string[255];

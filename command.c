@@ -711,6 +711,7 @@ action_can_get_nodes_json(struct client *client,
             client_printf(client, "\"%d\":{\r\n",i);
             client_printf(client, "\"name\": \"%s\",\r\n",can_config_get_node_name(i));
             client_printf(client, "\"uptime\": %d,\r\n",node->uptime);
+            client_printf(client, "\"show_in_ui\": \"%d\",\r\n",can_config_get_show_in_ui(i));
             client_printf(client, "\"relais\":[");
             client_printf(client, "{\"state\": %d, \"name\": \"%s\"},",
                 node->relais_state & 0x01 ? 1:0, can_config_get_relais_name(i,1));
@@ -718,8 +719,19 @@ action_can_get_nodes_json(struct client *client,
                 node->relais_state & 0x02 ? 1:0, can_config_get_relais_name(i,2));
             client_printf(client, "{\"state\": %d, \"name\": \"%s\"},",
                 node->relais_state & 0x04 ? 1:0, can_config_get_relais_name(i,3));
-            client_printf(client, "{\"state\": %d, \"name\": \"%s\"}]}",
+            client_printf(client, "{\"state\": %d, \"name\": \"%s\"}]\r\n,",
                 node->relais_state & 0x08 ? 1:0, can_config_get_relais_name(i,4));
+            client_printf(client, "\"hr20_data_valid\": %d,\r\n",node->hr20_state.data_valid);
+            client_printf(client, "\"hr20_mode\": %d,\r\n",node->hr20_state.mode);
+            client_printf(client, "\"hr20_window\": %d,\r\n",node->hr20_state.window_open);
+            client_printf(client, "\"hr20_tempis\": %d,\r\n",node->hr20_state.tempis);
+            client_printf(client, "\"hr20_tempset\": %d,\r\n",node->hr20_state.tempset);
+            client_printf(client, "\"hr20_valve\": %d,\r\n",node->hr20_state.valve);
+            client_printf(client, "\"hr20_voltage\": %d,\r\n",node->hr20_state.voltage);
+            client_printf(client, "\"hr20_error_code\": %d,\r\n",node->hr20_state.error_code);
+            client_printf(client, "\"hr20_data_age\": %d,\r\n",node->hr20_state.data_timestamp);
+            client_printf(client, "\"version\": %d,\r\n",node->version);
+            client_printf(client, "\"voltage\": %d\r\n}\r\n",node->voltage);
         }
     }
     client_printf(client, "}\r\n");
@@ -754,6 +766,17 @@ action_can_set_temperature(struct client *client,
     if (!check_int(client, &temperature, argv[2], need_positive))
         return COMMAND_RETURN_ERROR;
     can_set_temperature(address, temperature);
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_can_set_date(struct client *client,
+        int argc, char *argv[])
+{
+    int address;
+    if (!check_int(client, &address, argv[1], need_positive))
+        return COMMAND_RETURN_ERROR;
+    can_set_date(address);
     return COMMAND_RETURN_OK;
 }
 
@@ -821,6 +844,7 @@ static const struct command commands[] = {
     {"can_get_json",   PERMISSION_ADMIN, 0,0, action_can_get_nodes_json},
     {"can_get_node",    PERMISSION_ADMIN, 1,1, action_can_get_node},
     {"can_get_nodes",   PERMISSION_ADMIN, 0,0, action_can_get_nodes},
+    {"can_set_date",    PERMISSION_ADMIN, 1,1, action_can_set_date},
     {"can_set_mode_auto",PERMISSION_ADMIN, 1,1, action_can_set_mode_auto},
     {"can_set_mode_manu",PERMISSION_ADMIN, 1,1, action_can_set_mode_manu},
     {"can_set_relais",  PERMISSION_ADMIN, 3,3, action_can_set_relais},

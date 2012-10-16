@@ -58,5 +58,5 @@ extern void can_toggle_relais(int address, int relais);
 extern void can_set_temperature(int address, int temperature);
 extern void can_set_mode_manu(int address);
 extern void can_set_mode_auto(int address);
-
+extern void can_set_date(int address);
 #endif
