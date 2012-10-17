@@ -50,7 +50,7 @@ static char *config_params[] = { "db_db", "db_server", "db_user", "db_pass",
     "db_pg_activated","db_pg_db","db_pg_server","db_pg_user","db_pg_pass","db_pg_port","db_pg_sslmode",
     "db_mysql_activated","send_to_glcd","db_insert","glcd_modul_out","glcd_sensor_out","glcd_modul_in",
     "glcd_sensor_in","base_lcd","can_tty","can_activated","glcd_modul_dewpoint","glcd_sensor_dewpoint",
-    "latitude","longitude"};
+    "latitude","longitude","can_db_hr20_tempis","can_db_hr20_tempset","can_db_hr20_valve","can_db_hr20_battery"};
 
 static int setConfigValue(int param, char *value);
 
@@ -147,6 +147,10 @@ void printConfig(void (*func)(void*,...), void *dest)
     
     func(dest,"can_activated = %d\n", config.can_activated);
     func(dest,"can_tty = %s\n", config.can_tty);
+    func(dest,"can_db_hr20_tempis = %d\n", config.can_db_temp_is);
+    func(dest,"can_db_hr20_tempset = %d\n", config.can_db_temp_set);
+    func(dest,"can_db_hr20_valve = %d\n", config.can_db_valve);
+    func(dest,"can_db_hr20_battery = %d\n", config.can_db_battery);
     func(dest,"\n");
     
     func(dest,"latitude = %s\n", config.lat);
@@ -407,6 +411,18 @@ static int setConfigValue(int param, char *value)
             break;
         /* Long of position*/
         case 73: strcpy(config.lon, value);
+            break;
+        /* Can database module tempis*/
+        case 74: config.can_db_temp_is = atoi(value);
+            break;
+        /* Can database module tempset */
+        case 75: config.can_db_temp_set = atoi(value);
+            break;
+        /* Can database module valve */
+        case 76: config.can_db_valve = atoi(value);
+            break;
+        /* Can database module bat */
+        case 77: config.can_db_battery = atoi(value);
             break;
     }
     return 0;

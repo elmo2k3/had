@@ -82,6 +82,38 @@ static int hexToInt(char c)
     return -1;
 }
 
+static gboolean can_periodical(gpointer data)
+{
+    struct CanNode *node;
+    float temperature;
+    int i;
+
+    if(config.database_insert &&
+        config.can_activated)
+    {
+        for(i=0;i<255;i++)
+        {
+            node = can_get_node(i);
+            if(node->time_last_active > time(NULL)-10) // node is active
+            {
+                if(node->hr20_state.data_valid && node->hr20_state.data_timestamp != 255)
+                {
+                    temperature = node->hr20_state.tempis / 100.0;
+                    databasePgInsertTemperature(config.can_db_temp_is,i,&temperature,time(NULL));
+                    temperature = node->hr20_state.tempset / 100.0;
+                    databasePgInsertTemperature(config.can_db_temp_set,i,&temperature,time(NULL));
+                    temperature = node->hr20_state.valve;
+                    databasePgInsertTemperature(config.can_db_valve,i,&temperature,time(NULL));
+                    temperature = node->hr20_state.voltage / 1000.0;
+                    databasePgInsertTemperature(config.can_db_battery,i,&temperature,time(NULL));
+                }
+            }
+        }
+    }
+
+    return TRUE; // keep periodic
+}
+
 static void process_command(struct CanTTY *can_tty)
 {
     GError *error = NULL;
@@ -234,6 +266,7 @@ void can_init()
     memset(can_nodes,0, sizeof(can_nodes));
     g_debug("init");
     g_timeout_add_seconds(1, can_try_init, NULL);
+    g_timeout_add_seconds(60, can_periodical, NULL);
 }
 
 void can_send(char *data)

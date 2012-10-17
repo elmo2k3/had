@@ -190,6 +190,10 @@ struct _config
 
     char can_tty[255];
     int can_activated;
+    int can_db_temp_is;
+    int can_db_temp_set;
+    int can_db_valve;
+    int can_db_battery;
 }config;
 
 /**
