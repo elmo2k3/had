@@ -207,6 +207,7 @@ static void had_check_daemonize(void)
         fclose(pid_file);
 
         freopen(config.logfile, "a", stdout);
+        freopen(config.logfile, "a", stderr);
         /* write into file without buffer */
         setvbuf(stdout, NULL, _IONBF, 0);
         setvbuf(stderr, NULL, _IONBF, 0);
