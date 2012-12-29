@@ -803,6 +803,22 @@ action_can_set_mode_auto(struct client *client,
 }
 
 static enum command_return
+action_can_hands_on_device(struct client *client,
+        int argc, char *argv[])
+{
+    canHandsOnDevice(); 
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
+action_can_hands_off_device(struct client *client,
+        int argc, char *argv[])
+{
+    canHandsOffDevice(); 
+    return COMMAND_RETURN_OK;
+}
+
+static enum command_return
 action_can_toggle_relais(struct client *client,
         int argc, char *argv[])
 {
@@ -844,6 +860,8 @@ static const struct command commands[] = {
     {"can_get_json",   PERMISSION_ADMIN, 0,0, action_can_get_nodes_json},
     {"can_get_node",    PERMISSION_ADMIN, 1,1, action_can_get_node},
     {"can_get_nodes",   PERMISSION_ADMIN, 0,0, action_can_get_nodes},
+    {"can_handsoffdevice",   PERMISSION_ADMIN, 0,0, action_can_hands_off_device},
+    {"can_handsondevice",   PERMISSION_ADMIN, 0,0, action_can_hands_on_device},
     {"can_set_date",    PERMISSION_ADMIN, 1,1, action_can_set_date},
     {"can_set_mode_auto",PERMISSION_ADMIN, 1,1, action_can_set_mode_auto},
     {"can_set_mode_manu",PERMISSION_ADMIN, 1,1, action_can_set_mode_manu},

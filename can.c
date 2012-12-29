@@ -45,6 +45,7 @@ static int fd;
 static gboolean can_try_init(gpointer data);
 
 static struct CanNode can_nodes[255];
+static void can_send(char *data);
 
 static struct CanTTY
 {
@@ -82,12 +83,42 @@ static int hexToInt(char c)
     return -1;
 }
 
-static gboolean can_periodical(gpointer data)
+static gboolean can_mpd_status_periodical(gpointer data) // every 1s
+{
+    char send_string[255];
+    char led_status;
+    struct CanNode *node;
+
+    node = can_get_node(19); // tv and music
+
+    if(!config.can_activated)
+        return TRUE;
+
+    led_status = 0;
+    
+    if(mpdGetState() == MPD_PLAYER_PLAY)
+        led_status |= 1;
+
+    if(mpdGetRandom())
+        led_status |= 2;
+
+    if(node->relais_state & 0x01) // music is on
+        led_status |= 8;
+    
+    snprintf(send_string, sizeof(send_string),"00104%02x%02x%02x%02x",
+       MSG_COMMAND_STATUS, MPD_ADDRESS, MSG_STATUS_RELAIS, led_status);
+    can_send(send_string);
+    
+    return TRUE;
+}
+
+static gboolean can_periodical(gpointer data) // every 60s
 {
     struct CanNode *node;
     float temperature;
     int i;
 
+    // insert hr20 stuff into database
     if(config.database_insert &&
         config.can_activated)
     {
@@ -108,6 +139,13 @@ static gboolean can_periodical(gpointer data)
                     databasePgInsertTemperature(config.can_db_battery,i,&temperature,time(NULL));
                 }
             }
+            if(i == 18) // insert uptime from address 18 (blubb!)
+            {
+                temperature = node->uptime;
+                temperature = temperature*0.025; // sekunden zwischen 2 blubbs
+                temperature = 60 / temperature; // blubbs pro minute
+                databasePgInsertTemperature(18,18,&temperature,time(NULL));
+            }
         }
     }
 
@@ -122,6 +160,9 @@ static void process_command(struct CanTTY *can_tty)
     int can_length;
     int can_data[6];
     int i;
+    static int blubb_times[30];
+    static int blubb_pos = -1;
+    int blubb_avg;
     gchar *cl;
     
     //g_debug("received string %s",can_tty->cmd);
@@ -160,7 +201,30 @@ static void process_command(struct CanTTY *can_tty)
                                 can_data[2]*255*255 +
                                 can_data[3]*255 +
                                 can_data[4];
-                    can_nodes[can_device].uptime = uptime;
+                    if(can_device == 18) // very special: node 18 sends blubb times, not uptime
+                    {
+                        if(blubb_pos == -1) // in init, fill whole array with first value
+                        {
+                            for(i=0;i<30;i++)
+                            {
+                                blubb_times[i] = uptime;
+                            }
+                            blubb_pos = 0;
+                        }
+
+                        blubb_times[blubb_pos] = uptime;
+                        if(++blubb_pos > 29)
+                            blubb_pos = 0;
+                        for(i=0;i<30;i++)
+                        {
+                            blubb_avg += blubb_times[i];
+                        }
+                        can_nodes[18].uptime = blubb_avg / 30;
+                    }
+                    else // all other nodes submit uptime
+                    {
+                        can_nodes[can_device].uptime = uptime;
+                    }
                     can_nodes[can_device].version = (can_data[1] & 0xF0)>>4;
                     if(can_nodes[can_device].version > 0)
                         can_nodes[can_device].voltage = can_data[5];
@@ -190,25 +254,40 @@ static void process_command(struct CanTTY *can_tty)
                     break;
             }
             break;
-        case MSG_COMMAND_MPD:
-            g_debug("received mpd command");
-            switch(can_data[0])
+        case MSG_COMMAND_RELAIS:
+            if(can_device == MPD_ADDRESS)
             {
-                case MSG_MPD_PREV:
-                    mpdPrev();
-                    break;
-                case MSG_MPD_NEXT:
-                    mpdNext();
-                    break;
-                case MSG_MPD_RANDOM:
-                    mpdToggleRandom();
-                    break;
-                case MSG_MPD_PLAY:
-                    mpdPlay();
-                    break;
-                case MSG_MPD_PAUSE:
-                    mpdPause();
-                    break;
+                g_debug("received mpd command");
+                switch(can_data[0])
+                {
+                    case 1:
+                        mpdPause();
+                        break;
+                    case 2:
+                        mpdToggleRandom();
+                        break;
+                    case 4:
+                        mpdPlayNumber(1);
+                        break;
+                    case 8: // switch on switch and music. switch off music
+                        if(can_data[1] == 1)
+                        {
+                            can_set_relais(18, 1, 1); // switch on
+                            can_set_relais(19, 1, 1); // music on
+                        }
+                        else
+                        {
+                            can_set_relais(19, 1, 0); // music off
+                        }
+                        break;
+                    case 16:
+                        mpdNext();
+                        g_debug("mpdNext()");
+                        break;
+                    case 32:
+                        mpdPrev();
+                        break;
+                }
             }
             break;
     }
@@ -220,6 +299,18 @@ static void process_command(struct CanTTY *can_tty)
         g_error_free(error);
 }
 
+void canHandsOffDevice()
+{
+    can_is_initiated = 0;
+    g_io_channel_shutdown(can_tty.channel, 0, NULL);
+    close(fd);
+}
+
+void canHandsOnDevice()
+{
+    g_timeout_add_seconds(1, can_try_init, NULL);
+}
+
 static gboolean canSerialReceive
 (GIOChannel *channel, GIOCondition condition, struct CanTTY *can_tty)
 {
@@ -228,7 +319,7 @@ static gboolean canSerialReceive
     GError *error = NULL;
     GIOStatus status;
     gint i;
-    
+
     status = g_io_channel_read_chars(channel, buf, sizeof(buf), &bytes_read, &error);
     if( status != G_IO_STATUS_NORMAL && status != G_IO_STATUS_AGAIN)
     {
@@ -267,6 +358,7 @@ void can_init()
     g_debug("init");
     g_timeout_add_seconds(1, can_try_init, NULL);
     g_timeout_add_seconds(60, can_periodical, NULL);
+    g_timeout_add_seconds(1, can_mpd_status_periodical, NULL);
 }
 
 void can_send(char *data)

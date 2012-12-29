@@ -60,6 +60,7 @@ extern void mpdPrev(void);
 
 /** toggle random */
 extern void mpdToggleRandom(void);
+extern int mpdGetRandom(void);
 
 /** play specified song
  * \param number number of song in current playlist

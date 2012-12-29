@@ -59,4 +59,6 @@ extern void can_set_temperature(int address, int temperature);
 extern void can_set_mode_manu(int address);
 extern void can_set_mode_auto(int address);
 extern void can_set_date(int address);
+extern void canHandsOnDevice(void);
+extern void canHandsOffDevice(void);
 #endif

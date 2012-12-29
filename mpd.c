@@ -46,6 +46,7 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what);
 static int isPlaying;
 static guint submit_source = 0;
 static guint now_playing_source = 0;
+static gboolean israndom = 0;
 
 static gboolean mpdCheckConnected(gpointer data);
 static gboolean submitTrack(gpointer data);
@@ -65,6 +66,11 @@ struct _track_information
 int mpdGetState(void)
 {
     return isPlaying;
+}
+
+int mpdGetRandom(void)
+{
+    return israndom;
 }
 
 #ifdef ENABLE_LIBMPD
@@ -136,11 +142,13 @@ static void mpdStatusChanged(MpdObj *mi, ChangedStatusType what)
         {
             ledFifoInsert("Random on", 2, 1);
             mpdP.status |= MPD_RANDOM;
+            israndom = 1;
         }
         else
         {
             ledFifoInsert("Random off", 2, 1);
             mpdP.status &= ~MPD_RANDOM;
+            israndom = 0;
         }
         sendPacket(&mpdP, MPD_PACKET);
     }
@@ -159,7 +167,14 @@ static gboolean mpdCheckConnected(gpointer data)
     if(!mpd_check_connected(mpd))
     {
         if(!mpd_connect(mpd))
+        {
             g_debug("Connection to mpd successfully initiated!");
+            mpd_set_connection_timeout(mpd,5); // higher timeout for not losing connection
+        }
+        else
+        {
+            mpd_set_connection_timeout(mpd,0.5); // lower timeout for less blocking
+        }
     }
     return TRUE;
 }
@@ -181,9 +196,9 @@ int mpdInit(void)
 
     mpd_signal_connect_status_changed(mpd,(StatusChangedCallback)mpdStatusChanged, NULL);
 
-    mpd_set_connection_timeout(mpd,10);
-    g_timeout_add(500, mpdStatusUpdate, NULL);
-    g_timeout_add_seconds(1, mpdCheckConnected, NULL);
+    mpd_set_connection_timeout(mpd,5);
+    g_timeout_add(2000, mpdStatusUpdate, NULL);
+    g_timeout_add_seconds(20, mpdCheckConnected, NULL);
 
     if(mpd_connect(mpd))
     {
