@@ -143,8 +143,8 @@ static gboolean can_periodical(gpointer data) // every 60s
             {
                 temperature = node->uptime;
                 temperature = temperature*0.025; // sekunden zwischen 2 blubbs
-                temperature = 60 / temperature; // blubbs pro minute
-                databasePgInsertTemperature(18,18,&temperature,time(NULL));
+                temperature = 60 / temperature; // blubbs pro minute // DAMNIT! NEVER DEVIDE BY ZERO
+                //databasePgInsertTemperature(18,18,&temperature,time(NULL));
             }
         }
     }
