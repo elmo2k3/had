@@ -45,7 +45,7 @@ static int fd;
 static gboolean can_try_init(gpointer data);
 
 static struct CanNode can_nodes[255];
-static void can_send(char *data);
+void can_send(int cmd, int addr, int length, char *data);
 
 static struct CanTTY
 {
@@ -105,9 +105,8 @@ static gboolean can_mpd_status_periodical(gpointer data) // every 1s
     if(node->relais_state & 0x01) // music is on
         led_status |= 8;
     
-    snprintf(send_string, sizeof(send_string),"00104%02x%02x%02x%02x",
-       MSG_COMMAND_STATUS, MPD_ADDRESS, MSG_STATUS_RELAIS, led_status);
-    can_send(send_string);
+    send_string[0] = led_status;
+    can_send(MSG_STATUS_RELAIS, MPD_ADDRESS, 1, send_string);
     
     return TRUE;
 }
@@ -159,10 +158,12 @@ static void process_command(struct CanTTY *can_tty)
     int can_device;
     int can_length;
     int can_data[6];
+    int can_id;
     int i;
     static int blubb_times[30];
     static int blubb_pos = -1;
     int blubb_avg;
+    int uptime;
     gchar *cl;
     
     //g_debug("received string %s",can_tty->cmd);
@@ -173,88 +174,86 @@ static void process_command(struct CanTTY *can_tty)
         return;
     }
     cl = can_tty->cmd;
-    can_length = strlen(cl)/2;
-    can_cmd = hexToInt(cl[6])*16 + hexToInt(cl[7]);
-    can_device = hexToInt(cl[8])*16 + hexToInt(cl[9]);
-    can_length = hexToInt(cl[4])*16 + hexToInt(cl[5]);
-    //sscanf(can_tty->cmd,"%3X%2X%2Xx%2X", &can_id, &can_cmd, &can_device, &can_length);
-
-    //g_debug("can_device = %d",can_device);
-    
-    if(can_length > 8)
+    if(strlen(cl) == 0) // some canusb commands just return CR but we dont care
         return;
-    for(i=0;i<can_length-2;i++)
-    {
-        can_data[i] = hexToInt(cl[i*2+10])*16 + hexToInt(cl[i*2+11]);
-        //g_debug("data[%d] = %d",i,can_data[i]);
-    }
 
-    int uptime;
-    
-    switch(can_cmd)
+    switch(cl[0]) // first ascii byte is the command
     {
-        case MSG_COMMAND_STATUS:
-            switch(can_data[0]) // STATUS TYPE
+        case 't': // 11bit can frame
+            can_id = hexToInt(cl[1])*16*16 + hexToInt(cl[2])*16 + hexToInt(cl[3]);
+            can_length = hexToInt(cl[4]);
+            can_cmd = (can_id >> 5) & 0x1F; // can_cmd is enclosed in can_id
+            can_device = can_id & 0x1F; // can node address is enclosed in can_id
+
+            if(can_length*2 != (strlen(cl)-5))
+            {
+                g_debug("length of row %d does not fit can dlc %d",strlen(cl)+5,can_length*2);
+                g_debug(cl);
+                return;
+            }
+            for(i=0;i<can_length;i++) // assemble can_data array
+            {
+                can_data[i] = hexToInt(cl[i*2+5])*16 + hexToInt(cl[i*2+5+1]);
+            }
+    
+            switch(can_cmd)
             {
                 case MSG_STATUS_UPTIME:
                     uptime = (can_data[1]&0x0F)*255*255*255 +
                                 can_data[2]*255*255 +
                                 can_data[3]*255 +
                                 can_data[4];
-                    if(can_device == 18) // very special: node 18 sends blubb times, not uptime
-                    {
-                        if(blubb_pos == -1) // in init, fill whole array with first value
-                        {
-                            for(i=0;i<30;i++)
-                            {
-                                blubb_times[i] = uptime;
-                            }
-                            blubb_pos = 0;
-                        }
-
-                        blubb_times[blubb_pos] = uptime;
-                        if(++blubb_pos > 29)
-                            blubb_pos = 0;
-                        for(i=0;i<30;i++)
-                        {
-                            blubb_avg += blubb_times[i];
-                        }
-                        can_nodes[18].uptime = blubb_avg / 30;
-                    }
-                    else // all other nodes submit uptime
-                    {
-                        can_nodes[can_device].uptime = uptime;
-                    }
-                    can_nodes[can_device].version = (can_data[1] & 0xF0)>>4;
-                    if(can_nodes[can_device].version > 0)
-                        can_nodes[can_device].voltage = can_data[5];
-                    else
-                        can_nodes[can_device].voltage = 0;
+//                    if(can_device == 18) // very special: node 18 sends blubb times, not uptime
+//                    {
+//                        if(blubb_pos == -1) // in init, fill whole array with first value
+//                        {
+//                            for(i=0;i<30;i++)
+//                            {
+//                                blubb_times[i] = uptime;
+//                            }
+//                            blubb_pos = 0;
+//                        }
+//
+//                        blubb_times[blubb_pos] = uptime;
+//                        if(++blubb_pos > 29)
+//                            blubb_pos = 0;
+//                        for(i=0;i<30;i++)
+//                        {
+//                            blubb_avg += blubb_times[i];
+//                        }
+//                        can_nodes[18].uptime = blubb_avg / 30;
+//                    }
+//                    else // all other nodes submit uptime
+//                    {
+                    can_nodes[can_device].uptime = uptime;
+//                    }
+                    can_nodes[can_device].version = (can_data[0]);
+                    can_nodes[can_device].voltage = can_data[5];
                     break;
                 case MSG_STATUS_RELAIS:
-                    can_nodes[can_device].relais_state = can_data[1];
+                    can_nodes[can_device].relais_state = can_data[0];
                     break;
                 case MSG_STATUS_HR20_TEMPS:
-                    can_nodes[can_device].hr20_state.data_valid = can_data[1] & 0x01;
-                    can_nodes[can_device].hr20_state.mode = can_data[1] & 0x02;
-                    can_nodes[can_device].hr20_state.window_open = can_data[1] & 0x04;
-                    can_nodes[can_device].hr20_state.tempis = can_data[2] << 8;
-                    can_nodes[can_device].hr20_state.tempis |= can_data[3];
-                    can_nodes[can_device].hr20_state.tempset = can_data[4] << 8;
-                    can_nodes[can_device].hr20_state.tempset |= can_data[5];
+                    can_nodes[can_device].hr20_state.data_valid = can_data[0] & 0x01;
+                    can_nodes[can_device].hr20_state.mode = can_data[0] & 0x02;
+                    can_nodes[can_device].hr20_state.window_open = can_data[0] & 0x04;
+                    can_nodes[can_device].hr20_state.tempis = can_data[1] << 8;
+                    can_nodes[can_device].hr20_state.tempis |= can_data[2];
+                    can_nodes[can_device].hr20_state.tempset = can_data[3] << 8;
+                    can_nodes[can_device].hr20_state.tempset |= can_data[4];
                     break;
-                case MSG_STATUS_HR20_VALVE_VOLT:
-                    can_nodes[can_device].hr20_state.data_timestamp = can_data[1];
-                    can_nodes[can_device].hr20_state.valve = can_data[2];
-                    can_nodes[can_device].hr20_state.voltage = can_data[3] << 8;
-                    can_nodes[can_device].hr20_state.voltage |= can_data[4];
-                    can_nodes[can_device].hr20_state.error_code = can_data[5];
+                case MSG_STATUS_HR20_MISC:
+                    can_nodes[can_device].hr20_state.data_timestamp = can_data[0];
+                    can_nodes[can_device].hr20_state.valve = can_data[1];
+                    can_nodes[can_device].hr20_state.voltage = can_data[2] << 8;
+                    can_nodes[can_device].hr20_state.voltage |= can_data[3];
+                    can_nodes[can_device].hr20_state.error_code = can_data[4];
                     break;
                 default:
                     break;
             }
-            break;
-        case MSG_COMMAND_RELAIS:
+            break; // case 't'
+        case MSG_CMD_RELAIS:
             if(can_device == MPD_ADDRESS)
             {
                 g_debug("received mpd command");
@@ -301,7 +300,20 @@ static void process_command(struct CanTTY *can_tty)
 
 void canHandsOffDevice()
 {
+    char *data = "C\r";
+    gsize bytes_written;
+    GError *error = NULL;
+
+    if(!can_is_initiated)
+        return;
+    if(!config.can_activated)
+        return;
+
     can_is_initiated = 0;
+    // send channel to close communication
+    g_io_channel_write_chars(can_tty.channel, data, strlen(data),
+        &bytes_written, &error);
+    g_io_channel_flush(can_tty.channel, NULL);
     g_io_channel_shutdown(can_tty.channel, 0, NULL);
     close(fd);
 }
@@ -344,6 +356,9 @@ static gboolean canSerialReceive
         else if(buf[i] == '\n')
         {
         }
+        else if(buf[i] == 7) // error
+        {
+        }
         else if(buf[i])
         {
             can_tty->cmd[can_tty->cmd_position++] = buf[i];
@@ -361,16 +376,35 @@ void can_init()
     g_timeout_add_seconds(1, can_mpd_status_periodical, NULL);
 }
 
-void can_send(char *data)
+void can_send(int cmd, int addr, int length, char *data)
 {
     //char data[20];
-    char esc = 27;
+    int id;
+    char send_string[23];
+    int i;
+    char hex_val[3];
+
     gsize bytes_written;
     GError *error=NULL;
+    
+    if(!config.can_activated)
+        return;
+    if(!can_is_initiated)
+        return;
 
-    g_io_channel_write_chars(can_tty.channel, &esc, 1,
-        &bytes_written, &error);
-    g_io_channel_write_chars(can_tty.channel, data, strlen(data),
+    id = (cmd& 0x1F) << 5;
+    id |= (addr & 0x1F);
+    id &= 0x7FF;
+
+    sprintf(send_string,"t%03x%01x",id,length);
+    for(i=0;i<length;i++)
+    {
+        sprintf(hex_val,"%02x",data[i]);
+        strcat(send_string,hex_val);
+    }
+    strcat(send_string,"\r");
+    g_debug("%s",send_string);
+    g_io_channel_write_chars(can_tty.channel, send_string, strlen(send_string),
         &bytes_written, &error);
     g_io_channel_flush(can_tty.channel, NULL);
 }
@@ -385,9 +419,10 @@ void can_set_temperature(int address, int temperature)
     if(temperature < 50 || temperature > 300)
         return;
 
-    snprintf(send_string, sizeof(send_string),"00103%02x%02x%02x",
-        MSG_COMMAND_HR20_SET_T, address, temperature/5);
-    can_send(send_string);
+    send_string[0] = temperature/5;
+//    snprintf(send_string, sizeof(send_string),"00103%02x%02x%02x",
+        //MSG_COMMAND_HR20_SET_T, address, temperature/5);
+    can_send(MSG_HR20_SET_T, address, 1, send_string);
 }
 
 void can_set_date(int address)
@@ -399,39 +434,41 @@ void can_set_date(int address)
     time(&rawtime);
     ptm = localtime(&rawtime);
 
-    snprintf(send_string, sizeof(send_string),"00105%02x%02x%02x%02x%02x",
-        MSG_COMMAND_HR20_SET_TIME, address,ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
-    can_send(send_string);
-    snprintf(send_string, sizeof(send_string),"00105%02x%02x%02x%02x%02x",
-        MSG_COMMAND_HR20_SET_DATE, address, ptm->tm_year-100, ptm->tm_mon+1, ptm->tm_mday);
-    can_send(send_string);
+   // snprintf(send_string, sizeof(send_string),"00105%02x%02x%02x%02x%02x",
+   //     MSG_COMMAND_HR20_SET_TIME, address,ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+   // can_send(send_string);
+   // snprintf(send_string, sizeof(send_string),"00105%02x%02x%02x%02x%02x",
+   //     MSG_COMMAND_HR20_SET_DATE, address, ptm->tm_year-100, ptm->tm_mon+1, ptm->tm_mday);
+   // can_send(send_string);
 }
 
 void can_set_mode_manu(int address)
 {
     char send_string[255];
 
-    snprintf(send_string, sizeof(send_string),"00102%02x%02x",
-        MSG_COMMAND_HR20_SET_MODE_MANU, address);
-    can_send(send_string);
+  //  snprintf(send_string, sizeof(send_string),"00102%02x%02x",
+    //    MSG_COMMAND_HR20_SET_MODE_MANU, address);
+    can_send(MSG_HR20_SET_MODE_MANU, address, 0, NULL);
 }
 
 void can_set_mode_auto(int address)
 {
     char send_string[255];
 
-    snprintf(send_string, sizeof(send_string),"00102%02x%02x",
-        MSG_COMMAND_HR20_SET_MODE_AUTO, address);
-    can_send(send_string);
+//    snprintf(send_string, sizeof(send_string),"00102%02x%02x",
+        //MSG_COMMAND_HR20_SET_MODE_AUTO, address);
+    can_send(MSG_HR20_SET_MODE_AUTO, address, 0, NULL);
 }
 
 void can_set_relais(int address, int relais, int state)
 {
     char send_string[255];
 
-    snprintf(send_string, sizeof(send_string),"00104%02x%02x%02x%02x",
-        MSG_COMMAND_RELAIS, address, relais, state);
-    can_send(send_string);
+    send_string[0] = relais;
+    send_string[1] = state;
+//    snprintf(send_string, sizeof(send_string),"00104%02x%02x%02x%02x",
+//        MSG_COMMAND_RELAIS, address, relais, state);
+    can_send(MSG_CMD_RELAIS,address, 2, send_string);
 }
 
 void can_toggle_relais(int address, int relais)
@@ -446,6 +483,9 @@ static gboolean can_try_init(gpointer data)
 {
     struct termios newtio;
     GError *error = NULL;
+    gsize bytes_written;
+    char *open_cmd = "O\r";
+    char *timestamp_off = "Z0\r";
     
     if(can_is_initiated)
         return FALSE;
@@ -476,6 +516,14 @@ static gboolean can_try_init(gpointer data)
     g_io_channel_unref(serial_device_chan);
     can_tty.channel = serial_device_chan;
     can_tty.serial_port_watcher = serial_watch;
+    
+    
+    // send channel to open communication
+    g_io_channel_write_chars(can_tty.channel, open_cmd, strlen(open_cmd),
+        &bytes_written, &error);
+    g_io_channel_write_chars(can_tty.channel, timestamp_off, strlen(timestamp_off),
+        &bytes_written, &error);
+    g_io_channel_flush(can_tty.channel, NULL);
 
     can_is_initiated = 1;
     
