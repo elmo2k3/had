@@ -39,6 +39,8 @@ PKG_PROG_PKG_CONFIG
 AX_LIB_POSTGRESQL(8.0)
 AM_GLIB_GNU_GETTEXT
 
+
+
 #glib
 PKG_CHECK_MODULES([glib], glib-2.0 >= 2.10)
 AC_SUBST(glib_LIBS)
@@ -47,6 +49,34 @@ AC_SUBST(glib_CFLAGS)
 PKG_CHECK_MODULES([gthread], gthread-2.0 >= 2.10)
 AC_SUBST(gthread_LIBS)
 AC_SUBST(gthread_CFLAGS)
+
+AC_ARG_ENABLE(ipv6,
+	AS_HELP_STRING([--disable-ipv6],
+		[disable IPv6 support (default: enable)]),,
+	[enable_ipv6=yes])
+
+if test x$enable_ipv6 = xyes; then
+	AC_MSG_CHECKING(for ipv6)
+	AC_EGREP_CPP([AP_maGiC_VALUE],
+	[
+#include <sys/types.h>
+#ifdef WIN32
+#include <winsock2.h>
+#else
+#include <sys/socket.h>
+#endif
+#include <netdb.h>
+#ifdef PF_INET6
+#ifdef AF_INET6
+AP_maGiC_VALUE
+#endif
+#endif
+	],
+	AC_DEFINE(HAVE_IPV6, 1, [Define if IPv6 support present])
+	AC_MSG_RESULT([yes]),
+	AC_MSG_RESULT([no])
+)
+fi
 
 AC_ARG_ENABLE(fftw3,
               [  --disable-fftw3			Support for ledmatrix mpd fft.],

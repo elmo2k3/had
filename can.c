@@ -142,8 +142,11 @@ static gboolean can_periodical(gpointer data) // every 60s
             {
                 temperature = node->uptime;
                 temperature = temperature*0.025; // sekunden zwischen 2 blubbs
-                temperature = 60 / temperature; // blubbs pro minute // DAMNIT! NEVER DEVIDE BY ZERO
-                //databasePgInsertTemperature(18,18,&temperature,time(NULL));
+                if(temperature != 0)
+                {
+                    temperature = 60 / temperature; // blubbs pro minute // DAMNIT! NEVER DEVIDE BY ZERO
+                    databasePgInsertTemperature(18,18,&temperature,time(NULL));
+                }
             }
         }
     }
@@ -168,11 +171,6 @@ static void process_command(struct CanTTY *can_tty)
     
     //g_debug("received string %s",can_tty->cmd);
    
-    if(strlen(can_tty->cmd) < 6)
-    {
-        g_debug("length too short %d", strlen(can_tty->cmd));
-        return;
-    }
     cl = can_tty->cmd;
     if(strlen(cl) == 0) // some canusb commands just return CR but we dont care
         return;
@@ -249,45 +247,47 @@ static void process_command(struct CanTTY *can_tty)
                     can_nodes[can_device].hr20_state.voltage |= can_data[3];
                     can_nodes[can_device].hr20_state.error_code = can_data[4];
                     break;
+                case MSG_CMD_RELAIS:
+                    if(can_device == MPD_ADDRESS)
+                    {
+                        g_debug("received mpd command");
+                        switch(can_data[0])
+                        {
+                            case 1:
+                                mpdPause();
+                                break;
+                            case 2:
+                                mpdToggleRandom();
+                                break;
+                            case 4:
+                                mpdPlayNumber(1);
+                                break;
+                            case 8: // switch on switch and music. switch off music
+                                if(can_data[1] == 1)
+                                {
+                                    can_set_relais(18, 1, 1); // switch on
+                                    can_set_relais(19, 1, 1); // music on
+                                }
+                                else
+                                {
+                                    can_set_relais(19, 1, 0); // music off
+                                }
+                                break;
+                            case 16:
+                                mpdNext();
+                                g_debug("mpdNext()");
+                                break;
+                            case 32:
+                                mpdPrev();
+                                break;
+                        }
+                    }
+                    break;
                 default:
                     break;
-            }
+            } // end switch can_cmd
             break; // case 't'
-        case MSG_CMD_RELAIS:
-            if(can_device == MPD_ADDRESS)
-            {
-                g_debug("received mpd command");
-                switch(can_data[0])
-                {
-                    case 1:
-                        mpdPause();
-                        break;
-                    case 2:
-                        mpdToggleRandom();
-                        break;
-                    case 4:
-                        mpdPlayNumber(1);
-                        break;
-                    case 8: // switch on switch and music. switch off music
-                        if(can_data[1] == 1)
-                        {
-                            can_set_relais(18, 1, 1); // switch on
-                            can_set_relais(19, 1, 1); // music on
-                        }
-                        else
-                        {
-                            can_set_relais(19, 1, 0); // music off
-                        }
-                        break;
-                    case 16:
-                        mpdNext();
-                        g_debug("mpdNext()");
-                        break;
-                    case 32:
-                        mpdPrev();
-                        break;
-                }
-            }
+        default:
             break;
     }
 

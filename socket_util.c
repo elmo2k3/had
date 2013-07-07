@@ -20,6 +20,7 @@
 
 #include "socket_util.h"
 #include "fd_util.h"
+#include "config.h"
 
 #include <errno.h>
 #include <unistd.h>
@@ -32,7 +33,6 @@
 #include <ws2tcpip.h>
 #include <winsock.h>
 #endif /* G_OS_WIN32 */
-
 #ifdef HAVE_IPV6
 #include <string.h>
 #endif

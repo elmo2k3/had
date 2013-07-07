@@ -22,6 +22,7 @@
 #include "socket_util.h"
 #include "client.h"
 #include "fd_util.h"
+#include "config.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -158,9 +159,10 @@ listen_add_port(unsigned int port, GError **error)
     g_debug("binding to any address");
 
 #ifdef HAVE_IPV6
+#warning hello
     success6 = listen_add_port_ipv6(port, &error2);
     if (!success6) {
-        if (error2->domain != listen_quark() ||
+        if (
             (error2->code != EAFNOSUPPORT && error2->code != EINVAL &&
              error2->code != EPROTONOSUPPORT)) {
             g_propagate_error(error, error2);
